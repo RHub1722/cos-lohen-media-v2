@@ -27,6 +27,7 @@ def check_timeline(tl: Timeline, probe_fn: Callable[[str], float]) -> list[Probl
     if not tl.events:
         problems.append(Problem("error", "в сценарии нет событий"))
 
+    lengths: dict[str, float] = {}  # id -> разрешённая длина, для проверки наложений ниже
     for ev in tl.events:
         if ev.t >= tl.total_duration:
             problems.append(Problem(
@@ -42,6 +43,7 @@ def check_timeline(tl: Timeline, probe_fn: Callable[[str], float]) -> list[Probl
             continue
 
         length = ev.duration if ev.duration is not None else source_len
+        lengths[ev.id] = length
         end = ev.t + length
         if end > tl.total_duration + 1e-6:
             problems.append(Problem(
@@ -66,12 +68,13 @@ def check_timeline(tl: Timeline, probe_fn: Callable[[str], float]) -> list[Probl
 
     # Наложение реплик — тихий дефект: два голоса звучат одновременно, и это
     # слышно только на прослушивании. У sfx наложение штатное: взмах и
-    # попадание намеренно перекрываются.
+    # попадание намеренно перекрываются. Длина берётся из lengths, посчитанных
+    # в основном цикле выше, а не повторным probe_fn: недоступный ассет уже
+    # получил свою ошибку там, второй раз жаловаться не на чем.
     voices = sorted(tl.by_stem("voices"), key=lambda e: e.t)
     for earlier, later in zip(voices, voices[1:]):
-        try:
-            length = earlier.duration or probe_fn(earlier.asset)
-        except Exception:
+        length = lengths.get(earlier.id)
+        if length is None:
             continue
         overlap = (earlier.t + length) - later.t
         if overlap > 1e-3:

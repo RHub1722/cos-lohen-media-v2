@@ -106,12 +106,34 @@ def test_overlapping_voice_events_are_an_error():
 
 
 def test_adjacent_voice_events_are_fine():
+    # t подобраны так, чтобы не задеть "v" из _full (t=1.0) — иначе line_a
+    # сама наложилась бы на "v", и тест держался бы не на своей логике.
     tl = _full([
-        {"id": "line_a", "t": 1.0, "asset": "a.wav", "stem": "voices"},
-        {"id": "line_b", "t": 5.0, "asset": "b.wav", "stem": "voices"},
+        {"id": "line_a", "t": 20.0, "asset": "a.wav", "stem": "voices"},
+        {"id": "line_b", "t": 24.0, "asset": "b.wav", "stem": "voices"},
     ])
     problems = check_timeline(tl, probe_fn=lambda p: 2.0)
-    assert not any("line_a" in p.message and "line_b" in p.message for p in problems)
+    assert not has_errors(problems)
+
+
+def test_overlap_just_under_tolerance_is_not_flagged():
+    """0.5 мс меньше порога 1e-3 — шум вычислений, а не реальное наложение."""
+    tl = _full([
+        {"id": "line_a", "t": 10.0, "asset": "a.wav", "stem": "voices"},
+        {"id": "line_b", "t": 11.9995, "asset": "b.wav", "stem": "voices"},
+    ])
+    problems = check_timeline(tl, probe_fn=lambda p: 2.0)
+    assert not has_errors(problems)
+
+
+def test_overlap_just_over_tolerance_is_flagged():
+    """1.5 мс больше порога 1e-3 — уже настоящее наложение, а не шум."""
+    tl = _full([
+        {"id": "line_a", "t": 10.0, "asset": "a.wav", "stem": "voices"},
+        {"id": "line_b", "t": 11.9985, "asset": "b.wav", "stem": "voices"},
+    ])
+    problems = check_timeline(tl, probe_fn=lambda p: 2.0)
+    assert has_errors(problems)
 
 
 def test_overlapping_sfx_events_are_allowed():
