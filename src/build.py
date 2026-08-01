@@ -12,6 +12,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+# Консоль Windows по умолчанию в cp1252 и падает на кириллице в выводе.
+for stream in (sys.stdout, sys.stderr):
+    if hasattr(stream, "reconfigure"):
+        stream.reconfigure(encoding="utf-8", errors="replace")
+
 from src.measure import measure_duration, measure_loudness, measure_window  # noqa: E402
 from src.models import Timeline  # noqa: E402
 from src.probe import probe  # noqa: E402
