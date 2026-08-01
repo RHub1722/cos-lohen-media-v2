@@ -93,3 +93,32 @@ def test_format_problems_groups_errors_before_warnings():
     ])
     text = format_problems(check_timeline(tl, probe_fn=lambda p: 0.5))
     assert text.index("ОШИБКИ") < text.index("предупреждения")
+
+
+def test_overlapping_voice_events_are_an_error():
+    tl = _full([
+        {"id": "line_a", "t": 1.0, "asset": "a.wav", "stem": "voices"},
+        {"id": "line_b", "t": 2.0, "asset": "b.wav", "stem": "voices"},
+    ])
+    problems = check_timeline(tl, probe_fn=lambda p: 3.0)
+    assert any(p.level == "error" and "line_a" in p.message and "line_b" in p.message
+               for p in problems)
+
+
+def test_adjacent_voice_events_are_fine():
+    tl = _full([
+        {"id": "line_a", "t": 1.0, "asset": "a.wav", "stem": "voices"},
+        {"id": "line_b", "t": 5.0, "asset": "b.wav", "stem": "voices"},
+    ])
+    problems = check_timeline(tl, probe_fn=lambda p: 2.0)
+    assert not any("line_a" in p.message and "line_b" in p.message for p in problems)
+
+
+def test_overlapping_sfx_events_are_allowed():
+    """Взмах и попадание накладываются намеренно — это не дефект."""
+    tl = _full([
+        {"id": "whoosh", "t": 1.0, "asset": "w.wav", "stem": "sfx"},
+        {"id": "impact", "t": 1.3, "asset": "i.wav", "stem": "sfx"},
+    ])
+    problems = check_timeline(tl, probe_fn=lambda p: 1.0)
+    assert not any(p.level == "error" for p in problems)

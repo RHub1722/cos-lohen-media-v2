@@ -64,6 +64,23 @@ def check_timeline(tl: Timeline, probe_fn: Callable[[str], float]) -> list[Probl
                     f"файла {source_len:.3f} — петля не нужна",
                 ))
 
+    # Наложение реплик — тихий дефект: два голоса звучат одновременно, и это
+    # слышно только на прослушивании. У sfx наложение штатное: взмах и
+    # попадание намеренно перекрываются.
+    voices = sorted(tl.by_stem("voices"), key=lambda e: e.t)
+    for earlier, later in zip(voices, voices[1:]):
+        try:
+            length = earlier.duration or probe_fn(earlier.asset)
+        except Exception:
+            continue
+        overlap = (earlier.t + length) - later.t
+        if overlap > 1e-3:
+            problems.append(Problem(
+                "error",
+                f"{earlier.id} и {later.id} накладываются на {overlap:.3f} с — "
+                f"два голоса зазвучат одновременно",
+            ))
+
     used = {e.stem for e in tl.events}
     for stem in STEMS:
         if stem not in used:

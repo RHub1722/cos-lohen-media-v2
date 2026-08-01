@@ -448,11 +448,11 @@
     },
     {
       "id": "lohen_final",
-      "t": 51.0,
+      "t": 50.6,
       "asset": "voices/lohen_final.wav",
       "stem": "voices",
       "gain_db": -2.0,
-      "note": "They asked for a masterpiece. Consider it finished. Кончается на 54.44, до удара остаётся 0.76 с тишины."
+      "note": "They asked for a masterpiece. Consider it finished. При новой длительности 3.84 с (голос Lo Mod v2, см. adde184) кончается на 54.44, до удара остаётся 0.76 с тишины. t сдвинут с 51.0: старое значение било в 54.84, оставляя только 0.36 с — ниже требуемых 0.7 с паузы перед главным акцентом."
     },
     {
       "id": "ice_final_impact",
