@@ -29,24 +29,37 @@ ACCENTS = [
 ]
 
 
-def peak(start: float, end: float) -> float:
+def peak(start: float, end: float) -> float | None:
+    """None означает, что замер не удался.
+
+    Нельзя возвращать 0.0 как признак неудачи: все реальные пики отрицательные,
+    и ноль оказался бы громче любого из них. Скрипт обвинил бы не то событие, а
+    настоящую причину — сорванный замер — не показал бы вообще.
+    """
     out = subprocess.run([
         "ffmpeg", "-hide_banner", "-nostats", "-ss", f"{start}", "-to", f"{end}",
         "-i", str(PREMASTER), "-af", "volumedetect", "-f", "null", "-",
     ], capture_output=True, text=True).stderr
     m = re.search(r"max_volume: (-?[\d.]+)", out)
-    return float(m.group(1)) if m else 0.0
+    return float(m.group(1)) if m else None
 
 
 def main() -> int:
     if not PREMASTER.is_file():
         print(f"нет файла {PREMASTER} — сначала собери мастер")
         return 1
+
     rows = [(label, peak(a, b)) for label, a, b in ACCENTS]
     for label, value in rows:
-        print(f"  {label:18} {value:6.1f} dB")
-    loudest = max(rows, key=lambda r: r[1])
+        print(f"  {label:18} {'  замер сорван' if value is None else f'{value:6.1f} dB'}")
     print()
+
+    failed = [label for label, value in rows if value is None]
+    if failed:
+        print(f"  ОШИБКА: не удалось замерить {', '.join(failed)} — судить об иерархии нельзя.")
+        return 1
+
+    loudest = max(rows, key=lambda r: r[1])
     if loudest[0] != "ФИНАЛЬНЫЙ УДАР":
         print(f"  ВНИМАНИЕ: главный акцент перекрыт — громче всех «{loudest[0]}».")
         return 1
