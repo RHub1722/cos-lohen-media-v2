@@ -54,11 +54,26 @@ def test_missing_asset_is_an_error():
     assert any(p.level == "error" and "gone" in p.message for p in problems)
 
 
-def test_duration_longer_than_source_warns_about_looping():
+def test_duration_longer_than_source_without_loop_is_an_error():
+    """Ровно тот дефект, на котором встала первая сборка."""
     tl = _full([{"id": "room", "t": 0.0, "asset": "r.wav", "stem": "ambience",
                  "duration": 18.6}])
     problems = check_timeline(tl, probe_fn=lambda p: 5.0)
-    assert any(p.level == "warning" and "петл" in p.message for p in problems)
+    assert any(p.level == "error" and "loop не включён" in p.message for p in problems)
+
+
+def test_duration_longer_than_source_with_loop_is_fine():
+    tl = _full([{"id": "room", "t": 0.0, "asset": "r.wav", "stem": "ambience",
+                 "duration": 18.6, "loop": True}])
+    problems = check_timeline(tl, probe_fn=lambda p: 5.0)
+    assert not has_errors(problems)
+
+
+def test_needless_loop_is_a_warning():
+    tl = _full([{"id": "tail", "t": 0.0, "asset": "t.wav", "stem": "sfx",
+                 "duration": 2.0, "loop": True}])
+    problems = check_timeline(tl, probe_fn=lambda p: 5.0)
+    assert any(p.level == "warning" and "петля не нужна" in p.message for p in problems)
 
 
 def test_empty_stem_is_a_warning():

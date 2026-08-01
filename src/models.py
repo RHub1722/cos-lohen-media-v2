@@ -17,8 +17,12 @@ class ScenarioError(Exception):
 class Event:
     """Одно звуковое событие на таймлайне.
 
-    duration=None означает «взять файл целиком». Если duration задан и длиннее
-    файла, источник пойдёт петлёй — так собираются фоновые слои.
+    duration=None означает «взять файл целиком», иначе источник обрезается.
+
+    loop включается только для фоновых слоёв, которые надо растянуть длиннее
+    исходника. Автоматически выводить его из duration нельзя: обрезка короче
+    исходника петли не требует, а лишний бесконечный вход не отдаёт ffmpeg EOF,
+    и рендер зависает после сведения.
     """
 
     id: str
@@ -28,6 +32,7 @@ class Event:
     gain_db: float = 0.0
     pan: float = 0.0
     duration: float | None = None
+    loop: bool = False
     fade_in: float = 0.01
     fade_out: float = 0.01
     video: dict | None = None
@@ -59,6 +64,10 @@ class Event:
         if duration is not None and float(duration) <= 0:
             raise ScenarioError(f"{event_id}: duration должен быть больше нуля")
 
+        loop = bool(raw.get("loop", False))
+        if loop and duration is None:
+            raise ScenarioError(f"{event_id}: loop без duration зациклится навсегда")
+
         return Event(
             id=event_id,
             t=t,
@@ -67,6 +76,7 @@ class Event:
             gain_db=float(raw.get("gain_db", 0.0)),
             pan=pan,
             duration=None if duration is None else float(duration),
+            loop=loop,
             fade_in=float(raw.get("fade_in", 0.01)),
             fade_out=float(raw.get("fade_out", 0.01)),
             video=raw.get("video"),

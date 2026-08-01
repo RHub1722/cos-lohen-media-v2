@@ -1,0 +1,64 @@
+{
+  "note": "Откуда взялся каждый сгенерированный ассет. Сырые файлы лежат в */archive/ и в git не попадают. Скрипт src/import_assets.py переносит их в рабочие имена, приводя к 48 кГц, стерео, 24 бита. Семь боевых и ледяных SFX не перечислены: они скопированы из предыдущего проекта, а не сгенерированы.",
+  "note_trim": "Значение в map — либо строка с именем файла, либо объект {file, start, duration} для вырезки окна из длинной генерации. Вырезка живёт здесь, а не в сценарии: то, что у генерации был долгий разгон, — свойство ассета, а не номера.",
+  "generated": "2026-08-01",
+  "voice_lohen": {
+    "id": "LEEihXh5cGwWVxCordYf",
+    "name": "Lohen v2 candidate A",
+    "origin": "text_to_voice по описанию персонажа, кандидат A из трёх",
+    "model": "eleven_v3",
+    "alternatives": ["QAj7sMLSwjmn5OkSm9aJ", "Q3lwRyludqeaMeTDawL5", "TX3LPaxmHKxFdv7VOQHJ (Liam, премейд)"]
+  },
+  "map": {
+    "voices": {
+      "tts_Heh.__20260801_034341.mp3": "lohen_laugh_1.wav",
+      "tts_Still_20260801_034211.mp3": "lohen_impressed.wav",
+      "tts_One_m_20260801_034214.mp3": "lohen_security.wav",
+      "tts_Oh._C_20260801_034215.mp3": "lohen_tongue.wav",
+      "tts_Then__20260801_034217.mp3": "lohen_game.wav",
+      "tts_Six_c_20260801_034218.mp3": "lohen_chambers.wav",
+      "tts_Three_20260801_034219.mp3": "lohen_count.wav",
+      "tts_Hah.__20260801_034310.mp3": "lohen_laugh_2.wav",
+      "tts_Final_20260801_034229.mp3": "lohen_finally.wav",
+      "tts_Didn'_20260801_034231.mp3": "lohen_feel.wav",
+      "tts_Is_th_20260801_034233.mp3": "lohen_thatall.wav",
+      "tts_...Re_20260801_034235.mp3": "lohen_really.wav",
+      "tts_Hm._[_20260801_034312.mp3": "lohen_laugh_3.wav",
+      "tts_They__20260801_034236.mp3": "lohen_final.wav",
+      "tts_I_can_20260801_034239.mp3": "prisoner_refuse.wav",
+      "tts_There_20260801_034241.mp3": "guard_shout.wav"
+    },
+    "sfx": {
+      "sfx_A_rev_20260801_034315.mp3": "revolver_cylinder_spin.wav",
+      "sfx_A_sin_20260801_034316.mp3": "revolver_hammer_cock.wav",
+      "sfx_A_rev_20260801_034318.mp3": "revolver_dry_click.wav",
+      "sfx_A_hea_20260801_034320.mp3": "door_breach.wav",
+      "sfx_A_woo_20260801_034342.mp3": "chair_creak.wav",
+      "sfx_Two_s_20260801_034345.mp3": "footsteps_slow.wav",
+      "sfx_Sever_20260801_034347.mp3": "boots_rush.wav",
+      "sfx_Metal_20260801_034350.mp3": "weapon_ready_clatter.wav",
+      "sfx_Snatc_20260801_034354.mp3": "spear_grab.wav",
+      "sfx_One_b_20260801_034352.mp3": "hit_on_lohen.wav",
+      "sfx_Sever_20260801_034411.mp3": "retreat_shuffle.wav",
+      "sfx_A_met_20260801_034413.mp3": "weapon_dropped.wav",
+      "sfx_Risin_20260801_034414.mp3": "spear_raise_air.wav",
+      "sfx_A_vio_20260801_034416.mp3": "ice_burst.wav"
+    },
+    "ambience": {
+      "sfx_Room__20260801_034418.mp3": "room_interrogation.wav",
+      "sfx_An_ex_20260801_034422.mp3": "prisoner_breathing.wav",
+      "sfx_Room__20260801_034425.mp3": "frozen_room.wav"
+    },
+    "music": {
+      "music__20260801_034443.mp3": {
+        "file": "music_tick.wav", "start": 16.0, "duration": 8.0,
+        "why": "Генерация пришла на 600 с с долгим разгоном: первые три секунды на -37 дБ, полный уровень только к пятнадцатой. Берём окно, где слой уже работает."
+      },
+      "music__20260801_034525.mp3": {
+        "file": "music_combat.wav", "start": 0.0, "duration": 24.0,
+        "why": "Генерация на 180 с, начинается сразу на полном уровне. Берём начало."
+      },
+      "music__20260801_034546.mp3": "music_ice_drone.wav"
+    }
+  }
+}

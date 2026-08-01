@@ -28,9 +28,14 @@ ROOT = Path(__file__).resolve().parents[1]
 # Границы блоков из спеки, раздел 12. Нужны для проверки сжатия динамики:
 # допрос не должен быть тише боя больше чем на 8 LU, иначе в шумном зале
 # первые восемнадцать секунд просто не разберут.
-INTERROGATION = (0.0, 18.6)
-COMBAT = (20.6, 44.0)
+INTERROGATION = (0.0, 22.3)
+COMBAT = (26.9, 47.0)
 MAX_SPREAD_LU = 8.0
+
+# Потолок сдачи из спеки. Это не то же самое, что target_tp сценария: loudnorm
+# в линейном режиме в свою цель точно не попадает, поэтому цель ставится ниже
+# потолка, а проверяется именно потолок.
+DELIVERY_TP_CEILING = -1.5
 
 
 def main() -> int:
@@ -68,6 +73,7 @@ def main() -> int:
         "duration": duration,
         "integrated_lufs": loud.integrated_lufs,
         "true_peak_dbtp": loud.true_peak_dbtp,
+        "delivery_tp_ceiling": DELIVERY_TP_CEILING,
         "lra": loud.lra,
         "interrogation_lufs": quiet,
         "combat_lufs": fight,
@@ -80,15 +86,16 @@ def main() -> int:
     print(f"Мастер:       {master}")
     print(f"Длительность: {duration:.3f} с (цель {tl.total_duration:.3f})")
     print(f"LUFS:         {loud.integrated_lufs:.2f} (цель {tl.target_lufs})")
-    print(f"True Peak:    {loud.true_peak_dbtp:.2f} dBTP (потолок {tl.target_tp})")
+    print(f"True Peak:    {loud.true_peak_dbtp:.2f} dBTP "
+          f"(цель loudnorm {tl.target_tp}, потолок сдачи {DELIVERY_TP_CEILING})")
     print(f"Допрос:       {quiet:.2f} LUFS")
     print(f"Бой:          {fight:.2f} LUFS")
     print(f"Разброс:      {spread:.2f} LU (норма не больше {MAX_SPREAD_LU:.0f})")
 
     if abs(duration - tl.total_duration) > 0.001:
         print("  ВНИМАНИЕ: длительность разошлась с целевой.")
-    if loud.true_peak_dbtp > tl.target_tp:
-        print("  ВНИМАНИЕ: True Peak выше потолка, есть риск клиппинга.")
+    if loud.true_peak_dbtp > DELIVERY_TP_CEILING:
+        print("  ВНИМАНИЕ: True Peak выше потолка сдачи, есть риск клиппинга.")
     if spread > MAX_SPREAD_LU:
         print("  ВНИМАНИЕ: динамика шире нормы, допрос потеряется в шумном зале.")
     return 0

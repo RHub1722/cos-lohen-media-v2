@@ -66,11 +66,30 @@ def test_input_order_matches_chain_index():
 
 def test_looped_event_declares_stream_loop_and_trims():
     tl = _tl([{"id": "room", "t": 0.0, "asset": "r.wav", "stem": "ambience",
-               "duration": 18.6}])
+               "duration": 18.6, "loop": True}])
     graph, inputs = build_stem_graph(tl, "ambience")
     assert inputs[0].loop is True
     assert "atrim=0:18.600000" in graph
-    assert ffmpeg_input_args(inputs) == ["-stream_loop", "-1", "-i", "r.wav"]
+
+
+def test_looped_input_is_bounded_by_t_so_ffmpeg_can_finish():
+    """Без -t бесконечный вход не отдаёт EOF, и ffmpeg висит после сведения."""
+    tl = _tl([{"id": "room", "t": 0.0, "asset": "r.wav", "stem": "ambience",
+               "duration": 18.6, "loop": True}])
+    _, inputs = build_stem_graph(tl, "ambience")
+    assert ffmpeg_input_args(inputs) == [
+        "-stream_loop", "-1", "-t", "18.600000", "-i", "r.wav",
+    ]
+
+
+def test_trim_shorter_than_source_is_not_looped():
+    """duration задан, но петля не запрошена: вход конечный, -stream_loop не нужен."""
+    tl = _tl([{"id": "tail", "t": 55.3, "asset": "t.wav", "stem": "sfx",
+               "duration": 4.7}])
+    graph, inputs = build_stem_graph(tl, "sfx")
+    assert inputs[0].loop is False
+    assert ffmpeg_input_args(inputs) == ["-i", "t.wav"]
+    assert "atrim=0:4.700000" in graph
 
 
 def test_one_shot_event_is_not_looped():
@@ -82,7 +101,7 @@ def test_one_shot_event_is_not_looped():
 
 def test_looped_event_fades_out_before_its_end():
     tl = _tl([{"id": "room", "t": 0.0, "asset": "r.wav", "stem": "ambience",
-               "duration": 10.0, "fade_out": 0.5}])
+               "duration": 10.0, "loop": True, "fade_out": 0.5}])
     graph, _ = build_stem_graph(tl, "ambience")
     assert "afade=t=out:st=9.500000:d=0.500000" in graph
 

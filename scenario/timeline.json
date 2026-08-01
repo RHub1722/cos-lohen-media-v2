@@ -3,295 +3,477 @@
   "total_duration": 60.0,
   "sample_rate": 48000,
   "target_lufs": -16.0,
-  "target_tp": -1.5,
-  "note": "Таймкоды из спеки 2026-08-01, разделы 5-7. Значения gain_db стартовые, выставлены по иерархии из раздела 12 и уточняются после первого замера. Блок video есть только у событий-якорей синхронизации.",
-
+  "target_tp": -2.0,
+  "note": "Таймкоды выровнены по фактическим длительностям сгенерированных реплик 2026-08-01. Речь не ускорялась и не сжималась — двигались события. Границы блоков сдвинулись против спеки: допрос 0.0-22.3 вместо 0.0-18.6, бой 22.3-47.0 вместо 18.6-44.0, лёд 47.0-60.0 без изменений. Причина: чистой речи в допросе набралось 17.0 с, и в 18.6 с она вставала без единой паузы. Значения gain_db стартовые, уточняются после замера.",
   "events": [
     {
       "id": "room_interrogation",
-      "t": 0.0, "asset": "ambience/room_interrogation.wav", "stem": "ambience",
-      "duration": 18.6, "gain_db": -24.0, "fade_in": 0.0, "fade_out": 0.3,
-      "note": "Бетонная допросная: короткая жёсткая реверберация, противоположность большому залу. Начинается без фейда — зал попадает внутрь сцены, которая идёт давно.",
-      "video": { "cue": "state", "state": "interrogation" }
+      "t": 0.0,
+      "asset": "ambience/room_interrogation.wav",
+      "stem": "ambience",
+      "duration": 22.3,
+      "loop": true,
+      "gain_db": -24.0,
+      "fade_in": 0.0,
+      "fade_out": 0.3,
+      "note": "Начинается без фейда: зал попадает внутрь сцены, которая идёт давно.",
+      "video": {
+        "cue": "state",
+        "state": "interrogation"
+      }
     },
     {
       "id": "prisoner_breathing",
-      "t": 0.0, "asset": "ambience/prisoner_breathing.wav", "stem": "ambience",
-      "duration": 18.6, "gain_db": -20.0, "pan": -0.15, "fade_in": 0.0, "fade_out": 0.3,
-      "note": "Рваное дыхание петлёй. Держит пустой стул обитаемым все восемнадцать секунд."
+      "t": 0.0,
+      "asset": "ambience/prisoner_breathing.wav",
+      "stem": "ambience",
+      "duration": 22.3,
+      "loop": true,
+      "gain_db": -20.0,
+      "pan": -0.15,
+      "fade_in": 0.0,
+      "fade_out": 0.3,
+      "note": "Держит пустой стул обитаемым все двадцать две секунды."
     },
     {
       "id": "lohen_laugh_1",
-      "t": 0.8, "asset": "voices/lohen_laugh_1.wav", "stem": "voices",
+      "t": 0.7,
+      "asset": "voices/lohen_laugh_1.wav",
+      "stem": "voices",
       "gain_db": -3.0,
-      "note": "Первое, что зал слышит от него. Лёгкий, будто над своей же шуткой."
+      "note": "Первое, что зал слышит от него."
     },
     {
       "id": "lohen_impressed",
-      "t": 1.5, "asset": "voices/lohen_impressed.wav", "stem": "voices",
+      "t": 2.9,
+      "asset": "voices/lohen_impressed.wav",
+      "stem": "voices",
       "gain_db": -3.0,
       "note": "Still awake? I'm impressed."
     },
     {
       "id": "chair_creak",
-      "t": 3.6, "asset": "sfx/chair_creak.wav", "stem": "sfx",
-      "gain_db": -14.0, "pan": -0.15
+      "t": 4.6,
+      "asset": "sfx/chair_creak.wav",
+      "stem": "sfx",
+      "gain_db": -14.0,
+      "pan": -0.15
     },
     {
       "id": "footsteps_circling_1",
-      "t": 3.8, "asset": "sfx/footsteps_slow.wav", "stem": "sfx",
-      "gain_db": -16.0, "pan": -0.25,
-      "note": "Два медленных шага, он заходит за спинку стула."
+      "t": 5.2,
+      "asset": "sfx/footsteps_slow.wav",
+      "stem": "sfx",
+      "gain_db": -16.0,
+      "pan": -0.25,
+      "note": "Заходит за спинку стула."
     },
     {
       "id": "lohen_security",
-      "t": 4.8, "asset": "voices/lohen_security.wav", "stem": "voices",
+      "t": 5.6,
+      "asset": "voices/lohen_security.wav",
+      "stem": "voices",
       "gain_db": -3.0,
-      "note": "One more time. Where's the security posted? Буднично, как по списку дел."
+      "note": "One more time. Where's the security posted? Буднично, как по списку дел. Именно эта охрана через шестнадцать секунд войдёт в дверь."
     },
     {
       "id": "prisoner_refuse",
-      "t": 7.3, "asset": "voices/prisoner_refuse.wav", "stem": "voices",
-      "gain_db": -8.0, "pan": -0.15,
-      "note": "Одна сломанная реплика. Нужна не для сюжета, а чтобы стул перестал быть мебелью."
+      "t": 9.2,
+      "asset": "voices/prisoner_refuse.wav",
+      "stem": "voices",
+      "gain_db": -8.0,
+      "pan": -0.15
     },
     {
       "id": "lohen_tongue",
-      "t": 8.3, "asset": "voices/lohen_tongue.wav", "stem": "voices",
+      "t": 11.8,
+      "asset": "voices/lohen_tongue.wav",
+      "stem": "voices",
       "gain_db": -3.0,
       "note": "Oh. Cat got your tongue? Канон трейлера. Наклон вплотную к стулу."
     },
     {
       "id": "footsteps_circling_2",
-      "t": 9.9, "asset": "sfx/footsteps_slow.wav", "stem": "sfx",
-      "gain_db": -16.0, "pan": 0.25
+      "t": 13.6,
+      "asset": "sfx/footsteps_slow.wav",
+      "stem": "sfx",
+      "gain_db": -16.0,
+      "pan": 0.25
     },
     {
       "id": "lohen_game",
-      "t": 10.5, "asset": "voices/lohen_game.wav", "stem": "voices",
+      "t": 14.1,
+      "asset": "voices/lohen_game.wav",
+      "stem": "voices",
       "gain_db": -3.0,
       "note": "Then let's play a little game. Канон трейлера."
     },
     {
-      "id": "revolver_cylinder_spin",
-      "t": 12.4, "asset": "sfx/revolver_cylinder_spin.wav", "stem": "sfx",
-      "gain_db": -5.0,
-      "note": "Главный опознавательный звук блока. Револьвер поднят на уровень головы, на виду у зала.",
-      "video": { "cue": "tighten", "intensity": 0.4 }
+      "id": "music_tick",
+      "t": 16.2,
+      "asset": "music/music_tick.wav",
+      "stem": "music",
+      "duration": 6.1,
+      "gain_db": -18.0,
+      "fade_in": 0.4,
+      "fade_out": 0.2,
+      "note": "Входит вместе с барабаном, умирает на щелчке."
     },
     {
-      "id": "music_tick",
-      "t": 12.4, "asset": "music/music_tick.wav", "stem": "music",
-      "duration": 6.2, "gain_db": -18.0, "fade_in": 0.4, "fade_out": 0.2,
-      "note": "Низкая пульсация в ровном темпе, не эффект часов. Входит с барабаном, умирает на щелчке."
+      "id": "revolver_cylinder_spin",
+      "t": 16.2,
+      "asset": "sfx/revolver_cylinder_spin.wav",
+      "stem": "sfx",
+      "gain_db": -5.0,
+      "note": "Револьвер поднят на уровень головы, на виду у зала.",
+      "video": {
+        "cue": "tighten",
+        "intensity": 0.4
+      }
     },
     {
       "id": "lohen_chambers",
-      "t": 13.8, "asset": "voices/lohen_chambers.wav", "stem": "voices",
+      "t": 16.3,
+      "asset": "voices/lohen_chambers.wav",
+      "stem": "voices",
       "gain_db": -3.0,
-      "note": "Six chambers. One bullet. Канон трейлера."
+      "note": "Six chambers. One bullet. Говорит поверх прокрута барабана — он не ждёт, пока тот остановится."
     },
     {
       "id": "lohen_count",
-      "t": 15.6, "asset": "voices/lohen_count.wav", "stem": "voices",
+      "t": 19.2,
+      "asset": "voices/lohen_count.wav",
+      "stem": "voices",
       "gain_db": -3.0,
-      "note": "Three... two... Воздух между словами обязателен."
+      "note": "Three... two..."
     },
     {
       "id": "revolver_hammer_cock",
-      "t": 17.8, "asset": "sfx/revolver_hammer_cock.wav", "stem": "sfx",
+      "t": 21.15,
+      "asset": "sfx/revolver_hammer_cock.wav",
+      "stem": "sfx",
       "gain_db": -7.0
     },
     {
       "id": "revolver_dry_click",
-      "t": 18.0, "asset": "sfx/revolver_dry_click.wav", "stem": "sfx",
+      "t": 21.7,
+      "asset": "sfx/revolver_dry_click.wav",
+      "stem": "sfx",
       "gain_db": -4.0,
-      "note": "Осечка. Он жмёт спуск, глядя в зал. Громкий не уровнем, а контрастом с тишиной вокруг."
+      "note": "Осечка. Жмёт спуск, глядя в зал. Громкий не уровнем, а контрастом с тишиной."
     },
     {
       "id": "door_breach",
-      "t": 18.6, "asset": "sfx/door_breach.wav", "stem": "sfx",
-      "gain_db": -3.0,
-      "note": "Второй по силе транзиент номера. Ниже, чем хочется: иначе допрос придётся утопить.",
-      "video": { "cue": "state", "state": "combat" }
+      "t": 22.3,
+      "asset": "sfx/door_breach.wav",
+      "stem": "sfx",
+      "gain_db": -1.5,
+      "note": "Через 0.6 с после осечки. Два удара подряд читаются лучше, чем один слипшийся.",
+      "video": {
+        "cue": "state",
+        "state": "combat"
+      }
     },
     {
       "id": "room_after_breach",
-      "t": 18.6, "asset": "ambience/room_interrogation.wav", "stem": "ambience",
-      "duration": 28.4, "gain_db": -26.0, "fade_in": 0.05, "fade_out": 0.2,
-      "note": "Та же комната продолжает звучать под боем, тише. Обрывается на ударе копья."
+      "t": 22.3,
+      "asset": "ambience/room_interrogation.wav",
+      "stem": "ambience",
+      "duration": 24.7,
+      "loop": true,
+      "gain_db": -26.0,
+      "fade_in": 0.05,
+      "fade_out": 0.2,
+      "note": "Та же комната под боем, тише. Обрывается на ударе копья."
     },
     {
       "id": "boots_rush",
-      "t": 18.75, "asset": "sfx/boots_rush.wav", "stem": "sfx",
-      "gain_db": -9.0
+      "t": 22.45,
+      "asset": "sfx/boots_rush.wav",
+      "stem": "sfx",
+      "gain_db": -7.0
     },
     {
       "id": "guard_shout",
-      "t": 18.9, "asset": "voices/guard_shout.wav", "stem": "voices",
-      "gain_db": -6.0, "pan": 0.3,
-      "note": "Одной фразой: вошли враги и пришли за ним."
+      "t": 22.7,
+      "asset": "voices/guard_shout.wav",
+      "stem": "voices",
+      "gain_db": -4.5,
+      "pan": 0.3
     },
     {
       "id": "weapon_ready_clatter",
-      "t": 19.2, "asset": "sfx/weapon_ready_clatter.wav", "stem": "sfx",
-      "gain_db": -13.0, "pan": 0.35
+      "t": 23.1,
+      "asset": "sfx/weapon_ready_clatter.wav",
+      "stem": "sfx",
+      "gain_db": -11.0,
+      "pan": 0.35
     },
     {
       "id": "lohen_laugh_2",
-      "t": 19.6, "asset": "voices/lohen_laugh_2.wav", "stem": "voices",
+      "t": 24.3,
+      "asset": "voices/lohen_laugh_2.wav",
+      "stem": "voices",
       "gain_db": -3.0,
-      "note": "Другой смех: ниже, голоднее. Скука переключается в азарт."
+      "note": "Ниже и голоднее первого. Скука переключается в азарт."
     },
     {
       "id": "lohen_finally",
-      "t": 20.0, "asset": "voices/lohen_finally.wav", "stem": "voices",
+      "t": 26.1,
+      "asset": "voices/lohen_finally.wav",
+      "stem": "voices",
       "gain_db": -3.0,
       "note": "Finally. Выдох, не крик."
     },
     {
       "id": "music_combat",
-      "t": 20.6, "asset": "music/music_combat.wav", "stem": "music",
-      "duration": 26.4, "gain_db": -14.0, "fade_in": 0.05, "fade_out": 0.12,
-      "note": "Врывается, полный уровень к 0:22, редеет с 0:36.2, обрывается на ударе копья в 0:47."
+      "t": 26.9,
+      "asset": "music/music_combat.wav",
+      "stem": "music",
+      "duration": 20.1,
+      "gain_db": -10.0,
+      "fade_in": 0.05,
+      "fade_out": 0.12,
+      "note": "Врывается сразу на полном уровне, обрывается на ударе копья в 47.0."
     },
     {
       "id": "spear_grab",
-      "t": 20.6, "asset": "sfx/spear_grab.wav", "stem": "sfx",
-      "gain_db": -9.0
+      "t": 26.9,
+      "asset": "sfx/spear_grab.wav",
+      "stem": "sfx",
+      "gain_db": -7.5
     },
     {
       "id": "burst1_whoosh",
-      "t": 22.2, "asset": "sfx/spear_whoosh_fast.wav", "stem": "sfx",
-      "gain_db": -7.0, "pan": -0.25,
-      "video": { "cue": "flash", "intensity": 0.6 }
+      "t": 28.5,
+      "asset": "sfx/spear_whoosh_fast.wav",
+      "stem": "sfx",
+      "gain_db": -5.5,
+      "pan": -0.25,
+      "video": {
+        "cue": "flash",
+        "intensity": 0.6
+      }
     },
     {
       "id": "burst1_impact",
-      "t": 22.5, "asset": "sfx/spear_staff_impact.wav", "stem": "sfx",
-      "gain_db": -5.0, "pan": 0.15
+      "t": 28.8,
+      "asset": "sfx/spear_staff_impact.wav",
+      "stem": "sfx",
+      "gain_db": -3.0,
+      "pan": 0.15
     },
     {
       "id": "lohen_feel",
-      "t": 25.2, "asset": "voices/lohen_feel.wav", "stem": "voices",
+      "t": 31.2,
+      "asset": "voices/lohen_feel.wav",
+      "stem": "voices",
       "gain_db": -3.0,
-      "note": "Didn't even feel it. Канонная реплика персонажа на полученный урон."
+      "note": "Didn't even feel it. Канонная реплика на полученный урон."
     },
     {
       "id": "burst2_whoosh",
-      "t": 27.6, "asset": "sfx/spear_whoosh_heavy.wav", "stem": "sfx",
-      "gain_db": -6.0,
-      "video": { "cue": "flash", "intensity": 0.7 }
+      "t": 33.4,
+      "asset": "sfx/spear_whoosh_heavy.wav",
+      "stem": "sfx",
+      "gain_db": -4.5,
+      "video": {
+        "cue": "flash",
+        "intensity": 0.7
+      }
     },
     {
       "id": "burst2_impact",
-      "t": 28.05, "asset": "sfx/spear_armor_impact.wav", "stem": "sfx",
-      "gain_db": -4.0
+      "t": 33.85,
+      "asset": "sfx/spear_armor_impact.wav",
+      "stem": "sfx",
+      "gain_db": -2.0
     },
     {
       "id": "lohen_thatall",
-      "t": 31.2, "asset": "voices/lohen_thatall.wav", "stem": "voices",
+      "t": 36.4,
+      "asset": "voices/lohen_thatall.wav",
+      "stem": "voices",
       "gain_db": -3.0,
       "note": "Is that all you brought? Скучающе."
     },
     {
+      "id": "burst3_whoosh",
+      "t": 37.6,
+      "asset": "sfx/spear_whoosh_heavy.wav",
+      "stem": "sfx",
+      "gain_db": -4.5,
+      "pan": -0.15
+    },
+    {
       "id": "burst3_impact_a",
-      "t": 33.6, "asset": "sfx/spear_armor_impact.wav", "stem": "sfx",
-      "gain_db": -4.0, "pan": -0.2,
-      "video": { "cue": "flash", "intensity": 0.9 }
+      "t": 38.6,
+      "asset": "sfx/spear_armor_impact.wav",
+      "stem": "sfx",
+      "gain_db": -2.0,
+      "pan": -0.2,
+      "video": {
+        "cue": "flash",
+        "intensity": 0.9
+      }
     },
     {
       "id": "burst3_impact_b",
-      "t": 34.2, "asset": "sfx/spear_armor_impact.wav", "stem": "sfx",
-      "gain_db": -4.0, "pan": 0.2
+      "t": 39.2,
+      "asset": "sfx/spear_armor_impact.wav",
+      "stem": "sfx",
+      "gain_db": -2.0,
+      "pan": 0.2
     },
     {
       "id": "lohen_really",
-      "t": 38.6, "asset": "voices/lohen_really.wav", "stem": "voices",
+      "t": 41.6,
+      "asset": "voices/lohen_really.wav",
+      "stem": "voices",
       "gain_db": -3.0,
-      "note": "...Really? Разочарование: кончилось слишком быстро."
+      "note": "...Really? Кончилось слишком быстро."
     },
     {
       "id": "hit_on_lohen",
-      "t": 40.2, "asset": "sfx/hit_on_lohen.wav", "stem": "sfx",
-      "gain_db": -3.0,
-      "note": "Самое ценное место номера. Тупой корпусной звук, без крика и стона. Голова дёргается вбок, пауза, смех.",
-      "video": { "cue": "whiteflash", "intensity": 1.0 }
+      "t": 42.8,
+      "asset": "sfx/hit_on_lohen.wav",
+      "stem": "sfx",
+      "gain_db": -1.5,
+      "note": "Самое ценное место номера. Голова дёргается вбок, пауза, смех.",
+      "video": {
+        "cue": "whiteflash",
+        "intensity": 1.0
+      }
     },
     {
       "id": "lohen_laugh_3",
-      "t": 41.0, "asset": "voices/lohen_laugh_3.wav", "stem": "voices",
+      "t": 43.6,
+      "asset": "voices/lohen_laugh_3.wav",
+      "stem": "voices",
       "gain_db": -2.0,
-      "note": "Самый важный из трёх смехов: ответ на полученный удар."
+      "note": "Ответ на полученный удар. Самый важный из трёх смехов."
     },
     {
       "id": "burst4_whoosh",
-      "t": 41.6, "asset": "sfx/spear_whoosh_fast.wav", "stem": "sfx",
-      "gain_db": -7.0, "pan": 0.25,
-      "video": { "cue": "flash", "intensity": 0.8 }
+      "t": 44.6,
+      "asset": "sfx/spear_whoosh_fast.wav",
+      "stem": "sfx",
+      "gain_db": -5.5,
+      "pan": 0.25,
+      "video": {
+        "cue": "flash",
+        "intensity": 0.8
+      }
     },
     {
       "id": "burst4_impact",
-      "t": 41.9, "asset": "sfx/spear_staff_impact.wav", "stem": "sfx",
-      "gain_db": -5.0
+      "t": 44.9,
+      "asset": "sfx/spear_staff_impact.wav",
+      "stem": "sfx",
+      "gain_db": -3.0
     },
     {
       "id": "retreat_shuffle",
-      "t": 42.4, "asset": "sfx/retreat_shuffle.wav", "stem": "sfx",
+      "t": 45.5,
+      "asset": "sfx/retreat_shuffle.wav",
+      "stem": "sfx",
+      "duration": 1.7,
       "gain_db": -15.0,
-      "video": { "cue": "drain", "intensity": 0.5 }
-    },
-    {
-      "id": "weapon_dropped",
-      "t": 43.0, "asset": "sfx/weapon_dropped.wav", "stem": "sfx",
-      "gain_db": -13.0, "pan": -0.4
+      "fade_out": 0.5,
+      "video": {
+        "cue": "drain",
+        "intensity": 0.5
+      }
     },
     {
       "id": "spear_raise_air",
-      "t": 46.5, "asset": "sfx/spear_raise_air.wav", "stem": "sfx",
+      "t": 45.9,
+      "asset": "sfx/spear_raise_air.wav",
+      "stem": "sfx",
+      "duration": 1.1,
       "gain_db": -11.0,
-      "note": "Замах. Подъём воздуха, слышимая подготовка к главному удару."
+      "fade_out": 0.05,
+      "note": "Обрезан так, чтобы пик подъёма воздуха пришёлся ровно на удар копья в 47.0."
+    },
+    {
+      "id": "weapon_dropped",
+      "t": 46.0,
+      "asset": "sfx/weapon_dropped.wav",
+      "stem": "sfx",
+      "duration": 1.2,
+      "gain_db": -13.0,
+      "pan": -0.4,
+      "fade_out": 0.3
     },
     {
       "id": "ice_burst",
-      "t": 47.0, "asset": "sfx/ice_burst.wav", "stem": "sfx",
+      "t": 47.0,
+      "asset": "sfx/ice_burst.wav",
+      "stem": "sfx",
       "gain_db": -2.0,
-      "note": "Копьё в пол. Музыка обрывается ровно здесь: красная комната кончается, начинает работать лёд.",
-      "video": { "cue": "state", "state": "ice" }
+      "note": "Копьё в пол. Музыка обрывается ровно здесь.",
+      "video": {
+        "cue": "state",
+        "state": "ice"
+      }
     },
     {
       "id": "freeze_spreading",
-      "t": 47.4, "asset": "sfx/freeze_spreading.wav", "stem": "sfx",
+      "t": 47.4,
+      "asset": "sfx/freeze_spreading.wav",
+      "stem": "sfx",
       "gain_db": -9.0
     },
     {
       "id": "frozen_room",
-      "t": 47.4, "asset": "ambience/frozen_room.wav", "stem": "ambience",
-      "duration": 12.6, "gain_db": -22.0, "fade_in": 0.2, "fade_out": 2.5
+      "t": 47.4,
+      "asset": "ambience/frozen_room.wav",
+      "stem": "ambience",
+      "duration": 12.6,
+      "loop": true,
+      "gain_db": -22.0,
+      "fade_in": 0.2,
+      "fade_out": 2.5
     },
     {
       "id": "music_ice_drone",
-      "t": 47.4, "asset": "music/music_ice_drone.wav", "stem": "music",
-      "duration": 12.6, "gain_db": -20.0, "fade_in": 0.5, "fade_out": 3.0,
+      "t": 47.4,
+      "asset": "music/music_ice_drone.wav",
+      "stem": "music",
+      "duration": 12.6,
+      "gain_db": -20.0,
+      "fade_in": 0.5,
+      "fade_out": 3.0,
       "note": "Без низкой холодной подложки последние десять секунд провалятся в пустоту."
     },
     {
       "id": "lohen_final",
-      "t": 51.5, "asset": "voices/lohen_final.wav", "stem": "voices",
+      "t": 51.0,
+      "asset": "voices/lohen_final.wav",
+      "stem": "voices",
       "gain_db": -2.0,
-      "note": "They asked for a masterpiece. Consider it finished. Пауза между предложениями обязательна."
+      "note": "They asked for a masterpiece. Consider it finished. Кончается на 54.44, до удара остаётся 0.76 с тишины."
     },
     {
       "id": "ice_final_impact",
-      "t": 55.2, "asset": "sfx/ice_final_impact.wav", "stem": "sfx",
+      "t": 55.2,
+      "asset": "sfx/ice_final_impact.wav",
+      "stem": "sfx",
       "gain_db": 0.0,
-      "note": "Главный акцент всего номера. Восклицательный знак к слову finished.",
-      "video": { "cue": "freeze", "intensity": 1.0 }
+      "note": "Главный акцент номера. Восклицательный знак к слову finished.",
+      "video": {
+        "cue": "freeze",
+        "intensity": 1.0
+      }
     },
     {
       "id": "ice_resonance_tail",
-      "t": 55.3, "asset": "sfx/ice_resonance_tail.wav", "stem": "sfx",
-      "duration": 4.7, "gain_db": -5.0, "fade_out": 1.8,
+      "t": 55.3,
+      "asset": "sfx/ice_resonance_tail.wav",
+      "stem": "sfx",
+      "duration": 4.7,
+      "gain_db": -5.0,
+      "fade_out": 1.8,
       "note": "Обрезан до 4.7 с, чтобы кончиться ровно на 60.000, а не быть срезанным по границе."
     }
   ]

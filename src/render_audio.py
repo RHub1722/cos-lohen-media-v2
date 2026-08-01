@@ -31,7 +31,7 @@ def _run(cmd: list[str], what: str) -> str:
 
 def render_stem(tl: Timeline, stem: str, assets_root: Path, out_path: Path) -> list[str]:
     graph, inputs = build_stem_graph(tl, stem)
-    resolved = [GraphInput(path=str(assets_root / i.path), loop=i.loop) for i in inputs]
+    resolved = [GraphInput(path=str(assets_root / i.path), loop=i.loop, duration=i.duration) for i in inputs]
 
     cmd = ["ffmpeg", "-y", "-hide_banner", "-nostats", "-loglevel", "error"]
     cmd += ffmpeg_input_args(resolved)

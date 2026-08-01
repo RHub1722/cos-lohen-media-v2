@@ -15,10 +15,16 @@ from src.models import Event, Timeline
 
 @dataclass(frozen=True)
 class GraphInput:
-    """Один вход ffmpeg: -i <path>, при loop=True перед ним идёт -stream_loop -1."""
+    """Один вход ffmpeg.
+
+    При loop=True перед путём идут -stream_loop -1 и -t: ограничение по времени
+    обязательно, иначе бесконечный вход не отдаёт EOF и ffmpeg висит после того,
+    как всё уже сведено.
+    """
 
     path: str
     loop: bool
+    duration: float | None = None
 
 
 def pan_gains(pan: float) -> tuple[float, float]:
@@ -33,8 +39,6 @@ def _event_chain(index: int, ev: Event, sample_rate: int) -> str:
         f"aformat=sample_fmts=fltp:sample_rates={sample_rate}:channel_layouts=stereo",
     ]
 
-    # Обрезка нужна только петлям: -stream_loop -1 даёт бесконечный поток,
-    # и без atrim граф никогда не закончится.
     if ev.duration is not None:
         steps.append(f"atrim=0:{ev.duration:.6f}")
         steps.append("asetpts=PTS-STARTPTS")
@@ -74,7 +78,9 @@ def build_stem_graph(tl: Timeline, stem: str) -> tuple[str, list[GraphInput]]:
         )
         return graph, []
 
-    inputs = [GraphInput(path=ev.asset, loop=ev.duration is not None) for ev in events]
+    inputs = [
+        GraphInput(path=ev.asset, loop=ev.loop, duration=ev.duration) for ev in events
+    ]
     chains = [_event_chain(i, ev, sr) for i, ev in enumerate(events)]
     labels = "".join(f"[e{i}]" for i in range(len(events)))
 
@@ -89,6 +95,6 @@ def ffmpeg_input_args(inputs: list[GraphInput]) -> list[str]:
     args: list[str] = []
     for item in inputs:
         if item.loop:
-            args += ["-stream_loop", "-1"]
+            args += ["-stream_loop", "-1", "-t", f"{item.duration:.6f}"]
         args += ["-i", item.path]
     return args

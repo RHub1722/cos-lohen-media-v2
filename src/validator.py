@@ -49,12 +49,20 @@ def check_timeline(tl: Timeline, probe_fn: Callable[[str], float]) -> list[Probl
                 f"{ev.id}: кончается на {end:.3f}, будет обрезан по {tl.total_duration:.3f}",
             ))
 
-        if ev.duration is not None and ev.duration > source_len + 1e-6:
-            problems.append(Problem(
-                "warning",
-                f"{ev.id}: duration={ev.duration:.3f} длиннее файла {source_len:.3f}, "
-                f"источник пойдёт петлёй",
-            ))
+        if ev.duration is not None:
+            longer_than_source = ev.duration > source_len + 1e-6
+            if longer_than_source and not ev.loop:
+                problems.append(Problem(
+                    "error",
+                    f"{ev.id}: duration={ev.duration:.3f} длиннее файла {source_len:.3f}, "
+                    f"а loop не включён — событие молча выйдет короче заявленного",
+                ))
+            if ev.loop and not longer_than_source:
+                problems.append(Problem(
+                    "warning",
+                    f"{ev.id}: loop включён, но duration={ev.duration:.3f} не длиннее "
+                    f"файла {source_len:.3f} — петля не нужна",
+                ))
 
     used = {e.stem for e in tl.events}
     for stem in STEMS:
