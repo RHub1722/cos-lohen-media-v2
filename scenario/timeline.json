@@ -167,7 +167,7 @@
       "t": 22.3,
       "asset": "sfx/door_breach.wav",
       "stem": "sfx",
-      "gain_db": -1.5,
+      "gain_db": -6.0,
       "note": "Через 0.6 с после осечки. Два удара подряд читаются лучше, чем один слипшийся.",
       "video": {
         "cue": "state",
@@ -248,7 +248,7 @@
       "t": 28.5,
       "asset": "sfx/spear_whoosh_fast.wav",
       "stem": "sfx",
-      "gain_db": -5.5,
+      "gain_db": -10.5,
       "pan": -0.25,
       "video": {
         "cue": "flash",
@@ -260,7 +260,7 @@
       "t": 28.8,
       "asset": "sfx/spear_staff_impact.wav",
       "stem": "sfx",
-      "gain_db": -3.0,
+      "gain_db": -8.0,
       "pan": 0.15
     },
     {
@@ -276,7 +276,7 @@
       "t": 33.4,
       "asset": "sfx/spear_whoosh_heavy.wav",
       "stem": "sfx",
-      "gain_db": -4.5,
+      "gain_db": -9.5,
       "video": {
         "cue": "flash",
         "intensity": 0.7
@@ -287,7 +287,7 @@
       "t": 33.85,
       "asset": "sfx/spear_armor_impact.wav",
       "stem": "sfx",
-      "gain_db": -2.0
+      "gain_db": -8.5
     },
     {
       "id": "lohen_thatall",
@@ -302,7 +302,7 @@
       "t": 37.6,
       "asset": "sfx/spear_whoosh_heavy.wav",
       "stem": "sfx",
-      "gain_db": -4.5,
+      "gain_db": -9.5,
       "pan": -0.15
     },
     {
@@ -310,7 +310,7 @@
       "t": 38.6,
       "asset": "sfx/spear_armor_impact.wav",
       "stem": "sfx",
-      "gain_db": -2.0,
+      "gain_db": -8.5,
       "pan": -0.2,
       "video": {
         "cue": "flash",
@@ -322,7 +322,7 @@
       "t": 39.2,
       "asset": "sfx/spear_armor_impact.wav",
       "stem": "sfx",
-      "gain_db": -2.0,
+      "gain_db": -8.5,
       "pan": 0.2
     },
     {
@@ -338,7 +338,7 @@
       "t": 42.8,
       "asset": "sfx/hit_on_lohen.wav",
       "stem": "sfx",
-      "gain_db": -1.5,
+      "gain_db": -5.5,
       "note": "Самое ценное место номера. Голова дёргается вбок, пауза, смех.",
       "video": {
         "cue": "whiteflash",
@@ -358,7 +358,7 @@
       "t": 44.6,
       "asset": "sfx/spear_whoosh_fast.wav",
       "stem": "sfx",
-      "gain_db": -5.5,
+      "gain_db": -10.5,
       "pan": 0.25,
       "video": {
         "cue": "flash",
@@ -370,7 +370,7 @@
       "t": 44.9,
       "asset": "sfx/spear_staff_impact.wav",
       "stem": "sfx",
-      "gain_db": -3.0
+      "gain_db": -8.0
     },
     {
       "id": "retreat_shuffle",
@@ -410,7 +410,7 @@
       "t": 47.0,
       "asset": "sfx/ice_burst.wav",
       "stem": "sfx",
-      "gain_db": -2.0,
+      "gain_db": -3.5,
       "note": "Копьё в пол. Музыка обрывается ровно здесь.",
       "video": {
         "cue": "state",
