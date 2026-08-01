@@ -3,6 +3,7 @@
 Номер на 60 секунд: допрос с пустым стулом, вторжение охраны, бой из четырёх
 вспышек, ледяной финал. Один исполнитель, все голоса записаны заранее.
 
+- **Сценарий номера** — [scenario/SCENARIO_V2_60S.md](scenario/SCENARIO_V2_60S.md) — фактические таймкоды, все реплики, движения, реквизит
 - **Проектное решение** — [docs/superpowers/specs/2026-08-01-lohen-interrogation-scene-design.md](docs/superpowers/specs/2026-08-01-lohen-interrogation-scene-design.md)
 - **План реализации** — [docs/superpowers/plans/2026-08-01-lohen-v2-implementation.md](docs/superpowers/plans/2026-08-01-lohen-v2-implementation.md)
 - **Точки состояния** — [docs/status/INDEX.md](docs/status/INDEX.md)
