@@ -36,6 +36,12 @@
       "note": "Держит пустой стул обитаемым все двадцать две секунды."
     },
     {
+      "id": "music_interrogation",
+      "t": 0.0, "asset": "music/music_interrogation.wav", "stem": "music",
+      "duration": 16.2, "gain_db": -26.0, "fade_in": 1.5, "fade_out": 0.8,
+      "note": "Подложка допроса на пороге слышимости. Уходит, когда входит тик."
+    },
+    {
       "id": "lohen_laugh_1",
       "t": 0.7,
       "asset": "voices/lohen_laugh_1.wav",
@@ -173,6 +179,12 @@
         "cue": "state",
         "state": "combat"
       }
+    },
+    {
+      "id": "music_riser",
+      "t": 22.3, "asset": "music/music_riser.wav", "stem": "music",
+      "duration": 4.6, "gain_db": -13.0, "fade_in": 0.05, "fade_out": 0.05,
+      "note": "От вышибленной двери до дропа. Кончается ровно на 26.9, где входит боевой слой."
     },
     {
       "id": "room_after_breach",
