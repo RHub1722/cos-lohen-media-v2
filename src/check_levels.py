@@ -1,0 +1,58 @@
+"""Пики акцентов в предмастере.
+
+Замерять надо именно предмастер: в мастере лимитер нормализации сводит все
+верхние транзиенты в один потолок, и иерархии по нему не видно.
+"""
+
+from __future__ import annotations
+
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+for stream in (sys.stdout, sys.stderr):
+    if hasattr(stream, "reconfigure"):
+        stream.reconfigure(encoding="utf-8", errors="replace")
+
+ROOT = Path(__file__).resolve().parents[1]
+PREMASTER = ROOT / "output/premaster_v2.wav"
+
+ACCENTS = [
+    ("дверь", 22.3, 23.2),
+    ("раскрутка", 25.5, 26.9),
+    ("вспышка 1", 28.4, 29.9),
+    ("вспышка 3", 38.5, 39.9),
+    ("удар по нему", 42.7, 44.0),
+    ("копьё в пол", 46.9, 47.8),
+    ("ФИНАЛЬНЫЙ УДАР", 55.1, 56.3),
+]
+
+
+def peak(start: float, end: float) -> float:
+    out = subprocess.run([
+        "ffmpeg", "-hide_banner", "-nostats", "-ss", f"{start}", "-to", f"{end}",
+        "-i", str(PREMASTER), "-af", "volumedetect", "-f", "null", "-",
+    ], capture_output=True, text=True).stderr
+    m = re.search(r"max_volume: (-?[\d.]+)", out)
+    return float(m.group(1)) if m else 0.0
+
+
+def main() -> int:
+    if not PREMASTER.is_file():
+        print(f"нет файла {PREMASTER} — сначала собери мастер")
+        return 1
+    rows = [(label, peak(a, b)) for label, a, b in ACCENTS]
+    for label, value in rows:
+        print(f"  {label:18} {value:6.1f} dB")
+    loudest = max(rows, key=lambda r: r[1])
+    print()
+    if loudest[0] != "ФИНАЛЬНЫЙ УДАР":
+        print(f"  ВНИМАНИЕ: главный акцент перекрыт — громче всех «{loudest[0]}».")
+        return 1
+    print("  Иерархия в порядке: финальный удар — абсолютный пик.")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
