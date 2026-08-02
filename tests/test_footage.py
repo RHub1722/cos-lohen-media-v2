@@ -142,10 +142,24 @@ def test_the_real_shot_list_resolves_against_the_real_scenario():
     """Опечатка в имени якоря должна падать здесь, а не на рендере через
     восемь минут."""
     bases, fx = resolve(*load_shots("scenario/shots.json"), _real_plan())
-    assert [b.anchor for b in bases] == ["interrogation", "combat", "ice"]
+    assert [b.anchor for b in bases] == [
+        "interrogation", "combat", "burst1_whoosh", "ice"]
     assert len(fx) == 5
     assert all(f.t >= 0 for f in fx)
     assert bases[-1].end == 60.0
+
+
+def test_the_breach_gets_its_own_shot_and_it_is_long_enough_to_read():
+    """22.30-28.50 — кадр, из которого зал узнаёт, что в комнату вломились.
+
+    Если его слить с боевым фоном, пролом снова превратится во вспышку, а это
+    единственное место номера, где зрителю нужно объяснение, а не атмосфера.
+    """
+    bases, _ = resolve(*load_shots("scenario/shots.json"), _real_plan())
+    breach = next(b for b in bases if b.anchor == "combat")
+    assert breach.t == 22.3
+    assert breach.end == 28.5
+    assert breach.end - breach.t >= 4.0
 
 
 # --- композиция --------------------------------------------------------------
