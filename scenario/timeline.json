@@ -47,6 +47,7 @@
       "asset": "voices/lohen_laugh_1.wav",
       "stem": "voices",
       "gain_db": -3.0,
+      "text": "(смех)",
       "note": "Первое, что зал слышит от него."
     },
     {
@@ -55,6 +56,7 @@
       "asset": "voices/lohen_impressed.wav",
       "stem": "voices",
       "gain_db": -3.0,
+      "text": "Still awake? I'm impressed.",
       "note": "Still awake? I'm impressed."
     },
     {
@@ -80,6 +82,7 @@
       "asset": "voices/lohen_security.wav",
       "stem": "voices",
       "gain_db": -3.0,
+      "text": "One more time. Where's the security posted?",
       "note": "One more time. Where's the security posted? Буднично, как по списку дел. Именно эта охрана через шестнадцать секунд войдёт в дверь."
     },
     {
@@ -88,7 +91,8 @@
       "asset": "voices/prisoner_refuse.wav",
       "stem": "voices",
       "gain_db": -8.0,
-      "pan": -0.15
+      "pan": -0.15,
+      "text": "I can't— they'll kill me—"
     },
     {
       "id": "lohen_tongue",
@@ -96,6 +100,7 @@
       "asset": "voices/lohen_tongue.wav",
       "stem": "voices",
       "gain_db": -3.0,
+      "text": "Oh. Cat got your tongue?",
       "note": "Oh. Cat got your tongue? Канон трейлера. Наклон вплотную к стулу."
     },
     {
@@ -112,6 +117,7 @@
       "asset": "voices/lohen_game.wav",
       "stem": "voices",
       "gain_db": -3.0,
+      "text": "Then let's play a little game.",
       "note": "Then let's play a little game. Канон трейлера."
     },
     {
@@ -143,6 +149,7 @@
       "asset": "voices/lohen_chambers.wav",
       "stem": "voices",
       "gain_db": -3.0,
+      "text": "Six chambers. One bullet.",
       "note": "Six chambers. One bullet. Говорит поверх прокрута барабана — он не ждёт, пока тот остановится."
     },
     {
@@ -151,6 +158,7 @@
       "asset": "voices/lohen_count.wav",
       "stem": "voices",
       "gain_db": -3.0,
+      "text": "Three... two...",
       "note": "Three... two..."
     },
     {
@@ -211,7 +219,8 @@
       "asset": "voices/guard_shout.wav",
       "stem": "voices",
       "gain_db": -4.5,
-      "pan": 0.3
+      "pan": 0.3,
+      "text": "There! Take him!"
     },
     {
       "id": "weapon_ready_clatter",
@@ -227,6 +236,7 @@
       "asset": "voices/lohen_laugh_2.wav",
       "stem": "voices",
       "gain_db": -3.0,
+      "text": "(смех, голоднее)",
       "note": "Ниже и голоднее первого. Скука переключается в азарт."
     },
     {
@@ -235,6 +245,7 @@
       "asset": "voices/lohen_finally.wav",
       "stem": "voices",
       "gain_db": -3.0,
+      "text": "Finally.",
       "note": "Finally. Выдох, не крик."
     },
     {
@@ -281,6 +292,7 @@
       "asset": "voices/lohen_feel.wav",
       "stem": "voices",
       "gain_db": -3.0,
+      "text": "Didn't even feel it.",
       "note": "Didn't even feel it. Канонная реплика на полученный урон."
     },
     {
@@ -307,6 +319,7 @@
       "asset": "voices/lohen_thatall.wav",
       "stem": "voices",
       "gain_db": -3.0,
+      "text": "Is that all you brought?",
       "note": "Is that all you brought? Скучающе."
     },
     {
@@ -343,6 +356,7 @@
       "asset": "voices/lohen_really.wav",
       "stem": "voices",
       "gain_db": -3.0,
+      "text": "...Really?",
       "note": "...Really? Кончилось слишком быстро."
     },
     {
@@ -363,6 +377,7 @@
       "asset": "voices/lohen_laugh_3.wav",
       "stem": "voices",
       "gain_db": -2.0,
+      "text": "(смех после удара)",
       "note": "Ответ на полученный удар. Самый важный из трёх смехов."
     },
     {
@@ -464,6 +479,7 @@
       "asset": "voices/lohen_final.wav",
       "stem": "voices",
       "gain_db": -2.0,
+      "text": "They asked for a masterpiece. Consider it finished.",
       "note": "They asked for a masterpiece. Consider it finished. При новой длительности 3.84 с (голос Lo Mod v2, см. adde184) кончается на 54.44, до удара остаётся 0.76 с тишины. t сдвинут с 51.0: старое значение било в 54.84, оставляя только 0.36 с — ниже требуемых 0.7 с паузы перед главным акцентом."
     },
     {

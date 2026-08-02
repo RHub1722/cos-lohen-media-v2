@@ -8,6 +8,7 @@
 *.md    text eol=lf
 *.json  text eol=lf
 *.txt   text eol=lf
+*.html  text eol=lf
 
 # build.ps1 хранится с UTF-8 BOM: без него Windows PowerShell 5.1 читает файл
 # как ANSI, ломает русские строки и не может его разобрать. Отключаем любые

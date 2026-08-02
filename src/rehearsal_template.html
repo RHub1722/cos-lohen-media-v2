@@ -1,0 +1,658 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Репетиция — Лоэн v2</title>
+<style>
+  :root {
+    --bg: #08080b;
+    --panel: #15151c;
+    --panel-border: #24242f;
+    --text: #f2f2f5;
+    --muted: #8b8b98;
+    --accent: #5fd4ff;
+    --accent-rgb: 95, 212, 255;
+    --speed-c: #ffb020;
+    --power-c: #ff4d4f;
+    --line-c: #ffe27a;
+  }
+  /* Акцент страницы плывёт вслед за текущей сценой — тем же якорям,
+     что видеорендерер, поэтому цвет никогда не разойдётся со смыслом. */
+  body[data-scene="interrogation"] { --accent: #5fd4ff; --accent-rgb: 95, 212, 255; }
+  body[data-scene="combat"]        { --accent: #ff4d4f; --accent-rgb: 255, 77, 79; }
+  body[data-scene="ice"]           { --accent: #9be8ff; --accent-rgb: 155, 232, 255; }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  button { font-family: inherit; }
+
+  .page {
+    max-width: 1100px;
+    margin: 0 auto;
+    min-height: 100vh;
+    padding: 1.4vh 2vw 2.2vh;
+    display: flex;
+    flex-direction: column;
+    gap: 1.3vh;
+  }
+
+  /* --- Сцены --- */
+  .scenes {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .scene-plate {
+    background: var(--panel);
+    border: 2px solid var(--panel-border);
+    border-radius: 10px;
+    color: var(--muted);
+    padding: 10px 6px;
+    font-weight: 600;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    transition: border-color .15s, color .15s, background-color .15s;
+  }
+  .scene-plate .scene-name { font-size: clamp(0.95rem, 1.8vw, 1.3rem); }
+  .scene-plate .scene-range {
+    font-size: 0.72em;
+    font-weight: 400;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .scene-plate.active {
+    border-color: var(--accent);
+    color: var(--text);
+    background: rgba(var(--accent-rgb), 0.14);
+  }
+  .scene-plate:hover { border-color: var(--accent); }
+
+  /* --- Герой: текущее движение --- */
+  .hero {
+    background: var(--panel);
+    border: 2px solid var(--accent);
+    border-radius: 16px;
+    padding: clamp(16px, 3vh, 34px) clamp(16px, 4vw, 40px);
+    text-align: center;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: clamp(8px, 1.4vh, 16px);
+  }
+  .hero-label {
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    font-size: clamp(0.8rem, 1.4vw, 1rem);
+    text-transform: uppercase;
+  }
+  .hero-name {
+    margin: 0;
+    font-size: clamp(2.4rem, 6.6vw, 5.2rem);
+    line-height: 1.05;
+    font-weight: 800;
+  }
+  .hero-what {
+    margin: 0;
+    font-size: clamp(1.25rem, 3.2vw, 2.2rem);
+    line-height: 1.3;
+  }
+  .meters {
+    display: flex;
+    justify-content: center;
+    gap: clamp(20px, 5vw, 70px);
+    margin-top: 4px;
+  }
+  .meter { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .meter-label {
+    font-size: clamp(0.85rem, 1.5vw, 1.1rem);
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .meter-bar { display: flex; gap: 6px; }
+  .meter-bar span {
+    width: clamp(16px, 2.8vw, 30px);
+    height: clamp(26px, 4.6vh, 44px);
+    border-radius: 4px;
+    background: #24242c;
+    border: 1px solid #34343f;
+    display: block;
+  }
+  .meter-bar.speed span.filled { background: var(--speed-c); border-color: var(--speed-c); }
+  .meter-bar.power span.filled { background: var(--power-c); border-color: var(--power-c); }
+  .hero-hold {
+    margin: 2px 0 0;
+    font-size: clamp(1rem, 2vw, 1.25rem);
+    color: var(--muted);
+  }
+  .hero-hold .hold-label { color: var(--text); font-weight: 700; }
+  .hero-trigger {
+    margin-top: 2px;
+    font-size: 0.72rem;
+    color: var(--panel-border);
+    letter-spacing: 0.04em;
+  }
+
+  /* --- Следующее движение / реплика / следующая сцена --- */
+  .info-row {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr 1fr;
+    gap: 10px;
+  }
+  .info-card {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 10px 16px;
+    min-height: 84px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+  }
+  .info-label {
+    font-size: clamp(0.68rem, 1.1vw, 0.85rem);
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .info-name { font-size: clamp(1.05rem, 2.1vw, 1.5rem); font-weight: 700; }
+  .info-count {
+    font-size: clamp(0.95rem, 1.9vw, 1.3rem);
+    color: var(--accent);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  #lineCard { align-items: center; text-align: center; }
+  .info-line {
+    font-size: clamp(1.15rem, 2.5vw, 1.7rem);
+    font-style: italic;
+    color: var(--line-c);
+    min-height: 1.3em;
+  }
+
+  /* --- Таймлайн --- */
+  .timeline-wrap { display: flex; flex-direction: column; gap: 4px; }
+  .timeline-bar {
+    position: relative;
+    height: clamp(26px, 3.6vh, 38px);
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    cursor: pointer;
+    overflow: hidden;
+  }
+  .timeline-progress {
+    position: absolute; top: 0; left: 0; bottom: 0;
+    background: rgba(var(--accent-rgb), 0.32);
+    width: 0%;
+    pointer-events: none;
+  }
+  .timeline-ticks { position: absolute; inset: 0; }
+  .tick {
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 2px;
+    margin-left: -1px;
+    background: var(--muted);
+  }
+  .tick:hover { background: var(--accent); width: 3px; margin-left: -1.5px; }
+  .timeline-playhead {
+    position: absolute; top: 0; bottom: 0;
+    width: 2px;
+    margin-left: -1px;
+    background: var(--text);
+    left: 0%;
+    pointer-events: none;
+  }
+  .timeline-labels {
+    display: flex; justify-content: space-between;
+    color: var(--muted); font-size: 0.78rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* --- Плеер --- */
+  .player {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 10px 16px;
+    flex-wrap: wrap;
+  }
+  .file-picker {
+    position: relative;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 14px;
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.92rem;
+    max-width: 220px;
+  }
+  .file-picker:hover { border-color: var(--accent); }
+  .file-picker span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .file-picker input[type="file"] {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    opacity: 0;
+    cursor: pointer;
+  }
+  .play-btn {
+    flex: 0 0 auto;
+    width: 50px; height: 50px;
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+    background: transparent;
+    color: var(--text);
+    font-size: 1.3rem;
+    cursor: pointer;
+    line-height: 1;
+  }
+  .play-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .time-display {
+    font-variant-numeric: tabular-nums;
+    font-size: 1.05rem;
+    white-space: nowrap;
+  }
+  .hint {
+    color: var(--muted);
+    font-size: 0.88rem;
+    flex: 1 1 200px;
+  }
+
+  .help {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px 22px;
+    color: var(--muted);
+    font-size: 0.82rem;
+    padding-top: 2px;
+  }
+  .help kbd {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 4px;
+    padding: 1px 6px;
+    color: var(--text);
+    font-family: inherit;
+  }
+
+  @media (max-width: 640px) {
+    .info-row { grid-template-columns: 1fr; }
+    .scenes { grid-template-columns: 1fr; }
+  }
+</style>
+
+<div class="page">
+  <section class="scenes" id="scenes" aria-label="Сцены"></section>
+
+  <section class="hero" id="hero">
+    <div class="hero-label" id="heroLabel">Движение</div>
+    <h1 class="hero-name" id="moveName">—</h1>
+    <p class="hero-what" id="moveWhat"></p>
+    <div class="meters">
+      <div class="meter">
+        <div class="meter-label">Скорость</div>
+        <div class="meter-bar speed" id="speedBar">
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+      </div>
+      <div class="meter">
+        <div class="meter-label">Сила</div>
+        <div class="meter-bar power" id="powerBar">
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+      </div>
+    </div>
+    <p class="hero-hold" id="moveHoldWrap"><span class="hold-label">Держать:</span> <span id="moveHold"></span></p>
+    <div class="hero-trigger" id="moveTrigger"></div>
+  </section>
+
+  <section class="info-row">
+    <div class="info-card" id="nextMoveCard">
+      <div class="info-label">Следующее движение</div>
+      <div class="info-name" id="nextMoveName">—</div>
+      <div class="info-count" id="nextMoveCount">—</div>
+    </div>
+    <div class="info-card" id="lineCard">
+      <div class="info-label">Реплика</div>
+      <div class="info-line" id="lineText"></div>
+    </div>
+    <div class="info-card" id="nextSceneCard">
+      <div class="info-label">Следующая сцена</div>
+      <div class="info-name" id="nextSceneName">—</div>
+      <div class="info-count" id="nextSceneCount">—</div>
+    </div>
+  </section>
+
+  <section class="timeline-wrap">
+    <div class="timeline-bar" id="timelineBar" title="Клик — переход к моменту">
+      <div class="timeline-progress" id="timelineProgress"></div>
+      <div class="timeline-ticks" id="timelineTicks"></div>
+      <div class="timeline-playhead" id="timelinePlayhead"></div>
+    </div>
+    <div class="timeline-labels"><span>0:00</span><span id="totalLabel">1:00</span></div>
+  </section>
+
+  <section class="player">
+    <label class="file-picker">
+      <span id="fileLabel">Выбрать файл дорожки…</span>
+      <input type="file" id="fileInput" accept="audio/*">
+    </label>
+    <button type="button" class="play-btn" id="playBtn" disabled>&#9654;</button>
+    <div class="time-display"><span id="curTime">0:00</span> / <span id="totalTime">1:00</span></div>
+    <div class="hint" id="hint">Файл дорожки не выбран — откройте его слева, чтобы начать.</div>
+  </section>
+
+  <footer class="help">
+    <span><kbd>&larr;</kbd>/<kbd>&rarr;</kbd> движение</span>
+    <span><kbd>1</kbd>/<kbd>2</kbd>/<kbd>3</kbd> сцена</span>
+    <span><kbd>Space</kbd> пуск/пауза</span>
+  </footer>
+</div>
+
+<audio id="audio" preload="auto"></audio>
+
+<script>
+"use strict";
+// Данные вшиты генератором src/render_rehearsal.py — из file:// внешний JSON
+// не подгрузить, поэтому вся сцена уже здесь на момент открытия страницы.
+const DATA = /*__DATA__*/;
+
+const LINE_HOLD_SECONDS = 4.0; // сколько реплика держится на экране после старта
+
+const audio = document.getElementById("audio");
+const fileInput = document.getElementById("fileInput");
+const fileLabel = document.getElementById("fileLabel");
+const playBtn = document.getElementById("playBtn");
+const curTimeEl = document.getElementById("curTime");
+const totalTimeEl = document.getElementById("totalTime");
+const totalLabelEl = document.getElementById("totalLabel");
+const hintEl = document.getElementById("hint");
+
+const scenesEl = document.getElementById("scenes");
+const heroLabelEl = document.getElementById("heroLabel");
+const moveNameEl = document.getElementById("moveName");
+const moveWhatEl = document.getElementById("moveWhat");
+const moveHoldEl = document.getElementById("moveHold");
+const moveTriggerEl = document.getElementById("moveTrigger");
+const speedBarEl = document.getElementById("speedBar");
+const powerBarEl = document.getElementById("powerBar");
+
+const nextMoveNameEl = document.getElementById("nextMoveName");
+const nextMoveCountEl = document.getElementById("nextMoveCount");
+const nextSceneNameEl = document.getElementById("nextSceneName");
+const nextSceneCountEl = document.getElementById("nextSceneCount");
+const lineCardEl = document.getElementById("lineCard");
+const lineTextEl = document.getElementById("lineText");
+
+const timelineBar = document.getElementById("timelineBar");
+const timelineProgressEl = document.getElementById("timelineProgress");
+const timelineTicksEl = document.getElementById("timelineTicks");
+const timelinePlayheadEl = document.getElementById("timelinePlayhead");
+
+let audioLoaded = false;
+let objectUrl = null;
+
+function formatTime(seconds) {
+  let s = Number(seconds);
+  if (!isFinite(s) || s < 0) s = 0;
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return m + ":" + String(sec).padStart(2, "0");
+}
+
+// Единое правило и для сцен, и для движений: активен последний элемент,
+// чьё t не позже текущего времени. Индекс 0 — безопасное значение по
+// умолчанию, чтобы герой-панель никогда не оставалась пустой.
+function activeIndex(list, t) {
+  let idx = 0;
+  for (let i = 0; i < list.length; i++) {
+    if (list[i].t <= t) idx = i;
+    else break;
+  }
+  return idx;
+}
+
+function seekTo(seconds) {
+  if (!audioLoaded) return;
+  const clamped = Math.max(0, Math.min(DATA.total, seconds));
+  try {
+    audio.currentTime = clamped;
+  } catch (err) {
+    // Аудио ещё не готово принять перемотку — страница не должна падать.
+  }
+}
+
+// --- Плеер --------------------------------------------------------------
+
+fileInput.addEventListener("change", () => {
+  const file = fileInput.files && fileInput.files[0];
+  if (!file) return;
+  if (objectUrl) URL.revokeObjectURL(objectUrl);
+  objectUrl = URL.createObjectURL(file);
+  audio.src = objectUrl;
+  audioLoaded = true;
+  fileLabel.textContent = file.name;
+  playBtn.disabled = false;
+  hintEl.textContent = "Готово: " + file.name + ". Пробел — пуск/пауза.";
+});
+
+audio.addEventListener("error", () => {
+  if (!audio.src) return;
+  hintEl.textContent = "Не удалось прочитать файл как аудио — выберите другой.";
+});
+
+function togglePlay() {
+  if (!audioLoaded) {
+    hintEl.textContent = "Сначала выберите файл дорожки слева.";
+    return;
+  }
+  if (audio.paused) {
+    audio.play().catch(() => {});
+  } else {
+    audio.pause();
+  }
+}
+
+playBtn.addEventListener("click", togglePlay);
+audio.addEventListener("play", () => { playBtn.innerHTML = "&#10074;&#10074;"; });
+audio.addEventListener("pause", () => { playBtn.innerHTML = "&#9654;"; });
+audio.addEventListener("ended", () => { playBtn.innerHTML = "&#9654;"; });
+
+// --- Сцены: плашки --------------------------------------------------------
+
+DATA.scenes.forEach((sc) => {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "scene-plate";
+
+  const nameSpan = document.createElement("span");
+  nameSpan.className = "scene-name";
+  nameSpan.textContent = sc.name;
+
+  const rangeSpan = document.createElement("span");
+  rangeSpan.className = "scene-range";
+  rangeSpan.textContent = formatTime(sc.t) + "–" + formatTime(sc.end);
+
+  btn.appendChild(nameSpan);
+  btn.appendChild(rangeSpan);
+  btn.addEventListener("click", () => seekTo(sc.t));
+  scenesEl.appendChild(btn);
+});
+
+// --- Таймлайн: метки движений ---------------------------------------------
+
+DATA.movements.forEach((m) => {
+  const tick = document.createElement("div");
+  tick.className = "tick";
+  tick.style.left = (m.t / DATA.total * 100) + "%";
+  tick.title = m.name + " — " + formatTime(m.t);
+  tick.addEventListener("click", (ev) => {
+    ev.stopPropagation();
+    seekTo(m.t);
+  });
+  timelineTicksEl.appendChild(tick);
+});
+
+timelineBar.addEventListener("click", (ev) => {
+  const rect = timelineBar.getBoundingClientRect();
+  const frac = rect.width > 0 ? (ev.clientX - rect.left) / rect.width : 0;
+  seekTo(frac * DATA.total);
+});
+
+// --- Клавиатура ------------------------------------------------------------
+
+window.addEventListener("keydown", (ev) => {
+  // Файловый input сам обрабатывает пробел/стрелки, когда в фокусе —
+  // не перехватываем, иначе диалог выбора файла станет недоступен с клавиатуры.
+  if (document.activeElement === fileInput) return;
+
+  const t = audioLoaded ? audio.currentTime : 0;
+
+  switch (ev.key) {
+    case " ":
+    case "Spacebar":
+      ev.preventDefault();
+      togglePlay();
+      break;
+    case "ArrowRight":
+    case "ArrowDown": {
+      ev.preventDefault();
+      const idx = activeIndex(DATA.movements, t);
+      const next = DATA.movements[idx + 1];
+      if (next) seekTo(next.t);
+      break;
+    }
+    case "ArrowLeft":
+    case "ArrowUp": {
+      ev.preventDefault();
+      const idx = activeIndex(DATA.movements, t);
+      const prev = DATA.movements[idx - 1];
+      seekTo(prev ? prev.t : 0);
+      break;
+    }
+    case "1":
+    case "2":
+    case "3": {
+      const sc = DATA.scenes[Number(ev.key) - 1];
+      if (sc) {
+        ev.preventDefault();
+        seekTo(sc.t);
+      }
+      break;
+    }
+  }
+});
+
+// --- Отрисовка ---------------------------------------------------------
+
+function setMeter(barEl, value) {
+  for (let i = 0; i < barEl.children.length; i++) {
+    barEl.children[i].classList.toggle("filled", i < value);
+  }
+}
+
+function renderMovement(t) {
+  const mi = activeIndex(DATA.movements, t);
+  const move = DATA.movements[mi];
+  heroLabelEl.textContent = "Движение " + (mi + 1) + " из " + DATA.movements.length;
+  moveNameEl.textContent = move.name;
+  moveWhatEl.textContent = move.what;
+  moveHoldEl.textContent = move.hold || "—";
+  moveTriggerEl.textContent = "звук: " + move.trigger;
+  setMeter(speedBarEl, move.speed);
+  setMeter(powerBarEl, move.power);
+
+  const next = DATA.movements[mi + 1];
+  if (next) {
+    nextMoveNameEl.textContent = next.name;
+    nextMoveCountEl.textContent = (next.t - t).toFixed(1) + " с";
+  } else {
+    nextMoveNameEl.textContent = "финал номера";
+    nextMoveCountEl.textContent = "—";
+  }
+}
+
+function renderScene(t) {
+  const si = activeIndex(DATA.scenes, t);
+  const scene = DATA.scenes[si];
+  document.body.dataset.scene = scene.key;
+
+  const plates = scenesEl.children;
+  for (let i = 0; i < plates.length; i++) {
+    plates[i].classList.toggle("active", i === si);
+  }
+
+  const next = DATA.scenes[si + 1];
+  if (next) {
+    nextSceneNameEl.textContent = next.name;
+    nextSceneCountEl.textContent = (next.t - t).toFixed(1) + " с";
+  } else {
+    nextSceneNameEl.textContent = "конец номера";
+    nextSceneCountEl.textContent = "—";
+  }
+}
+
+function renderLine(t) {
+  let candidate = null;
+  for (const line of DATA.lines) {
+    if (line.t <= t) candidate = line;
+    else break;
+  }
+  const active = candidate && (t - candidate.t) <= LINE_HOLD_SECONDS && (t - candidate.t) >= 0;
+  lineTextEl.textContent = active ? candidate.text : "";
+  lineCardEl.classList.toggle("empty", !active);
+}
+
+function renderTimeline(t) {
+  const frac = DATA.total > 0 ? Math.max(0, Math.min(1, t / DATA.total)) : 0;
+  const pct = (frac * 100) + "%";
+  timelineProgressEl.style.width = pct;
+  timelinePlayheadEl.style.left = pct;
+}
+
+function render(t) {
+  renderMovement(t);
+  renderScene(t);
+  renderLine(t);
+  renderTimeline(t);
+  curTimeEl.textContent = formatTime(t);
+}
+
+function loop() {
+  try {
+    const t = audioLoaded ? (audio.currentTime || 0) : 0;
+    render(t);
+  } catch (err) {
+    // Кадр отрисовки не должен останавливать цикл — иначе страница
+    // замирает молча и репетиция идёт вслепую.
+    if (window.console) console.error(err);
+  } finally {
+    requestAnimationFrame(loop);
+  }
+}
+
+totalTimeEl.textContent = formatTime(DATA.total);
+totalLabelEl.textContent = formatTime(DATA.total);
+requestAnimationFrame(loop);
+</script>
