@@ -4,6 +4,7 @@
 вспышек, ледяной финал. Один исполнитель, все голоса записаны заранее.
 
 - **Сценарий номера** — [scenario/SCENARIO_V2_60S.md](scenario/SCENARIO_V2_60S.md) — фактические таймкоды, все реплики, движения, реквизит
+- **Что искать на стоке** — [docs/video-shopping-list.md](docs/video-shopping-list.md) — восемь файлов видеофона, поисковые слова, требования к лицензии
 - **Проектное решение** — [docs/superpowers/specs/2026-08-01-lohen-interrogation-scene-design.md](docs/superpowers/specs/2026-08-01-lohen-interrogation-scene-design.md)
 - **План реализации** — [docs/superpowers/plans/2026-08-01-lohen-v2-implementation.md](docs/superpowers/plans/2026-08-01-lohen-v2-implementation.md)
 - **Точки состояния** — [docs/status/INDEX.md](docs/status/INDEX.md)
@@ -51,6 +52,12 @@ python src/render_video.py
 python src/render_video.py --stills
 ```
 
+Какого видеоматериала не хватает:
+
+```bash
+python src/render_video.py --check
+```
+
 Репетиционная страница — `output/rehearsal.html`, дорожка выбирается в браузере:
 
 ```bash
@@ -86,7 +93,8 @@ scenario/timeline.json ─┬─> src/render_audio.py ─> output/master_v2.wav
 | `src/render_audio.py` | вызовы FFmpeg: стемы, сумма, нормализация, mp3 |
 | `src/measure.py` | замеры мастера: LUFS, True Peak, окна громкости |
 | `src/video_plan.py` | состояния палитры и якоря из блоков `video`, без numpy |
-| `src/render_video.py` | процедурный видеофон по тем же событиям |
+| `src/footage.py` | снятый материал и рисованные эффекты поверх тех же якорей |
+| `src/render_video.py` | сборка кадра, процедурный фон, мукс со звуком |
 | `src/movements.py` | движения исполнителя, привязка к событиям звука |
 | `src/render_rehearsal.py` | самодостаточная репетиционная страница |
 | `src/build.py` | точка входа и CLI |

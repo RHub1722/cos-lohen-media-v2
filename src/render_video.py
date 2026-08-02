@@ -33,6 +33,7 @@ for stream in (sys.stdout, sys.stderr):
     if hasattr(stream, "reconfigure"):
         stream.reconfigure(encoding="utf-8", errors="replace")
 
+from src.footage import FootageSource, load_shots, missing, resolve  # noqa: E402
 from src.measure import measure_duration  # noqa: E402
 from src.models import Timeline  # noqa: E402
 from src.video_plan import VideoPlan, build_plan  # noqa: E402
@@ -344,7 +345,8 @@ def animation_time(plan: VideoPlan, t: float) -> float:
     return t_anim
 
 
-def render_frame(canvas: Canvas, plan: VideoPlan, t: float, fps: int) -> np.ndarray:
+def render_frame(canvas: Canvas, plan: VideoPlan, t: float, fps: int,
+                 source=None) -> np.ndarray:
     # Замирает только рисование состояния. Якоря живут по настоящему времени:
     # если считать их фазу по замороженному, белая вспышка залипнет на первом
     # своём кадре и вместо двух кадров света даст почти секунду белого поля.
@@ -355,17 +357,34 @@ def render_frame(canvas: Canvas, plan: VideoPlan, t: float, fps: int) -> np.ndar
         c.source: i for i, c in enumerate(c for c in plan.cues if c.kind == "flash")
     }
 
-    if seg.state == "interrogation":
-        rgb = canvas.interrogation(t_anim, local)
-    elif seg.state == "combat":
-        passed = sum(1 for c in plan.cues if c.kind == "flash" and c.t <= t)
-        rgb = canvas.combat(t_anim, local, passed)
-    else:
-        rgb = canvas.ice(t_anim, local)
+    # Нижний слой: снятый материал, если он на это место положен. Клипа нет —
+    # работает процедурный фон, и номер всё равно собирается целиком. Так клипы
+    # можно докладывать по одному, каждый раз получая готовый файл, а не ждать
+    # полного комплекта.
+    rgb = source.base(t) if source is not None else None
+    if rgb is None:
+        if seg.state == "interrogation":
+            rgb = canvas.interrogation(t_anim, local)
+        elif seg.state == "combat":
+            passed = sum(1 for c in plan.cues if c.kind == "flash" and c.t <= t)
+            rgb = canvas.combat(t_anim, local, passed)
+        else:
+            rgb = canvas.ice(t_anim, local)
+
+    # Рисованные эффекты ложатся до якорей, а не после: сжатие кадра, спад
+    # цвета и белая вспышка должны действовать и на них тоже, иначе слэш
+    # окажется единственным, что живёт своей жизнью.
+    if source is not None:
+        rgb = source.overlay(t, rgb)
 
     for cue in plan.cues:
         phase = cue.phase(t)
         if phase is None:
+            continue
+        if (cue.kind == "flash" and source is not None
+                and source.has_fx(cue.source)):
+            # На этом ударе уже лежит рисованный слэш. Процедурная вспышка
+            # поверх него читается как двойной удар и как ошибка сборки.
             continue
 
         if cue.kind == "tighten":
@@ -450,12 +469,13 @@ def still_times(plan: VideoPlan) -> list[tuple[float, str]]:
     return sorted(set(marks))
 
 
-def write_stills(canvas: Canvas, plan: VideoPlan, fps: int, out_dir: Path) -> int:
+def write_stills(canvas: Canvas, plan: VideoPlan, fps: int, out_dir: Path,
+                 source=None) -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
     shots = still_times(plan)
     thumbs = []
     for t, label in shots:
-        frame = to_bytes(canvas, render_frame(canvas, plan, t, fps))
+        frame = to_bytes(canvas, render_frame(canvas, plan, t, fps, source))
         image = Image.fromarray(frame, mode="RGB")
         image.save(out_dir / f"{t:06.2f}-{label}.png")
         thumbs.append((image.resize((384, int(384 * canvas.h / canvas.w))), f"{t:.2f} {label}"))
@@ -473,7 +493,7 @@ def write_stills(canvas: Canvas, plan: VideoPlan, fps: int, out_dir: Path) -> in
     return len(shots)
 
 
-def render(args, plan: VideoPlan) -> Path:
+def render(args, plan: VideoPlan, source=None) -> Path:
     canvas = Canvas(args.width, args.height)
     total = plan.total if args.limit is None else min(args.limit, plan.total)
     frames = int(round(total * args.fps))
@@ -503,7 +523,8 @@ def render(args, plan: VideoPlan) -> Path:
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
     try:
         for i in range(frames):
-            frame = to_bytes(canvas, render_frame(canvas, plan, i / args.fps, args.fps))
+            frame = to_bytes(canvas, render_frame(canvas, plan, i / args.fps,
+                                                  args.fps, source))
             proc.stdin.write(frame.tobytes())
             if i % (args.fps * 5) == 0:
                 print(f"  {i / args.fps:5.1f} с / {total:.1f}", flush=True)
@@ -550,6 +571,12 @@ def main() -> int:
     ap.add_argument("--limit", type=float, default=None, help="отрендерить только N секунд")
     ap.add_argument("--stills", action="store_true", help="только кадры-образцы")
     ap.add_argument("--no-audio", action="store_true")
+    ap.add_argument("--shots", default=str(ROOT / "scenario" / "shots.json"))
+    ap.add_argument("--assets", default=str(ROOT / "assets" / "video"))
+    ap.add_argument("--no-footage", action="store_true",
+                    help="игнорировать снятый материал, рисовать процедурно")
+    ap.add_argument("--check", action="store_true",
+                    help="показать, какого материала не хватает, и выйти")
     args = ap.parse_args()
 
     with open(args.scenario, encoding="utf-8") as fh:
@@ -563,10 +590,32 @@ def main() -> int:
     for seg in plan.segments:
         print(f"  {seg.start:6.2f}-{seg.end:6.2f}  {seg.state}")
 
+    bases, fx, assets = [], [], Path(args.assets)
+    shots_path = Path(args.shots)
+    if not args.no_footage and shots_path.exists():
+        bases, fx = resolve(*load_shots(shots_path), plan)
+        gaps = missing(bases, assets) + missing(fx, assets)
+        have = len(bases) + len(fx) - len(gaps)
+        print(f"Материал:  {have} из {len(bases) + len(fx)} на месте"
+              f"{'' if not gaps else f', не хватает {len(gaps)}'}")
+        for shot in bases + fx:
+            mark = "есть" if (assets / shot.clip).exists() else "НЕТ "
+            print(f"  {shot.t:6.2f}  [{mark}] {shot.clip}")
+        if gaps:
+            print("  Недостающие места рисуются процедурно — файл соберётся всё равно.")
+
+    if args.check:
+        return 0
+
+    source = None
+    if bases or fx:
+        source = FootageSource(bases, fx, assets, args.width, args.height,
+                               args.fps, seek=args.stills)
+
     if args.stills:
         canvas = Canvas(args.width, args.height)
         out_dir = ROOT / "output" / "stills"
-        count = write_stills(canvas, plan, args.fps, out_dir)
+        count = write_stills(canvas, plan, args.fps, out_dir, source)
         print(f"Готово: {count} кадров в {out_dir}, сводка в contact.png")
         return 0
 
@@ -575,7 +624,11 @@ def main() -> int:
 
     print(f"Рендер {args.width}x{args.height} @ {args.fps}, "
           f"{int(round(plan.total * args.fps))} кадров")
-    out = render(args, plan)
+    try:
+        out = render(args, plan, source)
+    finally:
+        if source is not None:
+            source.close()
 
     # Проверка длительности встроена в рендер, а не оставлена отдельным шагом:
     # разъехавшаяся на кадр картинка не видна глазом, но на сдаче это брак.
