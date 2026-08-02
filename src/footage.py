@@ -40,7 +40,16 @@ class FootageError(Exception):
 
 @dataclass(frozen=True)
 class BaseShot:
-    """Кусок фона. Длится до следующей базы или до конца номера."""
+    """Кусок фона. Длится до следующей базы или до конца номера.
+
+    loop=True — короткий клип повторяется по кругу. Годится для фактуры: пыль,
+    угли, изморозь. Швов не видно, потому что видеть нечего.
+
+    loop=False — клип играет один раз, дальше держится последний кадр. Нужно
+    для кадров-событий. Пролом двери на пяти секундах при шестисекундном куске
+    закольцевался бы, и дверь вылетела бы дважды — зал прочитал бы это как
+    поломку файла, а не как вторжение.
+    """
 
     anchor: str
     clip: str
@@ -48,6 +57,7 @@ class BaseShot:
     speed: float = 1.0
     grade: str = "none"
     gain: float = 1.0
+    loop: bool = True
     t: float = -1.0
     end: float = -1.0
 
@@ -93,6 +103,7 @@ def load_shots(path: str | Path) -> tuple[list[BaseShot], list[FxShot]]:
             anchor=str(item["anchor"]), clip=str(item["clip"]),
             start_at=float(item.get("start_at", 0.0)), speed=speed,
             grade=grade, gain=float(item.get("gain", 1.0)),
+            loop=bool(item.get("loop", True)),
         ))
 
     fx = []
@@ -298,6 +309,7 @@ class FootageSource:
         self.seek = seek
         self._base_index = -1
         self._base_reader: ClipReader | None = None
+        self._base_last: np.ndarray | None = None
         self._fx_readers: dict[int, ClipReader] = {}
         self._fx_started: set[int] = set()
 
@@ -316,31 +328,45 @@ class FootageSource:
             return None
 
         if self.seek:
-            frame = self._one_frame(path, self._wrapped_offset(path, shot, t), shot.speed)
+            frame = self._one_frame(path, self._offset(path, shot, t), shot.speed)
         else:
             if index != self._base_index:
                 self._close_base()
                 self._base_index = index
+                self._base_last = None
                 self._base_reader = ClipReader(
                     path, self.w, self.h, self.fps,
-                    start_at=shot.start_at, speed=shot.speed, loop=True,
+                    start_at=shot.start_at, speed=shot.speed, loop=shot.loop,
                 )
             frame = self._base_reader.read() if self._base_reader else None
+            if frame is None and not shot.loop:
+                # Кадр-событие кончился — держим последний. Повторять его нельзя:
+                # дверь вылетела бы во второй раз.
+                frame = self._base_last
+            elif frame is not None:
+                self._base_last = frame
         if frame is None:
             return None
         tint = np.array(GRADES[shot.grade], dtype=np.float32) * shot.gain
         return frame[:, :, :3] * tint[None, None, :]
 
-    def _wrapped_offset(self, path: Path, shot: BaseShot, t: float) -> float:
-        """Смещение внутри клипа, завёрнутое по его длине.
+    def _offset(self, path: Path, shot: BaseShot, t: float) -> float:
+        """Смещение внутри клипа для режима перемотки.
 
-        В потоковом режиме то же самое делает -stream_loop, в режиме перемотки
-        приходится считать руками — иначе кадр-образец за концом короткого
-        клипа молча вернёт процедурный фон.
+        В потоковом режиме то же самое делают -stream_loop и удержание
+        последнего кадра, в режиме перемотки приходится считать руками — иначе
+        кадр-образец за концом короткого клипа молча вернёт процедурный фон.
         """
         elapsed = (t - shot.t) * shot.speed
         length = clip_duration(str(path))
         usable = max(0.05, length - shot.start_at)
+        if not shot.loop:
+            # Кадр-событие: за концом клипа встаём на последний кадр, а не
+            # возвращаемся в начало. Отступ в четыре кадра от конца, а не в
+            # один: перемотку ровно на последний кадр ffmpeg отдаёт не всегда,
+            # и вместо удержания получается пустота. Сотая доля секунды на
+            # замершем кадре не значит ничего.
+            return shot.start_at + min(elapsed, max(0.0, usable - 4.0 / self.fps))
         return shot.start_at + (elapsed % usable)
 
     def _one_frame(self, path: Path, offset: float, speed: float) -> np.ndarray | None:

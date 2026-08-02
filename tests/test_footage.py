@@ -41,6 +41,26 @@ def test_shots_parse_with_defaults(tmp_path):
     assert fx[0].scale == 1.0 and fx[0].key == "alpha" and fx[0].opacity == 1.0
 
 
+def test_base_loops_by_default(tmp_path):
+    path = _write(tmp_path, {"base": [{"anchor": "combat", "clip": "b.mp4"}]})
+    assert load_shots(path)[0][0].loop is True
+
+
+def test_base_can_be_told_not_to_loop(tmp_path):
+    path = _write(tmp_path, {"base": [{"anchor": "combat", "clip": "b.mp4",
+                                       "loop": False}]})
+    assert load_shots(path)[0][0].loop is False
+
+
+def test_the_breach_does_not_loop():
+    """Кадр-событие нельзя закольцовывать: пятисекундный клип на шестисекундном
+    куске вылетел бы дверью дважды, и это читается как поломка файла."""
+    bases, _ = load_shots("scenario/shots.json")
+    breach = next(b for b in bases if b.anchor == "combat")
+    assert breach.loop is False
+    assert all(b.loop for b in bases if b.anchor != "combat")
+
+
 def test_shots_reject_a_missing_clip_field(tmp_path):
     path = _write(tmp_path, {"base": [{"anchor": "combat"}]})
     with pytest.raises(FootageError, match="clip"):
