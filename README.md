@@ -7,6 +7,7 @@
 - **Что искать для видеофона** — [docs/video-shopping-list.md](docs/video-shopping-list.md) — девять файлов, поисковые слова, требования к формату и лицензии
 - **Где смотреть материал** — [docs/video-sources.md](docs/video-sources.md) — готовые ссылки на бесплатные источники, отсортированные по пользе для номера
 - **Платные сервисы** — [docs/video-services-paid.md](docs/video-services-paid.md) — генерация фона за $1–20, готовые запросы
+- **Оплата из Молдовы и MCP** — [docs/video-services-moldova-mcp.md](docs/video-services-moldova-mcp.md) — 20 сервисов: где рельсы открыты, где стоит блок по документам, у кого есть MCP
 - **Проектное решение** — [docs/superpowers/specs/2026-08-01-lohen-interrogation-scene-design.md](docs/superpowers/specs/2026-08-01-lohen-interrogation-scene-design.md)
 - **План реализации** — [docs/superpowers/plans/2026-08-01-lohen-v2-implementation.md](docs/superpowers/plans/2026-08-01-lohen-v2-implementation.md)
 - **Точки состояния** — [docs/status/INDEX.md](docs/status/INDEX.md)
