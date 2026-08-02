@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -32,6 +33,7 @@ for stream in (sys.stdout, sys.stderr):
     if hasattr(stream, "reconfigure"):
         stream.reconfigure(encoding="utf-8", errors="replace")
 
+from src.measure import measure_duration  # noqa: E402
 from src.models import Timeline  # noqa: E402
 from src.video_plan import VideoPlan, build_plan  # noqa: E402
 
@@ -254,13 +256,14 @@ class Canvas:
         return luma[:, :, None] * BLUE[None, None, :]
 
     def combat(self, t: float, local: float, flashes_passed: int) -> np.ndarray:
-        """Между вспышками кадр тёмный и почти пустой.
+        """Между вспышками — ровный жар, вся сила отдана четырём попаданиям.
 
         Тот же принцип, по которому нарезана хореография: действие идёт
-        вспышками, а не потоком. Непрерывный узор соревновался бы с
+        вспышками, а не потоком. Яркий непрерывный узор соревновался бы с
         исполнителем все двадцать пять секунд и выел бы костюм — а костюм
-        судят. Вся сила отдана четырём попаданиям, между ними только жар,
-        угли и тонкие следы.
+        судят. Но и в чёрный уходить нельзя: под самую громкую музыку номера
+        погасший экран читается как поломка, и бой оказался бы тусклее допроса.
+        Фон держится примерно на уровне ледяного блока, попадания дают ×7.
         """
         pulse = 0.5 + 0.5 * float(np.sin(2.0 * np.pi * local / 3.1))
 
@@ -272,12 +275,16 @@ class Canvas:
         np.maximum(wave, 0.0, out=wave)
         wave *= wave
         wave *= wave
-        luma = 0.052 + 0.030 * pulse + 0.115 * wave
+        # Уровень выше, чем кажется нужным на глаз в цифрах: густой красный при
+        # том же значении перцептивно темнее синего почти вдвое (по Rec.709
+        # 0.34 против 0.54). Без поправки бой выходил темнее допроса — то есть
+        # ровно наоборот тому, что должно происходить в номере.
+        luma = 0.125 + 0.065 * pulse + 0.32 * wave
 
         # Жар снизу, как от пола, и медленно поднимающиеся угли.
         sparks = np.roll(self.embers, -int(local * 95.0) % self.h, axis=0)
-        luma = luma + (0.11 + 0.05 * pulse) * np.exp(-((self.Y - 1.0) ** 2) / 0.55)
-        luma = luma + sparks * 0.34
+        luma = luma + (0.27 + 0.10 * pulse) * np.exp(-((self.Y - 1.0) ** 2) / 0.55)
+        luma = luma + sparks * 0.45
 
         luma = luma * (1.0 - 0.45 * smoothstep(0.55, 1.10, self.R))
 
@@ -486,7 +493,10 @@ def render(args, plan: VideoPlan) -> Path:
         "-pix_fmt", "yuv420p",
         # Явная разметка цвета: видеопроцессор экрана иначе угадывает сам, и
         # тёмно-синий допрос может уехать в другой оттенок на чужом железе.
-        "-color_primaries", "bt709", "-color_trc", "bt709", "-colorspace", "bt709",
+        # Именно через -x264-params: обычные -color_primaries и -color_trc
+        # этой сборкой ffmpeg для libx264 молча игнорируются, в файле остаётся
+        # unknown, и проверить это можно только ffprobe после сборки.
+        "-x264-params", "colorprim=bt709:transfer=bt709:colormatrix=bt709",
         "-movflags", "+faststart", "-shortest", str(out),
     ]
 
@@ -506,6 +516,27 @@ def render(args, plan: VideoPlan) -> Path:
     return out
 
 
+def colour_tags(path: str) -> dict[str, str]:
+    """Как цвет размечен в готовом файле.
+
+    Читается из результата, а не берётся с переданных флагов: обычные
+    -color_primaries и -color_trc эта сборка ffmpeg для libx264 молча
+    игнорирует, файл выходит с unknown, и заметить это можно только прочитав
+    его обратно. Экран с неразмеченным цветом угадывает сам.
+    """
+    result = subprocess.run([
+        "ffprobe", "-v", "error", "-select_streams", "v:0",
+        "-show_entries", "stream=color_primaries,color_transfer,color_space",
+        "-of", "default=nw=1", path,
+    ], capture_output=True, text=True)
+    tags = {}
+    for line in result.stdout.splitlines():
+        if "=" in line:
+            key, value = line.split("=", 1)
+            tags[key.strip()] = value.strip()
+    return tags
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--scenario", default=str(ROOT / "scenario" / "timeline.json"))
@@ -520,8 +551,6 @@ def main() -> int:
     ap.add_argument("--stills", action="store_true", help="только кадры-образцы")
     ap.add_argument("--no-audio", action="store_true")
     args = ap.parse_args()
-
-    import json
 
     with open(args.scenario, encoding="utf-8") as fh:
         raw = json.load(fh)
@@ -547,7 +576,21 @@ def main() -> int:
     print(f"Рендер {args.width}x{args.height} @ {args.fps}, "
           f"{int(round(plan.total * args.fps))} кадров")
     out = render(args, plan)
+
+    # Проверка длительности встроена в рендер, а не оставлена отдельным шагом:
+    # разъехавшаяся на кадр картинка не видна глазом, но на сдаче это брак.
+    duration = measure_duration(str(out))
+    target = plan.total if args.limit is None else min(args.limit, plan.total)
+    tags = colour_tags(str(out))
     print(f"Готово: {out}")
+    print(f"Длительность: {duration:.3f} с (цель {target:.3f})")
+    print(f"Размер:       {out.stat().st_size / 1e6:.1f} МБ")
+    print(f"Цвет:         {', '.join(f'{k}={v}' for k, v in sorted(tags.items()))}")
+    if any(v in ("unknown", "") for v in tags.values()):
+        print("  ВНИМАНИЕ: цвет размечен не полностью, экран будет угадывать сам.")
+    if abs(duration - target) > 1.0 / args.fps:
+        print("  ВНИМАНИЕ: длительность разошлась с целевой больше чем на кадр.")
+        return 1
     return 0
 
 
