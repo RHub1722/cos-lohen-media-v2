@@ -61,6 +61,39 @@ def test_the_breach_does_not_loop():
     assert all(b.loop for b in bases if b.anchor != "combat")
 
 
+def test_procedural_is_empty_by_default(tmp_path):
+    path = _write(tmp_path, {"base": [{"anchor": "combat", "clip": "b.mp4"}]})
+    assert load_shots(path)[0][0].procedural == ""
+
+
+def test_the_breach_has_a_procedural_fallback():
+    """Единственный кадр, который обязан объяснять, не должен зависеть ни от
+    оплаты, ни от гео-блока: LTX Studio Молдове закрыт целиком."""
+    bases, _ = load_shots("scenario/shots.json")
+    breach = next(b for b in bases if b.anchor == "combat")
+    assert breach.procedural == "breach"
+
+
+def test_procedural_fallback_only_inside_its_own_window(tmp_path):
+    from src.footage import FootageSource
+    bases, fx = resolve(*load_shots("scenario/shots.json"), _real_plan())
+    source = FootageSource(bases, fx, tmp_path, 64, 36, 30, seek=True)
+    assert source.procedural_at(22.4) == ("breach", pytest.approx(0.1))
+    assert source.procedural_at(28.4)[0] == "breach"
+    assert source.procedural_at(22.2)[0] == ""
+    assert source.procedural_at(28.6)[0] == ""
+    assert source.procedural_at(50.0)[0] == ""
+
+
+def test_procedural_fallback_steps_aside_when_the_clip_exists(tmp_path):
+    from src.footage import FootageSource
+    (tmp_path / "base").mkdir()
+    (tmp_path / "base" / "breach.mp4").write_bytes(b"x")
+    bases, fx = resolve(*load_shots("scenario/shots.json"), _real_plan())
+    source = FootageSource(bases, fx, tmp_path, 64, 36, 30, seek=True)
+    assert source.procedural_at(24.0)[0] == ""
+
+
 def test_shots_reject_a_missing_clip_field(tmp_path):
     path = _write(tmp_path, {"base": [{"anchor": "combat"}]})
     with pytest.raises(FootageError, match="clip"):

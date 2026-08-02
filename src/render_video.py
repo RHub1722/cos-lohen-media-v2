@@ -117,6 +117,7 @@ class Canvas:
         self.embers = self._specks(rng, 0.999955, max(4.0, width / 240.0))
 
         self.base_interrogation = self._interrogation_base()
+        self.door = self._door_fields()
         self.proj = self._projections()
         self.crack, self.crack_birth, self.bloom, self.bloom_birth = self._cracks()
         self.base_ice = self._ice_base()
@@ -145,6 +146,25 @@ class Canvas:
         base = 0.026 + lamp + walls
         base = base * (1.0 - 0.55 * smoothstep(0.55, 1.05, self.R))
         return base.astype(np.float32)
+
+    def _door_fields(self) -> dict[str, np.ndarray | float]:
+        """Геометрия дверного проёма. Считается один раз: дверь не двигается.
+
+        Проём стоит слева от центра намеренно. В середине кадра его съел бы
+        предохранитель, а сбоку получается то, что и нужно по сцене: свет и
+        враги приходят к нему со стороны, а сам он остаётся в тени.
+        """
+        x0, y0 = -0.62, 0.10
+        dx = (self.X - x0) * (self.w / self.h)
+        dy = self.Y - y0
+        return {
+            "x0": x0,
+            "y0": y0,
+            "r": np.sqrt(dx**2 + dy**2).astype(np.float32),
+            # Угол от проёма. Нужен, чтобы свет расходился конусом, а не шаром.
+            "ang": np.arctan2(dy, np.maximum(dx, 1e-4)).astype(np.float32),
+            "inside": (self.X > x0 - 0.02).astype(np.float32),
+        }
 
     def _projections(self) -> list[np.ndarray]:
         """Три фиксированных направления следов движения.
@@ -295,6 +315,104 @@ class Canvas:
         colour = RED[None, None, :] * (1.0 - hot) + EMBER[None, None, :] * hot
         return luma[:, :, None] * colour
 
+    def breach(self, local: float) -> np.ndarray:
+        """Пролом двери: тёмная комната, проём, свет из него, входящие силуэты.
+
+        Единственный кадр номера, который обязан не создавать настроение, а
+        сообщать факт: в комнату вломились. Поэтому здесь узнаваемая форма —
+        подсвеченный проём и тёмные фигуры в нём, — а не фактура. С десятого
+        метра в тёмном зале это читается как вторжение именно потому, что силуэт
+        человека в светящейся двери опознаётся мгновенно, без деталей.
+
+        Работает, когда на месте `base/breach.mp4` файла нет. Снятый или
+        сгенерированный клип его заменит, но зависимости от чужого сервиса,
+        оплаты и гео-блока здесь нет.
+        """
+        door = self.door
+        x0 = float(door["x0"])
+        r, ang, inside = door["r"], door["ang"], door["inside"]
+
+        # 1. Створка. Первые 0.35 с проём раскрывается от щели до полной ширины.
+        opening = smoothstep(0.0, 0.35, np.float32(local))
+        half = 0.035 + 0.115 * float(opening)
+        frame_x = 1.0 - smoothstep(half * 0.75, half, np.abs(self.X - x0))
+        frame_y = (1.0 - smoothstep(0.50, 0.60, np.abs(self.Y - 0.10) / 0.72))
+        doorway = frame_x * frame_y
+
+        # 2. Удар. Два кадра резкой засветки по контуру — это выбитая створка.
+        kick = float(np.exp(-local / 0.09)) if local < 0.5 else 0.0
+
+        # 3. Свет из коридора. Конус вправо, растёт и упирается в дальнюю стену.
+        reach = 0.35 + 1.9 * smoothstep(0.05, 1.1, np.float32(local))
+        cone = np.exp(-((ang / 0.62) ** 2)) * inside
+        spill = cone * np.exp(-r / reach) * (0.55 + 0.45 * float(opening))
+
+        luma = 0.030 + doorway * (1.05 + 2.2 * kick) + spill * 0.85
+        luma = luma + kick * 0.30 * frame_y
+
+        # 4. Пыль в луче: без неё свет выглядит нарисованной заливкой.
+        dust = np.roll(self.dust, int(local * 26.0) % self.h, axis=0)
+        luma = luma + dust * spill * 3.0
+
+        # 5. Входящие. Уходят от проёма недалеко: силуэт читается, пока он на
+        # просвет. Отойдя в тёмную часть кадра, фигура превращается в пятно.
+        # Размеры и шаг у всех трёх разные — три одинаковые фигуры на равном
+        # расстоянии читаются как узор, а не как люди.
+        blocked = np.zeros_like(luma)
+        for born, reach_i, size, lift in (
+            (0.55, 0.30, 1.00, 0.00),
+            (0.95, 0.17, 0.88, 0.04),
+            (1.40, 0.42, 0.94, -0.03),
+        ):
+            if local < born:
+                continue
+            walk = smoothstep(0.0, 1.4, np.float32(local - born))
+            scale = size * (0.62 + 0.42 * float(walk))
+            cx = x0 - 0.02 + reach_i * float(walk)
+            blocked = np.maximum(blocked, self._figure(cx, 0.20 + lift, scale))
+        luma = luma * (1.0 - 0.94 * blocked)
+
+        luma = luma * (1.0 - 0.35 * smoothstep(0.75, 1.25, self.R))
+
+        # Свет из коридора тёплый, комната остаётся холодной: контраст двух
+        # источников сам рисует границу между «здесь» и «оттуда».
+        warm = np.array([1.00, 0.74, 0.45], dtype=np.float32)
+        heat = np.clip((doorway + spill) * 1.5, 0.0, 1.0)[:, :, None]
+        colour = RED[None, None, :] * (1.0 - heat) + warm[None, None, :] * heat
+        return luma[:, :, None] * colour
+
+    def _figure(self, cx: float, cy: float, scale: float) -> np.ndarray:
+        """Силуэт человека: голова, корпус, две ноги.
+
+        Ног и ширины корпуса не избежать. Одна вытянутая капля с головой сверху
+        читается как кегля, а не как человек: узнаваемость силуэта держится на
+        пропорции плеч к росту и на разрыве между ногами, а не на деталях,
+        которых с десятого метра всё равно не видно.
+        """
+        ar = self.w / self.h
+        bx = (self.X - cx) * ar
+
+        def blob(ox: float, oy: float, hw: float, hh: float) -> np.ndarray:
+            return 1.0 - smoothstep(0.82, 1.0, np.sqrt(
+                ((bx - ox * scale) / (hw * scale)) ** 2
+                + ((self.Y - cy - oy * scale) / (hh * scale)) ** 2))
+
+        # Голова заходит на корпус намеренно: при зазоре между ними силуэт
+        # читается как две отдельные фигуры, а не как человек с шеей. Плечи
+        # вынесены отдельным широким блоком — один эллипс на весь корпус даёт
+        # колокол, широкий по центру, а у человека шире всего именно плечи.
+        parts = (
+            blob(0.000, -0.470, 0.052, 0.070),   # голова
+            blob(0.000, -0.330, 0.116, 0.080),   # плечи
+            blob(0.000, -0.170, 0.088, 0.230),   # корпус
+            blob(-0.046, 0.240, 0.040, 0.230),   # левая нога
+            blob(0.048, 0.240, 0.040, 0.230),    # правая нога
+        )
+        out = parts[0]
+        for part in parts[1:]:
+            out = np.maximum(out, part)
+        return out.astype(np.float32)
+
     def ice(self, t: float, local: float) -> np.ndarray:
         # Рост быстрый в первую секунду и почти останавливается к третьей:
         # разряд бьёт мгновенно, дальше лёд только доползает.
@@ -362,6 +480,13 @@ def render_frame(canvas: Canvas, plan: VideoPlan, t: float, fps: int,
     # можно докладывать по одному, каждый раз получая готовый файл, а не ждать
     # полного комплекта.
     rgb = source.base(t) if source is not None else None
+    if rgb is None and source is not None:
+        # Место может требовать не палитру состояния, а свой генератор. Пролом
+        # двери — именно такое место: единственный кадр, который обязан
+        # объяснять, и единственный, которого на стоке почти не бывает.
+        kind, local_shot = source.procedural_at(t)
+        if kind == "breach":
+            rgb = canvas.breach(local_shot)
     if rgb is None:
         if seg.state == "interrogation":
             rgb = canvas.interrogation(t_anim, local)

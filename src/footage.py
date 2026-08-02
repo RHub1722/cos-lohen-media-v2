@@ -58,6 +58,9 @@ class BaseShot:
     grade: str = "none"
     gain: float = 1.0
     loop: bool = True
+    # Чем рисовать это место, пока файла нет. Пусто — палитрой своего
+    # состояния. Иначе имя встроенного генератора, например "breach".
+    procedural: str = ""
     t: float = -1.0
     end: float = -1.0
 
@@ -104,6 +107,7 @@ def load_shots(path: str | Path) -> tuple[list[BaseShot], list[FxShot]]:
             start_at=float(item.get("start_at", 0.0)), speed=speed,
             grade=grade, gain=float(item.get("gain", 1.0)),
             loop=bool(item.get("loop", True)),
+            procedural=str(item.get("procedural", "")),
         ))
 
     fx = []
@@ -349,6 +353,18 @@ class FootageSource:
             return None
         tint = np.array(GRADES[shot.grade], dtype=np.float32) * shot.gain
         return frame[:, :, :3] * tint[None, None, :]
+
+    def procedural_at(self, t: float) -> tuple[str, float]:
+        """Чем рисовать это место без файла и сколько прошло с его начала.
+
+        Возвращает пустое имя, если на это время ничего специального не задано —
+        тогда вызывающий рисует палитру своего состояния, как и раньше.
+        """
+        for shot in self.bases:
+            if shot.t <= t < shot.end and shot.procedural:
+                if not (self.assets / shot.clip).exists():
+                    return shot.procedural, t - shot.t
+        return "", 0.0
 
     def _offset(self, path: Path, shot: BaseShot, t: float) -> float:
         """Смещение внутри клипа для режима перемотки.
