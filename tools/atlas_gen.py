@@ -10,9 +10,16 @@
 угадывать: у модели, например, вообще нет поля запретов, а пропорции называются
 ratio, и обе очевидные догадки были бы неверными.
 
+Каждая попытка ложится отдельным файлом в assets/video/attempts/, а в слот,
+который читает рендер, уходит копия выбранной. Затирать попытку нельзя: она
+стоит денег, а достать её обратно можно только по prediction_id — поэтому он и
+пишется в журнал.
+
     $env:ATLASCLOUD_API_KEY="..."
     python tools/atlas_gen.py --only interrogation combat --resolution 480p
     python tools/atlas_gen.py --all
+    python tools/atlas_gen.py --use combat=1
+    python tools/atlas_gen.py --refetch <prediction_id> --as combat
 """
 
 from __future__ import annotations
@@ -20,6 +27,7 @@ from __future__ import annotations
 import argparse
 import csv
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -40,10 +48,18 @@ MODEL = "bytedance/seedance-2.0-mini/reference-to-video"
 RATE_PER_SECOND = {"480p": 0.056, "720p": 0.061,
                    "720p-SR": 0.061, "1080p-SR": 0.075, "1440p-SR": 0.090}
 
+VIDEO = ROOT / "assets" / "video"
+# Попытки лежат отдельно от слотов, которые читает рендер. Слот один на кадр, а
+# попыток на него бывает три, и раньше каждая новая затирала предыдущую.
+ATTEMPTS = VIDEO / "attempts"
+
 LEDGER = ROOT / "docs" / "atlas-ledger.csv"
 LEDGER_HEADER = ["timestamp", "shot", "model", "resolution", "duration",
                  "attempt", "cost_estimate_usd", "total_tokens", "status",
-                 "file", "notes"]
+                 # Результат живёт на стороне сервиса, и вернуть его можно только
+                 # по идентификатору. Один раз его уже пришлось выписывать со
+                 # скриншота дашборда, потому что в журнал он не попадал.
+                 "prediction_id", "file", "notes"]
 
 # Успехом считаются оба слова: схема перечисляет completed, а их же пример в
 # cURL пишет "completed, succeeded or failed". Проверять только одно — значит
@@ -164,12 +180,14 @@ def wait(job: str, timeout: float = 900.0) -> tuple[str, int]:
 
 
 def download(url: str, target: Path) -> None:
-    """Скачивает и обеззвучивает при переносе на место.
+    """Скачивает попытку и обеззвучивает её.
 
     Звук снимается локально, а не только флагом generate_audio: флаг выставлен
     правильно, но полагаться на один барьер там, где дорожка поехала бы в монтаж
     под готовый мастер, не стоит.
     """
+    if target.exists():
+        raise AtlasError(f"попытка {target.name} уже скачана, не перезаписываю")
     target.parent.mkdir(parents=True, exist_ok=True)
     raw = target.with_suffix(".raw.mp4")
     with requests.get(url, stream=True, timeout=600) as response:
@@ -183,8 +201,37 @@ def download(url: str, target: Path) -> None:
     raw.unlink()
 
 
+def place(attempt: Path, slot: Path) -> None:
+    """Кладёт выбранную попытку в слот, который читает рендер.
+
+    Копией, а не переносом: файл попытки обязан остаться на месте, ради этого
+    вся раскладка и заведена.
+    """
+    slot.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(attempt, slot)
+
+
+def ledger_rows() -> list[dict]:
+    if not LEDGER.exists():
+        return []
+    with open(LEDGER, encoding="utf-8") as fh:
+        reader = csv.DictReader(fh)
+        # Дописывать строку нового формата в журнал старого нельзя: столбцы
+        # разъедутся молча, и первым потеряется как раз prediction_id.
+        if reader.fieldnames != LEDGER_HEADER:
+            raise AtlasError(
+                f"журнал {LEDGER.name} другого формата.\n"
+                f"  в файле: {', '.join(reader.fieldnames or [])}\n"
+                f"  нужно:   {', '.join(LEDGER_HEADER)}\n"
+                "  допиши колонки или удали файл — это только журнал расходов."
+            )
+        return list(reader)
+
+
 def note(row: dict) -> None:
     fresh = not LEDGER.exists()
+    if not fresh:
+        ledger_rows()  # только ради проверки формата, до открытия на запись
     LEDGER.parent.mkdir(parents=True, exist_ok=True)
     with open(LEDGER, "a", newline="", encoding="utf-8") as fh:
         writer = csv.DictWriter(fh, fieldnames=LEDGER_HEADER)
@@ -193,11 +240,28 @@ def note(row: dict) -> None:
         writer.writerow(row)
 
 
+def attempt_path(anchor: str, number: int) -> Path:
+    return ATTEMPTS / f"{anchor}_a{number}.mp4"
+
+
+def attempts(anchor: str) -> list[int]:
+    """Номера уже скачанных попыток кадра."""
+    found = []
+    for path in ATTEMPTS.glob(f"{anchor}_a*.mp4"):
+        tail = path.stem.removeprefix(f"{anchor}_a")
+        if tail.isdigit():
+            found.append(int(tail))
+    return sorted(found)
+
+
 def attempt_number(anchor: str) -> int:
-    if not LEDGER.exists():
-        return 1
-    with open(LEDGER, encoding="utf-8") as fh:
-        return sum(1 for r in csv.DictReader(fh) if r["shot"] == anchor) + 1
+    """Номер следующей попытки — по журналу и по уже скачанным файлам.
+
+    Одного журнала мало: стоит его удалить или переписать, и номер вернулся бы к
+    единице, а новая генерация легла бы в файл существующей попытки.
+    """
+    counted = sum(1 for r in ledger_rows() if r["shot"] == anchor)
+    return max([counted, *attempts(anchor)]) + 1
 
 
 def estimate(shot: BaseShot, resolution: str) -> float:
@@ -207,18 +271,25 @@ def estimate(shot: BaseShot, resolution: str) -> float:
 def generate(shot: BaseShot, resolution: str, stamp: str) -> None:
     attempt = attempt_number(shot.anchor)
     cost = estimate(shot, resolution)
-    target = ROOT / "assets" / "video" / shot.clip
+    target = attempt_path(shot.anchor, attempt)
     print(f"[{shot.anchor}] попытка {attempt}, {shot.duration:g} с "
           f"{resolution}, ожидаемо ${cost:.2f}")
 
     row = {"timestamp": stamp, "shot": shot.anchor, "model": MODEL,
            "resolution": resolution, "duration": shot.duration,
            "attempt": attempt, "cost_estimate_usd": f"{cost:.4f}",
-           "total_tokens": "", "status": "", "file": shot.clip, "notes": ""}
+           "total_tokens": "", "status": "", "prediction_id": "",
+           "file": shot.clip, "notes": ""}
     try:
         refs = [upload(ROOT / "assets" / "screenshots" / r) for r in shot.refs]
-        url, tokens = wait(submit(shot, refs, resolution))
+        # Идентификатор запоминаем сразу после отправки, а не после ожидания:
+        # упади скачивание, оплаченный результат остаётся на стороне сервиса, и
+        # забрать его можно только по нему — --refetch.
+        job = submit(shot, refs, resolution)
+        row["prediction_id"] = job
+        url, tokens = wait(job)
         download(url, target)
+        place(target, VIDEO / shot.clip)
     except (AtlasError, subprocess.CalledProcessError) as error:
         row["status"] = "failed"
         row["notes"] = str(error).replace("\n", " ")[:300]
@@ -227,8 +298,58 @@ def generate(shot: BaseShot, resolution: str, stamp: str) -> None:
     row["status"] = "ok"
     row["total_tokens"] = tokens
     note(row)
-    print(f"[{shot.anchor}] готово: {target.relative_to(ROOT)}, "
-          f"токенов {tokens}")
+    print(f"[{shot.anchor}] готово: {target.relative_to(ROOT)} -> {shot.clip}, "
+          f"токенов {tokens}, prediction {job}")
+
+
+def use_attempts(pairs: list[str], slots: dict[str, BaseShot]) -> int:
+    """Переключает слоты на уже скачанные попытки, без генерации."""
+    for pair in pairs:
+        anchor, _, raw = pair.partition("=")
+        if not raw.isdigit():
+            raise AtlasError(f"--use ждёт пары ЯКОРЬ=НОМЕР, получено {pair!r}")
+        shot = slots.get(anchor)
+        if shot is None:
+            raise AtlasError(f"нет такого якоря: {anchor}. "
+                             f"Есть: {', '.join(slots)}")
+        source = attempt_path(anchor, int(raw))
+        if not source.exists():
+            have = attempts(anchor)
+            raise AtlasError(
+                f"нет попытки {raw} кадра {anchor}. "
+                + (f"Есть: {', '.join(str(n) for n in have)}" if have else
+                   f"Скачанных попыток этого кадра нет вовсе — "
+                   f"в {ATTEMPTS.relative_to(ROOT)} для него ничего не лежит.")
+            )
+        place(source, VIDEO / shot.clip)
+        print(f"[{anchor}] слот {shot.clip} <- {source.relative_to(ROOT)}")
+    return 0
+
+
+def refetch(prediction_id: str, anchor: str, slots: dict[str, BaseShot]) -> int:
+    """Забирает готовый результат по идентификатору, не платя за него заново.
+
+    В слот не кладёт. Старую версию достают, чтобы сравнить её с той, что в слоте
+    уже отобрана, и молча заменить отобранное было бы той же потерей, от которой
+    вся раскладка и заведена. Переключает слот --use, и он же печатается готовой
+    строкой в конце.
+    """
+    if anchor not in slots:
+        raise AtlasError(f"--as: нет такого якоря: {anchor}. "
+                         f"Есть: {', '.join(slots)}")
+    url, _ = wait(prediction_id)
+    number = attempt_number(anchor)
+    target = attempt_path(anchor, number)
+    download(url, target)
+    note({"timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"), "shot": anchor,
+          "attempt": number, "cost_estimate_usd": "0.0000", "status": "refetch",
+          "prediction_id": prediction_id,
+          # Модель и разрешение не пишем: ответ prediction/{id} мы читаем только
+          # ради ссылки, и выдумывать за него поля этой строки нельзя.
+          "notes": "повторное скачивание готового результата, оплаты нет"})
+    print(f"[{anchor}] попытка {number}: {target.relative_to(ROOT)}")
+    print(f"  в слот {slots[anchor].clip}: --use {anchor}={number}")
+    return 0
 
 
 def main() -> int:
@@ -242,12 +363,34 @@ def main() -> int:
                     help="переопределить разрешение, например 480p для пробы")
     ap.add_argument("--dry-run", action="store_true",
                     help="показать, что будет отправлено, и не отправлять")
+    ap.add_argument("--use", nargs="+", metavar="ЯКОРЬ=N",
+                    help="положить в слот уже скачанную попытку, без генерации")
+    ap.add_argument("--refetch", metavar="PREDICTION_ID",
+                    help="забрать готовый результат по идентификатору из журнала")
+    ap.add_argument("--as", dest="anchor", metavar="ЯКОРЬ",
+                    help="какому кадру принадлежит результат --refetch")
     args = ap.parse_args()
 
-    if not args.only and not args.all:
-        ap.error("укажи --only ЯКОРЬ [ЯКОРЬ...] или --all")
+    if sum(map(bool, [args.only or args.all, args.use, args.refetch])) != 1:
+        ap.error("выбери одно: --only ЯКОРЬ [ЯКОРЬ...] | --all | "
+                 "--use ЯКОРЬ=N | --refetch PREDICTION_ID --as ЯКОРЬ")
+    if args.refetch and not args.anchor:
+        ap.error("--refetch требует --as ЯКОРЬ: без якоря непонятно, чьей "
+                 "попыткой стал бы скачанный файл")
 
     bases, _ = load_shots(args.shots)
+    slots = {b.anchor: b for b in bases}
+
+    if args.use or args.refetch:
+        try:
+            if args.use:
+                return use_attempts(args.use, slots)
+            key()
+            return refetch(args.refetch, args.anchor, slots)
+        except (AtlasError, subprocess.CalledProcessError) as error:
+            print(error, file=sys.stderr)
+            return 1
+
     if args.only:
         unknown = set(args.only) - {b.anchor for b in bases}
         if unknown:

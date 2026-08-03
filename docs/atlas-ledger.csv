@@ -1,5 +1,5 @@
-timestamp,shot,model,resolution,duration,attempt,cost_estimate_usd,total_tokens,status,file,notes
-2026-08-03T17:38:10,interrogation,bytedance/seedance-2.0-mini/reference-to-video,480p,15.0,1,0.8400,151078,ok,base/01_interrogation.mp4,
-2026-08-03T17:38:10,combat,bytedance/seedance-2.0-mini/reference-to-video,480p,7.0,1,0.3920,70726,ok,base/03_breach.mp4,
-2026-08-03T17:49:26,interrogation,bytedance/seedance-2.0-mini/reference-to-video,480p,15.0,2,0.8400,151078,ok,base/01_interrogation.mp4,
-2026-08-03T18:09:30,combat,bytedance/seedance-2.0-mini/reference-to-video,480p,7.0,2,0.3920,70726,ok,base/03_breach.mp4,
+timestamp,shot,model,resolution,duration,attempt,cost_estimate_usd,total_tokens,status,prediction_id,file,notes
+2026-08-03T17:38:10,interrogation,bytedance/seedance-2.0-mini/reference-to-video,480p,15.0,1,0.8400,151078,ok,,base/01_interrogation.mp4,
+2026-08-03T17:38:10,combat,bytedance/seedance-2.0-mini/reference-to-video,480p,7.0,1,0.3920,70726,ok,,base/03_breach.mp4,
+2026-08-03T17:49:26,interrogation,bytedance/seedance-2.0-mini/reference-to-video,480p,15.0,2,0.8400,151078,ok,,base/01_interrogation.mp4,
+2026-08-03T18:09:30,combat,bytedance/seedance-2.0-mini/reference-to-video,480p,7.0,2,0.3920,70726,ok,,base/03_breach.mp4,
