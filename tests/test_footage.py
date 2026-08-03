@@ -330,18 +330,35 @@ def test_every_base_covers_its_window_without_looping():
     """Клип короче своего куска закольцуется, и событие произойдёт дважды.
     Длиннее — обрежется по границе, и это безопасно.
 
-    Считать надо эффективную длину, duration/speed, а не саму duration: у
-    допроса окно 16.2 с при максимуме модели 15, и закрывается оно замедлением
-    на 8%. Тест на голой duration этот случай пропустил бы.
+    Считать надо то, что реально доходит до экрана: (duration - start_at)/speed.
+    Голая duration соврала бы дважды. У допроса окно 16.2 с при максимуме модели
+    15 — закрывается замедлением. И у него же обрезано начало: модель ставит
+    перед событием мёртвый разгон, его отрезают через start_at, и на этом
+    отрезанном куске тест на голой duration ничего бы не заметил.
+
+    Различие по loop важно. Закольцованный кадр короче окна прокрутит начало
+    заново — для фактуры это незаметно, для события это катастрофа. Кадр с
+    loop=False вместо этого держит последний кадр, и короткий клип ему не
+    смертелен: смертелен только длинный простой на замершей картинке.
     """
+    HOLD_LIMIT = 1.0
     bases, _ = resolve(*load_shots("scenario/shots.json"), _real_plan())
     for shot in bases:
         window = shot.end - shot.t
-        effective = shot.duration / shot.speed
-        assert effective >= window - 1e-6, (
-            f"{shot.anchor}: {shot.duration:g} с на speed {shot.speed:g} дают "
-            f"{effective:.1f} с на куске {window:.1f} с — закольцуется"
-        )
+        effective = (shot.duration - shot.start_at) / shot.speed
+        if shot.loop:
+            assert effective >= window - 1e-6, (
+                f"{shot.anchor}: {shot.duration:g} с минус разгон "
+                f"{shot.start_at:g} на speed {shot.speed:g} дают "
+                f"{effective:.1f} с на куске {window:.1f} с — закольцуется"
+            )
+        else:
+            hold = window - effective
+            assert hold <= HOLD_LIMIT, (
+                f"{shot.anchor}: не закольцуется, но держит последний кадр "
+                f"{hold:.1f} с — это больше {HOLD_LIMIT:g} с и читается как "
+                f"подвисший экран"
+            )
 
 
 def test_no_shot_asks_the_model_for_more_than_it_can_do():

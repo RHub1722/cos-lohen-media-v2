@@ -15,7 +15,8 @@
   POST https://api.atlascloud.ai/api/v1/model/uploadMedia
   Authorization: Bearer <ключ>
   multipart/form-data, файл в поле "file"
-  Ответ: JSON со ссылкой в "url". Ссылки временные, файлы чистятся периодически.
+  Ответ: ссылка в data.download_url — НЕ в data.url, см. ниже.
+  Ссылки временные, файлы чистятся периодически.
 
 Отправка задания (асинхронно)
   POST https://api.atlascloud.ai/api/v1/model/generateVideo
@@ -94,6 +95,22 @@ return_last_frame   boolean               по умолчанию false
 
 Все 22 файла в `assets/screenshots/` проверены и проходят: пропорции от 1.07 до
 2.20, минимальная сторона 498 px, самый тяжёлый файл 2.0 МБ.
+
+### Ответ на загрузку: `download_url`, а не `url`
+
+В питоновском примере их документации стоит `data.get("url")`, и это **неверно**.
+Настоящий ответ, снятый с живого запроса 3 августа:
+
+```json
+{"code": 200, "message": "success",
+ "data": {"type": "image",
+          "download_url": "https://atlas-img.oss-accelerate-overseas.aliyuncs.com/images/….png",
+          "filename": "….png",
+          "size": 662284}}
+```
+
+Ссылка лежит в `data.download_url`. Своя же документация здесь врёт — этот блок
+записан по факту, а не по примеру.
 
 ### Как промпт ссылается на референсы
 

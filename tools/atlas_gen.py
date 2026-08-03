@@ -81,7 +81,13 @@ def upload(path: Path) -> str:
         raise AtlasError(f"загрузка {path.name} отклонена "
                          f"({response.status_code}): {response.text[:400]}")
     payload = response.json()
-    url = payload.get("url") or payload.get("data", {}).get("url")
+    data = payload.get("data") or {}
+    # Настоящее имя поля — download_url, проверено живым ответом. В питоновском
+    # примере их документации стоит data.get("url"), и это неверно: ответ
+    # выглядит как {"code":200,"data":{"type":"image","download_url":...}}.
+    # Остальные варианты оставлены на случай, если схема поменяется.
+    url = (data.get("download_url") or data.get("url")
+           or payload.get("download_url") or payload.get("url"))
     if not url:
         raise AtlasError(f"в ответе на загрузку {path.name} нет ссылки: "
                          f"{response.text[:400]}")
