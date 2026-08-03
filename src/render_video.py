@@ -479,7 +479,7 @@ def render_frame(canvas: Canvas, plan: VideoPlan, t: float, fps: int,
     # работает процедурный фон, и номер всё равно собирается целиком. Так клипы
     # можно докладывать по одному, каждый раз получая готовый файл, а не ждать
     # полного комплекта.
-    rgb = source.base(t) if source is not None else None
+    rgb = source.base(t, t_anim) if source is not None else None
     if rgb is None and source is not None:
         # Место может требовать не палитру состояния, а свой генератор. Пролом
         # двери — именно такое место: единственный кадр, который обязан

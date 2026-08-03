@@ -4,7 +4,9 @@ import numpy as np
 import pytest
 
 from src.footage import (
+    BaseShot,
     FootageError,
+    FootageSource,
     despill,
     green_alpha,
     load_shots,
@@ -286,3 +288,68 @@ def test_despill_leaves_honest_green_alone():
     rgb = np.zeros((1, 1, 3), dtype=np.float32)
     rgb[0, 0] = (0.4, 0.2, 0.5)
     assert despill(rgb)[0, 0, 1] == pytest.approx(0.2)
+
+
+# --- заморозка держит и снятый материал --------------------------------------
+
+
+@pytest.fixture
+def moving_clip(tmp_path):
+    """Трёхсекундный клип, у которого каждый кадр отличается от соседнего.
+
+    На клипе из одинаковых кадров тест на заморозку прошёл бы и на сломанном
+    коде: держим мы кадр или читаем следующий, картинка была бы та же.
+    """
+    import subprocess
+    (tmp_path / "base").mkdir()
+    subprocess.run([
+        "ffmpeg", "-v", "error", "-y", "-f", "lavfi",
+        "-i", "testsrc=size=64x36:rate=30", "-t", "3",
+        "-pix_fmt", "yuv420p", str(tmp_path / "base" / "c.mp4"),
+    ], check=True)
+    return tmp_path
+
+
+def test_footage_holds_its_frame_while_time_is_frozen(moving_clip):
+    """На 55.2 исполнитель держит позу, и шевелиться в зале не должно ничто.
+
+    Процедурный фон замирал и раньше, а снятый материал продолжал ехать: труба
+    FFmpeg отдаёт следующий кадр на каждый вызов, и никакое время её не
+    остановит. Пока фона не было, это не проявлялось.
+    """
+    bases = [BaseShot(anchor="ice", clip="base/c.mp4", t=0.0, end=3.0)]
+    source = FootageSource(bases, [], moving_clip, 64, 36, 30)
+    try:
+        moving = [source.base(i / 30.0, i / 30.0) for i in range(10)]
+        held = [source.base(0.5 + i / 30.0, 0.5) for i in range(4)]
+    finally:
+        source.close()
+    assert not np.array_equal(moving[0], moving[5]), "клип должен ехать"
+    assert all(np.array_equal(held[0], frame) for frame in held[1:])
+
+
+def test_footage_freeze_works_in_seek_mode_too(moving_clip):
+    """Кадры-образцы идут вразнобой, поэтому держать последний прочитанный
+    нельзя — надо перематывать на замороженный момент."""
+    bases = [BaseShot(anchor="ice", clip="base/c.mp4", t=0.0, end=3.0)]
+    source = FootageSource(bases, [], moving_clip, 64, 36, 30, seek=True)
+    try:
+        frozen_early = source.base(1.0, 0.5)
+        frozen_late = source.base(2.0, 0.5)
+        running = source.base(2.0, 2.0)
+    finally:
+        source.close()
+    assert np.array_equal(frozen_early, frozen_late)
+    assert not np.array_equal(frozen_early, running)
+
+
+def test_footage_runs_normally_when_time_is_not_frozen(moving_clip):
+    """Заморозка не должна протечь на остальной номер."""
+    bases = [BaseShot(anchor="ice", clip="base/c.mp4", t=0.0, end=3.0)]
+    source = FootageSource(bases, [], moving_clip, 64, 36, 30, seek=True)
+    try:
+        a = source.base(0.5, 0.5)
+        b = source.base(1.5, 1.5)
+    finally:
+        source.close()
+    assert not np.array_equal(a, b)

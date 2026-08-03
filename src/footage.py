@@ -319,7 +319,17 @@ class FootageSource:
 
     # -- фон ------------------------------------------------------------------
 
-    def base(self, t: float) -> np.ndarray | None:
+    def base(self, t: float, t_hold: float | None = None) -> np.ndarray | None:
+        """Кадр фона на момент `t`.
+
+        `t_hold` — момент, с которого берётся картинка. Обычно равен `t`, но на
+        заморозке отстаёт: на 42.8 он получает удар и не реагирует, на 55.2
+        держит позу до конца номера. Кусок при этом выбирается по настоящему
+        времени, иначе после 55.2 мы бы уехали в предыдущий кадр списка.
+        """
+        hold = t_hold if t_hold is not None else t
+        frozen = hold < t
+
         index, shot = -1, None
         for i, candidate in enumerate(self.bases):
             if candidate.t <= t < candidate.end:
@@ -332,7 +342,13 @@ class FootageSource:
             return None
 
         if self.seek:
-            frame = self._one_frame(path, self._offset(path, shot, t), shot.speed)
+            # Кадры-образцы идут вразнобой, держать последний прочитанный
+            # нельзя — перематываем ровно на замороженный момент.
+            frame = self._one_frame(path, self._offset(path, shot, hold), shot.speed)
+        elif frozen and self._base_last is not None:
+            # Труба отдаёт следующий кадр на каждый вызов, и никакое время её не
+            # остановит. Значит на заморозке не читаем вовсе.
+            frame = self._base_last
         else:
             if index != self._base_index:
                 self._close_base()
