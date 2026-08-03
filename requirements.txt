@@ -8,5 +8,9 @@ numpy>=2.0
 scipy>=1.13
 Pillow>=10.0
 
+# Загрузка референсов в Atlas Cloud идёт multipart/form-data. На urllib это
+# двадцать строк ручной сборки границ, на requests — одна.
+requests>=2.31
+
 # Тесты.
 pytest>=8.0
