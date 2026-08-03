@@ -40,7 +40,7 @@
 
 **Референсы адресуются внутри промпта токенами `@image1`, `@image2`** — их собственный пример: `Car 1 @image1 is speeding along the highway @image3`. Порядок токенов соответствует порядку загруженных файлов.
 
-**Точные имена JSON-полей для всего, кроме `model`, `prompt` и `image_url`, в документации не приведены.** Их выясняет Задача 1, и до этого `atlas_gen.py` не запускается.
+**Точные имена полей сняты со схемы модели и лежат в [docs/atlas-api.md](../../atlas-api.md)** — это результат Задачи 1. Четыре вещи, где очевидная догадка неверна: пропорции называются `ratio`, поля запретов нет вовсе, идентификатор задания лежит в `data.id`, а успехом считаются два статуса — `completed` и `succeeded`.
 
 ---
 
@@ -828,6 +828,13 @@ git commit -m "video: одиннадцать кадров с промптами,
 
 ## Задача 5: `tools/atlas_gen.py`
 
+Имена полей взяты из `docs/atlas-api.md` (Задача 1), не угаданы. Четыре места, где очевидная догадка была бы неверной:
+
+- пропорции называются **`ratio`**, а не `aspect_ratio`;
+- **поля запретов у модели нет вовсе** — `negative` дописывается в конец промпта;
+- идентификатор задания лежит в **`data.id`**, а не в корне ответа;
+- успехом считаются **два** статуса, `completed` и `succeeded`.
+
 **Файлы:**
 - Создать: `tools/atlas_gen.py`
 - Изменить: `requirements.txt`
@@ -861,8 +868,8 @@ python -m pip install -r requirements.txt
 Ключ берётся только из переменной окружения ATLASCLOUD_API_KEY и никуда не
 печатается — ни в журнал, ни в сообщение об ошибке.
 
-Точные имена полей запроса — в docs/atlas-api.md. Здесь они собраны в один
-словарь FIELDS: Atlas поменяет схему, и правка будет в одном месте.
+Имена полей запроса — из docs/atlas-api.md, снятые со схемы модели. Не угадывать:
+у модели, например, вообще нет поля запретов, а пропорции называются ratio.
 
     $env:ATLASCLOUD_API_KEY="..."
     python tools/atlas_gen.py --only interrogation combat --resolution 480p
@@ -888,26 +895,21 @@ from src.footage import BaseShot, load_shots  # noqa: E402
 ROOT = Path(__file__).resolve().parents[1]
 API = "https://api.atlascloud.ai/api/v1/model"
 MODEL = "bytedance/seedance-2.0-mini/reference-to-video"
-RATE_PER_SECOND = {"480p": 0.056, "720p": 0.061}
+
+# Оценка, а не факт: списывает Atlas в токенах, и настоящее число приезжает в
+# ответе полем total_tokens. Нужно, чтобы знать сумму до отправки.
+RATE_PER_SECOND = {"480p": 0.056, "720p": 0.061,
+                   "720p-SR": 0.061, "1080p-SR": 0.075, "1440p-SR": 0.09}
+
 LEDGER = ROOT / "docs" / "atlas-ledger.csv"
 LEDGER_HEADER = ["timestamp", "shot", "model", "resolution", "duration",
-                 "attempt", "cost_usd", "status", "file", "notes"]
+                 "attempt", "cost_estimate_usd", "total_tokens", "status",
+                 "file", "notes"]
 
-# Имена полей запроса. Сверены со схемой модели — docs/atlas-api.md. Если
-# какое-то имя окажется неверным, водяной знак или генерённый звук приедут
-# молча, поэтому менять только вместе с документом.
-FIELDS = {
-    "model": "model",
-    "prompt": "prompt",
-    "negative": "negative_prompt",
-    "refs": "reference_images",
-    "duration": "duration",
-    "resolution": "resolution",
-    "aspect": "aspect_ratio",
-    "audio": "generate_audio",
-    "watermark": "watermark",
-    "last_frame": "return_last_frame",
-}
+# Успехом считаются оба слова: схема перечисляет completed, а их же пример в
+# cURL пишет "completed, succeeded or failed". Проверять только одно — значит
+# опрашивать готовый результат до таймаута.
+DONE = ("completed", "succeeded")
 
 
 class AtlasError(RuntimeError):
@@ -931,47 +933,68 @@ def headers() -> dict[str, str]:
 
 def upload(path: Path) -> str:
     """Заливает референс и возвращает временную ссылку на него."""
+    if not path.exists():
+        raise AtlasError(f"нет референса {path}")
     with open(path, "rb") as fh:
         response = requests.post(f"{API}/uploadMedia", headers=headers(),
                                  files={"file": fh}, timeout=120)
     if response.status_code >= 400:
         raise AtlasError(f"загрузка {path.name} отклонена "
                          f"({response.status_code}): {response.text[:400]}")
-    url = response.json().get("url")
+    payload = response.json()
+    url = payload.get("url") or payload.get("data", {}).get("url")
     if not url:
-        raise AtlasError(f"в ответе на загрузку {path.name} нет поля url: "
+        raise AtlasError(f"в ответе на загрузку {path.name} нет ссылки: "
                          f"{response.text[:400]}")
     return url
 
 
+def full_prompt(shot: BaseShot) -> str:
+    """Промпт вместе с запретами.
+
+    Отдельного поля запретов у модели нет — это единственный способ их передать.
+    """
+    if not shot.negative.strip():
+        return shot.prompt
+    return f"{shot.prompt}\n\nAvoid entirely: {shot.negative}."
+
+
 def submit(shot: BaseShot, refs: list[str], resolution: str) -> str:
     body = {
-        FIELDS["model"]: MODEL,
-        FIELDS["prompt"]: shot.prompt,
-        FIELDS["negative"]: shot.negative,
-        FIELDS["refs"]: refs,
-        FIELDS["duration"]: int(shot.duration),
-        FIELDS["resolution"]: resolution,
-        FIELDS["aspect"]: "16:9",
-        # Мастер-звук готов и лежит в output/master_v2.wav. Генерённый звук нам
-        # не нужен ни в каком виде, а водяной знак виден с любого места в зале.
-        FIELDS["audio"]: False,
-        FIELDS["watermark"]: False,
-        FIELDS["last_frame"]: True,
+        "model": MODEL,
+        "prompt": full_prompt(shot),
+        "duration": int(shot.duration),
+        "resolution": resolution,
+        # Не aspect_ratio. И не adaptive по умолчанию: adaptive взял бы
+        # пропорции первого референса, а у нас они разные, кадр обязан быть 16:9.
+        "ratio": "16:9",
+        "bitrate_mode": "standard",
+        # По умолчанию true. Мастер-звук готов, дорожка от модели не нужна.
+        "generate_audio": False,
+        # По умолчанию уже false, но передаём явно: молчаливая смена дефолта на
+        # стороне сервиса стоила бы водяного знака в готовом номере.
+        "watermark": False,
+        "return_last_frame": False,
     }
+    if refs:
+        # Поле требует минимум один элемент, поэтому пустым его не отправляем.
+        body["reference_images"] = refs
+
     response = requests.post(f"{API}/generateVideo", headers=headers(),
                              json=body, timeout=120)
     if response.status_code >= 400:
         raise AtlasError(f"задание отклонено ({response.status_code}): "
                          f"{response.text[:600]}")
-    job = response.json().get("id")
+    payload = response.json()
+    # Идентификатор в конверте: {"code": 200, "data": {"id": ..., ...}}
+    job = payload.get("data", {}).get("id") or payload.get("id")
     if not job:
         raise AtlasError(f"в ответе нет id задания: {response.text[:400]}")
     return job
 
 
-def wait(job: str, timeout: float = 900.0) -> str:
-    """Опрашивает задание раз в две секунды и возвращает ссылку на результат."""
+def wait(job: str, timeout: float = 900.0) -> tuple[str, int]:
+    """Опрашивает задание и возвращает ссылку на результат и списанные токены."""
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         response = requests.get(f"{API}/prediction/{job}",
@@ -980,25 +1003,26 @@ def wait(job: str, timeout: float = 900.0) -> str:
             raise AtlasError(f"опрос {job} ({response.status_code}): "
                              f"{response.text[:400]}")
         payload = response.json()
-        status = str(payload.get("status", payload.get("data", {}).get("status", "")))
-        if status == "completed":
-            outputs = payload.get("data", {}).get("outputs") or []
+        data = payload.get("data", payload)
+        status = str(data.get("status", "")).lower()
+        if status in DONE:
+            outputs = data.get("outputs") or []
             if not outputs:
                 raise AtlasError(f"задание {job} готово, но outputs пуст: "
                                  f"{str(payload)[:400]}")
-            return outputs[0]
-        if status == "failed":
-            raise AtlasError(f"задание {job} провалилось: {str(payload)[:600]}")
+            return outputs[0], int(data.get("total_tokens") or 0)
+        if status in ("failed", "timeout"):
+            raise AtlasError(f"задание {job} — {status}: {str(payload)[:600]}")
         time.sleep(2.0)
     raise AtlasError(f"задание {job} не завершилось за {timeout:.0f} с")
 
 
 def download(url: str, target: Path) -> None:
-    """Скачивает во временный файл и обеззвучивает его при переносе на место.
+    """Скачивает и обеззвучивает при переносе на место.
 
-    Звук снимается локально, а не только флагом в запросе: если имя поля
-    generate_audio окажется неверным, флаг молча ничего не сделает, а
-    сгенерированная дорожка поедет в монтаж под готовый мастер.
+    Звук снимается локально, а не только флагом generate_audio: флаг мы
+    выставляем правильно, но полагаться на один барьер там, где дорожка поехала
+    бы в монтаж под готовый мастер, не стоит.
     """
     target.parent.mkdir(parents=True, exist_ok=True)
     raw = target.with_suffix(".raw.mp4")
@@ -1023,28 +1047,31 @@ def note(row: dict) -> None:
         writer.writerow(row)
 
 
-def attempt_number(shot_anchor: str) -> int:
+def attempt_number(anchor: str) -> int:
     if not LEDGER.exists():
         return 1
     with open(LEDGER, encoding="utf-8") as fh:
-        rows = [r for r in csv.DictReader(fh) if r["shot"] == shot_anchor]
-    return len(rows) + 1
+        return sum(1 for r in csv.DictReader(fh) if r["shot"] == anchor) + 1
+
+
+def estimate(shot: BaseShot, resolution: str) -> float:
+    return RATE_PER_SECOND.get(resolution, 0.061) * shot.duration
 
 
 def generate(shot: BaseShot, resolution: str, stamp: str) -> None:
     attempt = attempt_number(shot.anchor)
-    cost = RATE_PER_SECOND.get(resolution, 0.061) * shot.duration
+    cost = estimate(shot, resolution)
     target = ROOT / "assets" / "video" / shot.clip
     print(f"[{shot.anchor}] попытка {attempt}, {shot.duration:g} с "
           f"{resolution}, ожидаемо ${cost:.2f}")
 
     row = {"timestamp": stamp, "shot": shot.anchor, "model": MODEL,
            "resolution": resolution, "duration": shot.duration,
-           "attempt": attempt, "cost_usd": f"{cost:.4f}",
-           "status": "", "file": shot.clip, "notes": ""}
+           "attempt": attempt, "cost_estimate_usd": f"{cost:.4f}",
+           "total_tokens": "", "status": "", "file": shot.clip, "notes": ""}
     try:
         refs = [upload(ROOT / "assets" / "screenshots" / r) for r in shot.refs]
-        url = wait(submit(shot, refs, resolution))
+        url, tokens = wait(submit(shot, refs, resolution))
         download(url, target)
     except (AtlasError, subprocess.CalledProcessError) as error:
         row["status"] = "failed"
@@ -1052,12 +1079,14 @@ def generate(shot: BaseShot, resolution: str, stamp: str) -> None:
         note(row)
         raise
     row["status"] = "ok"
+    row["total_tokens"] = tokens
     note(row)
-    print(f"[{shot.anchor}] готово: {target.relative_to(ROOT)}")
+    print(f"[{shot.anchor}] готово: {target.relative_to(ROOT)}, "
+          f"токенов {tokens}")
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__)
+    ap = argparse.ArgumentParser(description="Генерация кадров через Atlas Cloud")
     ap.add_argument("--shots", default=str(ROOT / "scenario" / "shots.json"))
     ap.add_argument("--only", nargs="+", metavar="ЯКОРЬ",
                     help="сгенерировать только эти кадры")
@@ -1072,24 +1101,23 @@ def main() -> int:
         ap.error("укажи --only ЯКОРЬ [ЯКОРЬ...] или --all")
 
     bases, _ = load_shots(args.shots)
-    chosen = [b for b in bases if args.all or b.anchor in args.only]
     if args.only:
         unknown = set(args.only) - {b.anchor for b in bases}
         if unknown:
             ap.error(f"нет таких якорей: {', '.join(sorted(unknown))}. "
                      f"Есть: {', '.join(b.anchor for b in bases)}")
+    chosen = [b for b in bases if args.all or b.anchor in args.only]
 
-    total = sum(RATE_PER_SECOND.get(args.resolution or b.resolution, 0.061)
-                * b.duration for b in chosen)
+    total = sum(estimate(b, args.resolution or b.resolution) for b in chosen)
     print(f"кадров: {len(chosen)}, ожидаемая стоимость ${total:.2f}\n")
 
     if args.dry_run:
         for shot in chosen:
             resolution = args.resolution or shot.resolution
-            print(f"--- {shot.anchor} | {shot.duration:g} с | {resolution} ---")
-            print(f"референсы: {', '.join(shot.refs)}")
-            print(f"промпт: {shot.prompt}\n")
-            print(f"запреты: {shot.negative}\n")
+            print(f"--- {shot.anchor} | {shot.duration:g} с | {resolution} "
+                  f"| ${estimate(shot, resolution):.2f} ---")
+            print(f"референсы: {', '.join(shot.refs) or 'нет'}")
+            print(f"{full_prompt(shot)}\n")
         return 0
 
     stamp = time.strftime("%Y-%m-%dT%H:%M:%S")
@@ -1107,38 +1135,24 @@ if __name__ == "__main__":
     raise SystemExit(main())
 ```
 
-- [ ] **Шаг 3: Заменить угаданные имена полей настоящими**
+- [ ] **Шаг 3: Сверить имена полей с контрактом**
 
-**Значения в словаре `FIELDS`, кроме `model` и `prompt`, — заглушки.** Они
-выглядят правдоподобно (`negative_prompt`, `reference_images`, `generate_audio`),
-но документацией не подтверждены, а спека прямо запрещает выдумывать поля API.
-
-Открыть `docs/atlas-api.md` (Задача 1) и подставить в `FIELDS` имена из таблицы.
-Два поля критичны:
-
-- `watermark` — при неверном имени флаг молча не сработает, и водяной знак
-  приедет в готовом клипе. Локально его не снять, а виден он с любого места
-  в зале.
-- `audio` — при неверном имени приедет сгенерированная дорожка. Это лечится
-  локально: `download()` всё равно прогоняет файл через `ffmpeg -an`. Но знать
-  об этом лучше сразу.
-
-Сверить, что в `FIELDS` не осталось ни одного значения, которого нет в
-`docs/atlas-api.md`:
+Каждое имя поля в теле запроса обязано встречаться в `docs/atlas-api.md`. Если Atlas поменяет схему, расхождение вылезет здесь, а не после оплаченной генерации.
 
 ```bash
 python - <<'PY'
 import re, pathlib
 doc = pathlib.Path("docs/atlas-api.md").read_text(encoding="utf-8")
 src = pathlib.Path("tools/atlas_gen.py").read_text(encoding="utf-8")
-block = re.search(r"FIELDS = \{(.+?)\n\}", src, re.S).group(1)
-names = re.findall(r':\s*"([^"]+)"', block)
+body = re.search(r"    body = \{(.+?)\n    \}", src, re.S).group(1)
+names = re.findall(r'^\s*"([a-z_]+)":', body, re.M)
 missing = [n for n in names if n not in doc]
+print("полей в запросе:", len(names))
 print("не подтверждены документацией:", missing or "нет, всё сходится")
 PY
 ```
 
-Ожидается: `не подтверждены документацией: нет, всё сходится`
+Ожидается: `полей в запросе: 9` и `не подтверждены документацией: нет, всё сходится`
 
 - [ ] **Шаг 4: Проверить сухим прогоном, без сети и без ключа**
 
@@ -1146,7 +1160,7 @@ PY
 python tools/atlas_gen.py --only interrogation combat --resolution 480p --dry-run
 ```
 
-Ожидается: два блока с промптами и строка `кадров: 2, ожидаемая стоимость $0.73`. Ключ не требуется, потому что сеть не трогается.
+Ожидается: два блока с промптами, каждый с дописанными запретами после `Avoid entirely:`, и строка `кадров: 2, ожидаемая стоимость $0.73`. Ключ не требуется, потому что сеть не трогается.
 
 - [ ] **Шаг 5: Проверить, что неверный якорь ловится сразу**
 
