@@ -1193,26 +1193,31 @@ git commit -m "tools: генерация кадров через Atlas Cloud, к
 
 **Файлы:** ничего не правится, только читается результат.
 
-- [ ] **Шаг 1: Подрезать референсы с полосой браузера**
+- [x] **Шаг 1: Подрезать то, что реально уходит в запрос**
 
-У четырёх файлов посторонние элементы по краям — модель может воспроизвести их как часть кадра. Для пробы нужен только `lohen_splash_art.png`, но проще сделать все сразу.
+Сделано. Из четырёх файлов с посторонними элементами подрезан **один**:
+`lohen_splash_art.png`, 1122×894 → 1052×880, убраны стрелка галереи справа и
+дуга слева сверху. Результат проверен глазами: фигура целиком, от головы до
+сапог, копьё полностью.
 
-```bash
-cd assets/screenshots
-for f in door_green.png spear_fight_03.png knife_green.png; do
-  ffmpeg -v error -y -i "$f" -vf "crop=iw:ih-24:0:24" "tmp_$f" && mv "tmp_$f" "$f"
-done
-ffmpeg -v error -y -i lohen_splash_art.png -vf "crop=iw-80:ih-24:0:24" tmp.png && mv tmp.png lohen_splash_art.png
-cd ../..
+`door_green.png`, `spear_fight_03.png` и `knife_green.png` не подрезаны, потому
+что **не отправляются никуда** — ни одного из них нет в `refs` ни у одного
+кадра. Проверять надо не где есть мусор, а что уходит в запрос.
+
+- [ ] **Шаг 2: Ключ в переменных окружения**
+
+Пользователь прописывает у себя, значение в переписку не попадает:
+
+```powershell
+[Environment]::SetEnvironmentVariable("ATLASCLOUD_API_KEY", "ключ", "User")
 ```
 
-- [ ] **Шаг 2: Задать ключ в окружении**
+Перезапуск не нужен: значение читается из User-scope и передаётся дочернему
+процессу напрямую, минуя вывод.
 
-```bash
-export ATLASCLOUD_API_KEY=...
+```powershell
+$env:ATLASCLOUD_API_KEY = [Environment]::GetEnvironmentVariable("ATLASCLOUD_API_KEY","User")
 ```
-
-В PowerShell: `$env:ATLASCLOUD_API_KEY="..."`. В репозиторий, в файлы и в переписку ключ не попадает.
 
 - [ ] **Шаг 3: Сгенерировать два кадра на 480p**
 
@@ -1220,7 +1225,13 @@ export ATLASCLOUD_API_KEY=...
 python tools/atlas_gen.py --only interrogation combat --resolution 480p
 ```
 
-Ожидается: две строки `готово`, файлы `assets/video/base/01_interrogation.mp4` и `assets/video/base/04_breach.mp4`, новая строка в `docs/atlas-ledger.csv` на каждый кадр.
+Ожидается: `кадров: 2, ожидаемая стоимость $1.23`, две строки `готово`, файлы
+`assets/video/base/01_interrogation.mp4` и `assets/video/base/03_breach.mp4`,
+новая строка в `docs/atlas-ledger.csv` на каждый кадр с фактическими
+`total_tokens`.
+
+Дороже изначальных $0.73, потому что допрос стал одним кадром на 15 секунд
+вместо двух по 6 и 11.
 
 - [ ] **Шаг 4: Убедиться, что звука в клипах нет**
 
@@ -1228,7 +1239,9 @@ python tools/atlas_gen.py --only interrogation combat --resolution 480p
 ffprobe -v error -show_entries stream=codec_type -of csv=p=0 assets/video/base/01_interrogation.mp4
 ```
 
-Ожидается: только `video`. Если появилась строка `audio` — поле `generate_audio` названо неверно, править `docs/atlas-api.md` и `FIELDS`.
+Ожидается: только `video`. Имя поля `generate_audio` подтверждено схемой, и
+сверх него `download()` прогоняет файл через `ffmpeg -an` — если строка `audio`
+всё же появилась, сломан локальный барьер, а не флаг.
 
 - [ ] **Шаг 5: Прогнать через настоящий пайплайн**
 
