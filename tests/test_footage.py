@@ -88,10 +88,13 @@ def test_procedural_fallback_only_inside_its_own_window(tmp_path):
 
 
 def test_procedural_fallback_steps_aside_when_the_clip_exists(tmp_path):
-    from src.footage import FootageSource
-    (tmp_path / "base").mkdir()
-    (tmp_path / "base" / "breach.mp4").write_bytes(b"x")
     bases, fx = resolve(*load_shots("scenario/shots.json"), _real_plan())
+    breach = next(b for b in bases if b.procedural)
+    # Имя берём из самого кадра: заглушка с зашитым именем молча перестала бы
+    # проверять то, что должна, стоило переименовать клип.
+    stub = tmp_path / breach.clip
+    stub.parent.mkdir(parents=True, exist_ok=True)
+    stub.write_bytes(b"x")
     source = FootageSource(bases, fx, tmp_path, 64, 36, 30, seek=True)
     assert source.procedural_at(24.0)[0] == ""
 
@@ -269,9 +272,13 @@ def test_the_real_shot_list_resolves_against_the_real_scenario():
     восемь минут."""
     bases, fx = resolve(*load_shots("scenario/shots.json"), _real_plan())
     assert [b.anchor for b in bases] == [
-        "interrogation", "combat", "burst1_whoosh", "ice"]
-    assert len(fx) == 5
-    assert all(f.t >= 0 for f in fx)
+        "interrogation", "revolver_cylinder_spin", "combat", "burst1_whoosh",
+        "burst2_whoosh", "burst3_impact_a", "hit_on_lohen", "burst4_whoosh",
+        "ice", "ice_final_impact",
+    ]
+    # Рисованных эффектов с альфа-каналом больше нет: генерация альфу не отдаёт,
+    # и удары переехали внутрь базовых кадров.
+    assert fx == []
     assert bases[-1].end == 60.0
 
 
@@ -286,6 +293,80 @@ def test_the_breach_gets_its_own_shot_and_it_is_long_enough_to_read():
     assert breach.t == 22.3
     assert breach.end == 28.5
     assert breach.end - breach.t >= 4.0
+
+
+# --- реальный список кадров под генерацию ------------------------------------
+
+
+def test_every_base_has_a_prompt_and_a_negative():
+    """Кадр без промпта молча уедет в процедурный фолбэк, и это выяснится только
+    на просмотре готового номера."""
+    bases, _ = load_shots("scenario/shots.json")
+    for shot in bases:
+        assert shot.prompt.strip(), f"{shot.anchor}: пустой промпт"
+        assert shot.negative.strip(), f"{shot.anchor}: пустые запреты"
+
+
+def test_every_reference_file_exists():
+    """Опечатка в имени референса выяснилась бы после загрузки, то есть уже
+    потратив время на отправку."""
+    from pathlib import Path
+    bases, _ = load_shots("scenario/shots.json")
+    for shot in bases:
+        for ref in shot.refs:
+            assert (Path("assets/screenshots") / ref).exists(), \
+                f"{shot.anchor}: нет файла {ref}"
+
+
+def test_the_logo_frame_is_never_used_as_a_reference():
+    """Логотип на входе — прямой способ получить в генерации буквенный мусор,
+    а читаемый текст стоит в запретах у каждого кадра."""
+    bases, _ = load_shots("scenario/shots.json")
+    for shot in bases:
+        assert not any("logo" in ref for ref in shot.refs), shot.anchor
+
+
+def test_every_base_covers_its_window_without_looping():
+    """Клип короче своего куска закольцуется, и событие произойдёт дважды.
+    Длиннее — обрежется по границе, и это безопасно.
+
+    Считать надо эффективную длину, duration/speed, а не саму duration: у
+    допроса окно 16.2 с при максимуме модели 15, и закрывается оно замедлением
+    на 8%. Тест на голой duration этот случай пропустил бы.
+    """
+    bases, _ = resolve(*load_shots("scenario/shots.json"), _real_plan())
+    for shot in bases:
+        window = shot.end - shot.t
+        effective = shot.duration / shot.speed
+        assert effective >= window - 1e-6, (
+            f"{shot.anchor}: {shot.duration:g} с на speed {shot.speed:g} дают "
+            f"{effective:.1f} с на куске {window:.1f} с — закольцуется"
+        )
+
+
+def test_no_shot_asks_the_model_for_more_than_it_can_do():
+    """4-15 с — границы Seedance 2.0 Mini. За ними задание вернёт ошибку через
+    минуту ожидания, а не сразу."""
+    bases, _ = load_shots("scenario/shots.json")
+    for shot in bases:
+        assert 4.0 <= shot.duration <= 15.0, f"{shot.anchor}: {shot.duration}"
+
+
+def test_the_shot_list_covers_the_whole_number():
+    bases, _ = resolve(*load_shots("scenario/shots.json"), _real_plan())
+    assert len(bases) == 10
+    assert bases[0].t == 0.0
+    assert bases[-1].end == 60.0
+    for earlier, later in zip(bases, bases[1:]):
+        assert earlier.end == later.t, "в списке кадров дырка"
+
+
+def test_only_one_shot_shows_his_face():
+    """Второй Лоэн на экране перетягивает внимание с исполнителя. Лицо
+    разрешено ровно один раз — вспышкой на 42.8."""
+    bases, _ = resolve(*load_shots("scenario/shots.json"), _real_plan())
+    with_face = [b.anchor for b in bases if "lohen_rage.png" in b.refs]
+    assert with_face == ["hit_on_lohen"]
 
 
 # --- композиция --------------------------------------------------------------
