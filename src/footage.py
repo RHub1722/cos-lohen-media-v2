@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 from dataclasses import dataclass, replace
 from functools import lru_cache
@@ -32,6 +33,17 @@ GRADES = {
     "hot": (1.20, 0.72, 0.55),    # бой
     "ice": (0.82, 0.95, 1.15),    # лёд
 }
+
+# Ограничения генерирующей модели. Полный контракт — docs/atlas-api.md.
+# Задание за пределами вернёт ошибку через минуту ожидания, а не сразу, поэтому
+# ловим здесь: это самая дорогая форма опечатки.
+RESOLUTIONS = ("480p", "720p", "720p-SR", "1080p-SR", "1440p-SR")
+MIN_DURATION, MAX_DURATION = 4.0, 15.0
+MAX_REFS = 9
+
+# Референсы адресуются внутри промпта: «@image1», «image 1». Порядок токенов
+# соответствует порядку refs.
+_REF_TOKEN = re.compile(r"@image(\d+)")
 
 
 class FootageError(Exception):
@@ -61,6 +73,15 @@ class BaseShot:
     # Чем рисовать это место, пока файла нет. Пусто — палитрой своего
     # состояния. Иначе имя встроенного генератора, например "breach".
     procedural: str = ""
+    # Задание на генерацию. Пусто у кадров со стока: им промпт не нужен.
+    # negative уезжает склеенным с prompt — отдельного поля запретов у модели
+    # нет, см. docs/atlas-api.md. Здесь он лежит отдельно, потому что
+    # документирует замысел и проверяется тестами.
+    prompt: str = ""
+    negative: str = ""
+    duration: float = 0.0
+    resolution: str = ""
+    refs: tuple[str, ...] = ()
     t: float = -1.0
     end: float = -1.0
 
@@ -102,12 +123,42 @@ def load_shots(path: str | Path) -> tuple[list[BaseShot], list[FxShot]]:
         speed = float(item.get("speed", 1.0))
         if speed <= 0:
             raise FootageError(f"{item['anchor']}: speed={speed} должен быть больше нуля")
+
+        duration = float(item.get("duration", 0.0))
+        if duration and not MIN_DURATION <= duration <= MAX_DURATION:
+            raise FootageError(
+                f"{item['anchor']}: duration={duration:g} вне диапазона модели "
+                f"{MIN_DURATION:g}-{MAX_DURATION:g} с"
+            )
+        resolution = str(item.get("resolution", ""))
+        if resolution and resolution not in RESOLUTIONS:
+            raise FootageError(
+                f"{item['anchor']}: неизвестное разрешение {resolution!r}, "
+                f"допустимы {RESOLUTIONS}"
+            )
+        refs = tuple(str(ref) for ref in item.get("refs", []))
+        if len(refs) > MAX_REFS:
+            raise FootageError(
+                f"{item['anchor']}: {len(refs)} референсов, модель принимает не "
+                f"больше {MAX_REFS}"
+            )
+        prompt = str(item.get("prompt", ""))
+        for token in _REF_TOKEN.finditer(prompt):
+            number = int(token.group(1))
+            if not 1 <= number <= len(refs):
+                raise FootageError(
+                    f"{item['anchor']}: промпт ссылается на @image{number}, "
+                    f"а референсов {len(refs)}"
+                )
+
         bases.append(BaseShot(
             anchor=str(item["anchor"]), clip=str(item["clip"]),
             start_at=float(item.get("start_at", 0.0)), speed=speed,
             grade=grade, gain=float(item.get("gain", 1.0)),
             loop=bool(item.get("loop", True)),
             procedural=str(item.get("procedural", "")),
+            prompt=prompt, negative=str(item.get("negative", "")),
+            duration=duration, resolution=resolution, refs=refs,
         ))
 
     fx = []

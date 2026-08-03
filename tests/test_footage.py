@@ -137,6 +137,77 @@ def test_shots_reject_zero_scale(tmp_path):
         load_shots(path)
 
 
+# --- поля генерации ----------------------------------------------------------
+
+
+def test_generation_fields_are_empty_by_default(tmp_path):
+    """Кадру со стока промпт не нужен — поля необязательные."""
+    path = _write(tmp_path, {"base": [{"anchor": "combat", "clip": "b.mp4"}]})
+    shot = load_shots(path)[0][0]
+    assert shot.prompt == "" and shot.negative == ""
+    assert shot.duration == 0.0 and shot.resolution == ""
+    assert shot.refs == ()
+
+
+def test_generation_fields_are_read(tmp_path):
+    path = _write(tmp_path, {"base": [{
+        "anchor": "combat", "clip": "b.mp4",
+        "prompt": "a dark hold @image1", "negative": "no text",
+        "duration": 6, "resolution": "720p", "refs": ["room_wide.png"],
+    }]})
+    shot = load_shots(path)[0][0]
+    assert shot.prompt == "a dark hold @image1"
+    assert shot.negative == "no text"
+    assert shot.duration == 6.0
+    assert shot.resolution == "720p"
+    assert shot.refs == ("room_wide.png",)
+
+
+@pytest.mark.parametrize("duration", [3.9, 15.1, 0.5])
+def test_shots_reject_duration_outside_the_model_range(duration, tmp_path):
+    """Модель принимает 4-15 с. Задание за пределами вернёт ошибку через минуту
+    ожидания, а не сразу, и это самая дорогая форма опечатки."""
+    path = _write(tmp_path, {"base": [{
+        "anchor": "combat", "clip": "b.mp4", "duration": duration}]})
+    with pytest.raises(FootageError, match="duration"):
+        load_shots(path)
+
+
+def test_shots_reject_an_unknown_resolution(tmp_path):
+    path = _write(tmp_path, {"base": [{
+        "anchor": "combat", "clip": "b.mp4", "resolution": "4k"}]})
+    with pytest.raises(FootageError, match="4k"):
+        load_shots(path)
+
+
+def test_shots_reject_a_prompt_token_without_its_reference(tmp_path):
+    """@image3 при двух референсах — тихая ошибка: модель подставит не тот кадр,
+    и разбираться придётся глазами по готовому клипу."""
+    path = _write(tmp_path, {"base": [{
+        "anchor": "combat", "clip": "b.mp4",
+        "prompt": "@image1 and @image3", "refs": ["a.png", "b.png"],
+    }]})
+    with pytest.raises(FootageError, match="@image3"):
+        load_shots(path)
+
+
+def test_shots_accept_tokens_that_match_their_references(tmp_path):
+    path = _write(tmp_path, {"base": [{
+        "anchor": "combat", "clip": "b.mp4",
+        "prompt": "@image2 behind @image1", "refs": ["a.png", "b.png"],
+    }]})
+    assert load_shots(path)[0][0].refs == ("a.png", "b.png")
+
+
+def test_shots_reject_more_references_than_the_model_takes(tmp_path):
+    path = _write(tmp_path, {"base": [{
+        "anchor": "combat", "clip": "b.mp4",
+        "refs": [f"{i}.png" for i in range(10)],
+    }]})
+    with pytest.raises(FootageError, match="9"):
+        load_shots(path)
+
+
 # --- привязка к якорям -------------------------------------------------------
 
 
