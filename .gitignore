@@ -30,6 +30,19 @@ assets/video/**/*.mkv
 assets/video/**/*.avi
 assets/video/**/*.mxf
 
+# Кадры из официального трейлера «Lohen: A Masterpiece» и официальный арт.
+# Они нужны как референсы на вход генерации, но это чужой материал — в
+# репозиторий ему не место. Что за что отвечает, записано в
+# assets/screenshots/MANIFEST.md, и он версионируется: разбор кадров дороже
+# самих кадров, а сами кадры пересобираются из трейлера за десять минут.
+#
+# Исключение по расширениям, а не папкой: иначе git не обойдёт папку и
+# MANIFEST.md вместе с .gitkeep в проект не попадут.
+assets/screenshots/**/*.png
+assets/screenshots/**/*.jpg
+assets/screenshots/**/*.jpeg
+assets/screenshots/**/*.webp
+
 # Служебное
 .DS_Store
 Thumbs.db
