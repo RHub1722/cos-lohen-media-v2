@@ -340,15 +340,27 @@ def test_every_base_covers_its_window_without_looping():
     заново — для фактуры это незаметно, для события это катастрофа. Кадр с
     loop=False вместо этого держит последний кадр, и короткий клип ему не
     смертелен: смертелен только длинный простой на замершей картинке.
+
+    Если файл уже лежит, длина берётся из него, а не из поля duration. duration —
+    это то, что заказали у модели, а не то, что получилось: склеенный локально
+    клип длится 6.29 с при заявленных семи, и на голом поле тест этого не увидит.
     """
+    from pathlib import Path
+
     HOLD_LIMIT = 1.0
     bases, _ = resolve(*load_shots("scenario/shots.json"), _real_plan())
     for shot in bases:
         window = shot.end - shot.t
-        effective = (shot.duration - shot.start_at) / shot.speed
+        path = Path("assets/video") / shot.clip
+        if path.exists():
+            from src.footage import clip_duration
+            length = clip_duration(str(path))
+        else:
+            length = shot.duration
+        effective = (length - shot.start_at) / shot.speed
         if shot.loop:
             assert effective >= window - 1e-6, (
-                f"{shot.anchor}: {shot.duration:g} с минус разгон "
+                f"{shot.anchor}: {length:g} с минус разгон "
                 f"{shot.start_at:g} на speed {shot.speed:g} дают "
                 f"{effective:.1f} с на куске {window:.1f} с — закольцуется"
             )
