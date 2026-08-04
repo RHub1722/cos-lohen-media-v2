@@ -35,6 +35,18 @@ class Event:
     loop: bool = False
     fade_in: float = 0.01
     fade_out: float = 0.01
+    # На сколько децибел это событие уводит музыку вниз под собой. Ноль — не
+    # уводит. Нужно ударам: подложка боя стоит на −10 dB и накрывает их, а
+    # поднять сами удары нельзя — их пики уже вплотную к финальному, который
+    # обязан остаться абсолютным. Значит вниз идёт музыка, а не вверх удар.
+    duck_db: float = 0.0
+    # Подъём низа и верха на самом событии. Громкость и тембр — разные вещи.
+    # Вышибленная дверь по уровню в порядке, но низа у неё меньше, чем верха, и
+    # читается она треском, а не взрывом. У удара по Лоэну обратная беда: даже
+    # после провала музыки запас в верхней полосе всего 2.2 dB, то есть у самого
+    # ценного места номера нет щелчка, только глухой толчок.
+    bass_db: float = 0.0
+    treble_db: float = 0.0
     video: dict | None = None
     note: str = ""
 
@@ -68,6 +80,20 @@ class Event:
         if loop and duration is None:
             raise ScenarioError(f"{event_id}: loop без duration зациклится навсегда")
 
+        duck_db = float(raw.get("duck_db", 0.0))
+        if duck_db < 0:
+            raise ScenarioError(
+                f"{event_id}: duck_db={duck_db} отрицательный. Поле означает "
+                "глубину провала музыки в децибелах, и отрицательное значение "
+                "подняло бы её на ударе вместо того, чтобы убрать."
+            )
+        if duck_db and stem != "sfx":
+            raise ScenarioError(
+                f"{event_id}: duck_db на стеме {stem!r}. Уводить музыку под "
+                "музыкой бессмысленно, а под голосом это отдельное решение, "
+                "которого мы не принимали."
+            )
+
         return Event(
             id=event_id,
             t=t,
@@ -79,6 +105,9 @@ class Event:
             loop=loop,
             fade_in=float(raw.get("fade_in", 0.01)),
             fade_out=float(raw.get("fade_out", 0.01)),
+            duck_db=duck_db,
+            bass_db=float(raw.get("bass_db", 0.0)),
+            treble_db=float(raw.get("treble_db", 0.0)),
             video=raw.get("video"),
             note=str(raw.get("note", "")),
         )

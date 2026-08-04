@@ -1,9 +1,174 @@
-from src.filtergraph import build_stem_graph, ffmpeg_input_args, pan_gains
-from src.models import Timeline
+import re
+
+import pytest
+
+from src.filtergraph import (DUCK_ATTACK, DUCK_HOLD, DUCK_RELEASE,
+                             build_stem_graph, duck_expression,
+                             ffmpeg_input_args, pan_gains)
+from src.models import ScenarioError, Timeline
 
 
 def _tl(events, total=60.0):
     return Timeline.from_dict({"total_duration": total, "events": events})
+
+
+def _hit(anchor, t, duck=0.0, **extra):
+    raw = {"id": anchor, "t": t, "asset": f"{anchor}.wav", "stem": "sfx"}
+    if duck:
+        raw["duck_db"] = duck
+    raw.update(extra)
+    return raw
+
+
+def _music(t=0.0, duration=60.0):
+    return {"id": "bed", "t": t, "asset": "bed.wav", "stem": "music",
+            "duration": duration}
+
+
+# --- провал музыки под ударом ------------------------------------------------
+# Глеб и Галя независимо сказали, что аудио и видео в бою не стыкуются. Замер
+# показал, что дело не в таймингах: удар по нему на 42.80 имел запас над музыкой
+# 0.2 dB в середине спектра и −9.7 в верхе, то есть музыка была ГРОМЧЕ удара.
+# Отсюда эти поля. Ошибка здесь тихая: граф соберётся, а зал не услышит удара.
+
+
+def test_nothing_to_duck_gives_no_expression():
+    assert duck_expression(_tl([_hit("a", 5.0)])) == ""
+
+
+def test_duck_reaches_the_requested_depth():
+    """Шесть децибел — это множитель 0.5012, а не 0.6 и не 6."""
+    expr = duck_expression(_tl([_hit("a", 5.0, duck=6.0)]))
+    factor = 1.0 - 10.0 ** (-6.0 / 20.0)
+    assert f"{factor:.6f}" in expr
+
+
+def test_overlapping_ducks_take_the_deepest_not_the_sum():
+    """Удары на 38.60 и 39.20 стоят в 0.6 с друг от друга, и их окна
+    пересекаются. Сумма дала бы провал вдвое глубже заказанного, и музыка между
+    ними пропала бы совсем."""
+    expr = duck_expression(_tl([_hit("a", 38.60, duck=6.0),
+                                _hit("b", 39.20, duck=8.0)]))
+    assert "max(" in expr
+    assert "+" not in expr, "провалы складываются вместо взятия максимума"
+
+
+def test_duck_starts_before_the_impact_to_cover_the_swing():
+    """Замах стоит за 0.30–0.45 с до удара. Если музыка уходит вниз ровно на
+    ударе, слышно, как она дёргается посередине движения."""
+    assert DUCK_ATTACK >= 0.25
+    expr = duck_expression(_tl([_hit("a", 10.0, duck=6.0)]))
+    assert f"(t-{10.0 - DUCK_ATTACK:.4f})" in expr
+
+
+def test_duck_window_closes_after_hold_and_release():
+    expr = duck_expression(_tl([_hit("a", 10.0, duck=6.0)]))
+    assert f"({10.0 + DUCK_HOLD + DUCK_RELEASE:.4f}-t)" in expr
+
+
+def test_commas_inside_the_expression_are_escaped():
+    """В фильтрграфе запятая разделяет фильтры. Неэкранированная запятая внутри
+    выражения не падает громко — граф просто не собирается, и разбираться
+    приходится в четырёх тысячах символов stderr."""
+    expr = duck_expression(_tl([_hit("a", 5.0, duck=6.0)]))
+    unescaped = [i for i, ch in enumerate(expr)
+                 if ch == "," and (i == 0 or expr[i - 1] != "\\")]
+    assert not unescaped, f"неэкранированные запятые на позициях {unescaped}"
+
+
+def test_only_the_music_stem_is_ducked():
+    """Уводить эффекты под эффектами незачем, а голос — отдельное решение,
+    которого мы не принимали."""
+    events = [_hit("a", 5.0, duck=9.0), _music(),
+              {"id": "v", "t": 5.0, "asset": "v.wav", "stem": "voices"},
+              {"id": "amb", "t": 0.0, "asset": "amb.wav", "stem": "ambience",
+               "duration": 60.0}]
+    tl = _tl(events)
+    assert "eval=frame" in build_stem_graph(tl, "music")[0]
+    for stem in ("sfx", "voices", "ambience"):
+        assert "eval=frame" not in build_stem_graph(tl, stem)[0], stem
+
+
+def test_duck_on_a_music_event_is_refused():
+    with pytest.raises(ScenarioError, match="duck_db"):
+        _tl([{"id": "bed", "t": 0.0, "asset": "b.wav", "stem": "music",
+              "duration": 60.0, "duck_db": 6.0}])
+
+
+def test_negative_duck_is_refused():
+    with pytest.raises(ScenarioError, match="отрицательный"):
+        _tl([_hit("a", 5.0, duck=-6.0)])
+
+
+def test_the_real_timeline_ducks_every_masked_impact():
+    """Четыре удара были измерены как маскирующиеся: серия 2, серия 3 Б, удар по
+    нему и серия 4. Ни один не должен остаться без провала."""
+    tl = Timeline.load("scenario/timeline.json")
+    ducked = {e.id for e in tl.events if e.duck_db > 0}
+    for anchor in ("burst2_impact", "burst3_impact_b", "hit_on_lohen",
+                   "burst4_impact"):
+        assert anchor in ducked, f"{anchor} измерен как маскирующийся, но без провала"
+    # Самый глухой удар обязан получить провал не меньше остальных серий.
+    by = {e.id: e.duck_db for e in tl.events}
+    assert by["hit_on_lohen"] >= by["burst1_impact"]
+
+
+def test_the_final_blow_is_not_ducked():
+    """На 47.00 музыка обрывается по сценарию, на 55.20 играет только дрон на
+    −20 dB. Провал там нечего уводить, и дописывать его «для симметрии» нельзя."""
+    tl = Timeline.load("scenario/timeline.json")
+    by = {e.id: e.duck_db for e in tl.events}
+    assert by["ice_burst"] == 0.0
+    assert by["ice_final_impact"] == 0.0
+
+
+# --- низ на событии ----------------------------------------------------------
+
+
+def test_bass_boost_reaches_the_chain_before_the_gain():
+    """Полка ставится до volume, чтобы гейн события считался от готового
+    тембра, а не наоборот."""
+    graph, _ = build_stem_graph(_tl([_hit("door", 5.0, bass_db=7.0)]), "sfx")
+    assert "bass=g=7.000000:f=110" in graph
+    assert graph.index("bass=g=") < graph.index("volume=")
+
+
+def test_no_bass_filter_when_not_asked():
+    graph, _ = build_stem_graph(_tl([_hit("a", 5.0)]), "sfx")
+    assert "bass=" not in graph
+
+
+def test_only_the_door_carries_a_bass_boost():
+    """Единственный удар набора, у которого низ тише верха: −3.5 dB против
+    +11.6 у финального. Остальным полка не нужна, и лишняя размыла бы бой."""
+    tl = Timeline.load("scenario/timeline.json")
+    boosted = {e.id for e in tl.events if e.bass_db}
+    assert boosted == {"door_breach"}, boosted
+
+
+def test_treble_boost_reaches_the_chain():
+    graph, _ = build_stem_graph(_tl([_hit("hit", 5.0, treble_db=6.0)]), "sfx")
+    assert "treble=g=6.000000" in graph
+    assert graph.index("treble=g=") < graph.index("volume=")
+
+
+def test_the_treble_shelf_starts_inside_the_band_it_is_measured_in():
+    """Приёмка мерит верх от 2000 Гц. Полка с 3500 подняла запас на 1.9 dB из
+    заказанных шести — она просто не попадала в измеряемую область."""
+    graph, _ = build_stem_graph(_tl([_hit("hit", 5.0, treble_db=6.0)]), "sfx")
+    match = re.search(r"treble=g=[\d.]+:f=(\d+)", graph)
+    assert match, "полка верха не найдена в графе"
+    assert int(match.group(1)) <= 2500, (
+        "полка начинается выше области, в которой мерится запас, "
+        "и её подъём приёмка не увидит")
+
+
+def test_only_the_hit_on_lohen_carries_a_treble_boost():
+    """У остальных ударов верх в порядке: запас 12–23 dB. Лишняя полка сделала бы
+    бой резким без причины."""
+    tl = Timeline.load("scenario/timeline.json")
+    boosted = {e.id for e in tl.events if e.treble_db}
+    assert boosted == {"hit_on_lohen"}, boosted
 
 
 def test_pan_gains_centre_is_equal_and_constant_power():
