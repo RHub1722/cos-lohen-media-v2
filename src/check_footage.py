@@ -88,12 +88,21 @@ EDGE_WINDOW = 0.6
 # серии дали превышение по 2–5 кадров, и все три — на самом ударе, под который в
 # звуке стоит импакт.
 #
-# Поэтому: короткая вспышка разрешена, свет — нет. Подряд не больше 0.20 с (шесть
-# кадров на тридцати) и не больше десятой части кадров куска. Отвергнутый первый
-# пролом эти оба условия провалил бы: у него центр держался выше порога почти
-# всё время, а не вспыхивал.
+# Поэтому: короткая вспышка разрешена, свет — нет. Оба предела в секундах, и это
+# не мелочь. Сначала вторым пределом стояла доля кадров куска, и она сразу дала
+# ложное срабатывание: у кадра hit_on_lohen окно всего 1.8 с, три кадра выше
+# порога — это 11% при позволенных 10%, притом что абсолютно там 0.10 с, то есть
+# ничего. Доля на коротком окне меряет длину окна, а не яркость.
+#
+# Суммарный предел 0.35 с выведен из первого: одна вспышка длиной 0.20 с
+# позволена, две подряд уже нет. В номере на каждый кадр по замыслу один удар.
+#
+# Оба условия проверялись на живых замерах:
+#   burst1 0.13 с, burst2 0.07, burst3 0.17, hit_on_lohen 0.10, лёд 0.07 — прошли
+#   отвергнутый первый пролом: центр выше порога почти все 6.2 с — провалился бы
+#   мерцающий фон: двенадцать вспышек по 0.03 с дают 0.40 с — провалился бы
 FLASH_BURST = 0.20
-FLASH_SHARE = 0.10
+FLASH_TOTAL = 0.35
 
 
 @dataclass(frozen=True)
@@ -254,6 +263,17 @@ def flash_windows(plan: VideoPlan) -> list[tuple[float, float]]:
 # --- отчёт -------------------------------------------------------------------
 
 
+def frame_step(samples: list[Sample]) -> float:
+    """Сколько секунд занимает один кадр замера.
+
+    Берётся из самих отсчётов, а не из fps: замер может идти с любой частотой, и
+    зашитая тридцатка превратила бы суммарный предел в предел на число кадров.
+    """
+    if len(samples) < 2:
+        return 1.0 / 30.0
+    return (samples[-1].t - samples[0].t) / (len(samples) - 1)
+
+
 def longest_run(samples: list[Sample]) -> tuple[float, float]:
     """Самая долгая непрерывная засветка центра: длина в секундах и когда.
 
@@ -340,15 +360,14 @@ def report(title: str, samples: list[Sample], step: float = 0.5,
         print(f"  склейка на входе: {cut.motion:.4f}, в полосе "
               f"{cut.motion_centre:.4f} (это стык, а не движение клипа)")
     burst, burst_at = longest_run(judged)
-    share = len(hot) / len(judged) if judged else 0.0
+    total = len(hot) * frame_step(samples)
     if judged:
         print(f"  центр: максимум {worst.centre:.3f} на {worst.t:.2f} с, "
-              f"порог {CENTRE_LIMIT:.2f}, выше порога {len(hot)} "
-              f"({100.0 * share:.0f}%)")
+              f"порог {CENTRE_LIMIT:.2f}, выше порога {len(hot)} кадров")
         if hot:
-            print(f"  выше порога подряд: {burst:.2f} с на {burst_at:.2f} с "
-                  f"(вспышке позволено {FLASH_BURST:.2f} с и "
-                  f"{100.0 * FLASH_SHARE:.0f}% кадров куска)")
+            print(f"  выше порога: подряд {burst:.2f} с на {burst_at:.2f} с, "
+                  f"всего {total:.2f} с (позволено {FLASH_BURST:.2f} с подряд "
+                  f"и {FLASH_TOTAL:.2f} с суммарно)")
     else:
         print("  центр: судить нечего — все кадры внутри белой вспышки")
     if flashes:
@@ -367,11 +386,10 @@ def report(title: str, samples: list[Sample], step: float = 0.5,
         problems.append(f"{title}: центр выше {CENTRE_LIMIT:.2f} подряд "
                         f"{burst:.2f} с на {burst_at:.2f} с — это уже не "
                         f"вспышка, а свет (позволено {FLASH_BURST:.2f} с)")
-    if share > FLASH_SHARE:
-        problems.append(f"{title}: центр выше {CENTRE_LIMIT:.2f} в "
-                        f"{100.0 * share:.0f}% кадров куска, максимум "
-                        f"{worst.centre:.3f} на {worst.t:.2f} с (позволено "
-                        f"{100.0 * FLASH_SHARE:.0f}%)")
+    if total > FLASH_TOTAL:
+        problems.append(f"{title}: центр выше {CENTRE_LIMIT:.2f} суммарно "
+                        f"{total:.2f} с, максимум {worst.centre:.3f} на "
+                        f"{worst.t:.2f} с (позволено {FLASH_TOTAL:.2f} с)")
     if quiet and judge_motion:
         loud = [s for s in quiet if s.motion_centre > QUIET_MOTION_LIMIT]
         peak = max(quiet, key=lambda s: (s.motion_centre

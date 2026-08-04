@@ -54,13 +54,29 @@ def test_base_can_be_told_not_to_loop(tmp_path):
     assert load_shots(path)[0][0].loop is False
 
 
-def test_the_breach_does_not_loop():
-    """Кадр-событие нельзя закольцовывать: пятисекундный клип на шестисекундном
-    куске вылетел бы дверью дважды, и это читается как поломка файла."""
+# Кадры-события: в каждом происходит одна разовая вещь на свою долю звука.
+# Закольцевать такой кадр — значит показать эту вещь дважды, и зал прочитает это
+# как поломку файла, а не как замысел. Дверь вылетит второй раз, удар придётся
+# второй раз. Остальные кадры — длящиеся: у них можно.
+EVENT_SHOTS = {
+    "combat": "дверь вылетает один раз",
+    "burst1_whoosh": "удар на 28.80 один",
+    "burst2_whoosh": "два удара на 33.40 и 33.85, и оба один раз",
+    "burst3_impact_a": "два удара на 38.60 и 39.20",
+    "burst4_whoosh": "копьё входит в пол на 47.00 один раз",
+}
+
+
+def test_event_shots_do_not_loop():
     bases, _ = load_shots("scenario/shots.json")
-    breach = next(b for b in bases if b.anchor == "combat")
-    assert breach.loop is False
-    assert all(b.loop for b in bases if b.anchor != "combat")
+    for shot in bases:
+        expected = shot.anchor not in EVENT_SHOTS
+        assert shot.loop is expected, (
+            f"{shot.anchor}: loop={shot.loop}, ожидалось {expected}. "
+            + (f"Это кадр-событие: {EVENT_SHOTS[shot.anchor]}."
+               if shot.anchor in EVENT_SHOTS else
+               "Это длящийся кадр, ему кольцо не мешает.")
+        )
 
 
 def test_procedural_is_empty_by_default(tmp_path):

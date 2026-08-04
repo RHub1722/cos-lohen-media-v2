@@ -102,12 +102,33 @@ def test_the_same_brightness_held_is_not_allowed():
     assert problems and "не вспышка, а свет" in problems[0]
 
 
-def test_many_short_flashes_still_fail_on_the_share():
+def test_many_short_flashes_still_fail_on_the_total():
     """Одна короткая вспышка — удар. Каждый третий кадр — мерцающий фон, на
-    котором исполнителя не будет видно ни в одном из них."""
+    котором исполнителя не будет видно ни в одном из них. Ни одна серия при этом
+    не длиннее кадра, так что первый предел его пропускает."""
     frames = [_flat(0.19) if i % 3 == 0 else _flat(0.05) for i in range(60)]
     problems = report("мерцание", scan(_stream(frames), W))
-    assert problems and "% кадров куска" in problems[0]
+    assert problems and "суммарно" in problems[0]
+
+
+def test_a_short_window_is_not_failed_just_for_being_short():
+    """Три кадра выше порога на окне 1.8 с — это 11% и 0.10 с. Доля мерила бы
+    длину окна, а не яркость: ровно так приёмка соврала на кадре hit_on_lohen."""
+    frames = [_flat(0.05 + 0.004 * (i % 2)) for i in range(54)]
+    frames[30:33] = [_flat(0.13)] * 3
+    assert not report("короткое окно", scan(_stream(frames), W))
+
+
+def test_the_total_limit_does_not_depend_on_the_measurement_rate():
+    """Тот же свет, снятый вдвое чаще, обязан дать тот же вердикт. Предел на
+    число кадров превратился бы здесь в предел на частоту замера."""
+    def build(fps):
+        frames = [_flat(0.05 + 0.004 * (i % 2)) for i in range(fps * 2)]
+        frames[fps:fps + fps // 2] = [_flat(0.19)] * (fps // 2)   # 0.5 с
+        return scan(_stream(frames, fps=fps), W)
+
+    assert report("30 fps", build(30)), "полсекунды света должны валиться"
+    assert report("60 fps", build(60)), "и на шестидесяти тоже"
 
 
 def test_a_single_over_limit_frame_has_a_length_not_zero():
@@ -241,11 +262,11 @@ def test_a_blinding_centre_inside_the_flash_is_not_a_violation():
 
 
 def test_the_same_brightness_outside_the_flash_is_a_violation():
-    """Обратная сторона: исключение не должно погасить порог вообще."""
-    white = _flat(0.95)
-    samples = scan(_stream([white, white]), W, flashes=[(100.0, 110.0)])
+    """Обратная сторона: исключение не должно погасить порог вообще. Кадров надо
+    больше двух — два дают 0.07 с, а это законная вспышка при любой яркости."""
+    samples = scan(_stream([_flat(0.95)] * 30), W, flashes=[(100.0, 110.0)])
     problems = report("не вспышка", samples)
-    assert problems and "центр выше" in problems[0]
+    assert problems and "не вспышка, а свет" in problems[0]
 
 
 def test_the_flash_peak_is_still_printed(capsys):
