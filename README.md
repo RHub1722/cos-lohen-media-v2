@@ -9,6 +9,7 @@
 - **Платные сервисы** — [docs/video-services-paid.md](docs/video-services-paid.md) — генерация фона за $1–20, готовые запросы
 - **Оплата из Молдовы и MCP** — [docs/video-services-moldova-mcp.md](docs/video-services-moldova-mcp.md) — 20 сервисов: где рельсы открыты, где стоит блок по документам, у кого есть MCP
 - **Цены, отзывы, права** — [docs/video-services-reviews.md](docs/video-services-reviews.md) — сколько видео за минимальную подписку, оценки Trustpilot, лицензии. **Читать до оплаты**
+- **Как разучивать номер** — [docs/status/2026-08-05-training-site.md](docs/status/2026-08-05-training-site.md) — тренажёр `output/training.html`: разбор боя по долям, слышимые времена, петли, референсы
 - **Проектное решение** — [docs/superpowers/specs/2026-08-01-lohen-interrogation-scene-design.md](docs/superpowers/specs/2026-08-01-lohen-interrogation-scene-design.md)
 - **План реализации** — [docs/superpowers/plans/2026-08-01-lohen-v2-implementation.md](docs/superpowers/plans/2026-08-01-lohen-v2-implementation.md)
 - **Точки состояния** — [docs/status/INDEX.md](docs/status/INDEX.md)
@@ -68,6 +69,13 @@ python src/render_video.py --check
 python src/render_rehearsal.py
 ```
 
+Тренажёр номера — `output/training.html`. Видео берёт рядом с собой, поэтому
+открывать надо из `output/`, а на телефон копировать оба файла:
+
+```bash
+python src/render_training.py
+```
+
 Через PowerShell:
 
 ```powershell
@@ -100,7 +108,10 @@ scenario/timeline.json ─┬─> src/render_audio.py ─> output/master_v2.wav
 | `src/footage.py` | снятый материал и рисованные эффекты поверх тех же якорей |
 | `src/render_video.py` | сборка кадра, процедурный фон, мукс со звуком |
 | `src/movements.py` | движения исполнителя, привязка к событиям звука |
+| `src/strikes.py` | разбор боя по долям, привязка к событиям звука |
+| `src/peaks.py` | где внутри ассета лежит пик: событие слышно пиком, а не началом файла |
 | `src/render_rehearsal.py` | самодостаточная репетиционная страница |
+| `src/render_training.py` | тренажёр: плеер, разбор боя, четыре вида |
 | `src/build.py` | точка входа и CLI |
 
 ## Тесты

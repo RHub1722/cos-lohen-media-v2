@@ -1,0 +1,1244 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Тренажёр номера — Лоэн</title>
+<style>
+  :root {
+    --bg: #08080b;
+    --panel: #14141b;
+    --panel-2: #1b1b24;
+    --line: #262633;
+    --text: #f2f2f5;
+    --muted: #8b8b98;
+    --accent: #5fd4ff;
+    --accent-rgb: 95, 212, 255;
+    --speed-c: #ffb020;
+    --power-c: #ff4d4f;
+    --line-c: #ffe27a;
+    --windup: #8b8b98;
+    --swing: #ffb020;
+    --contact: #ff4d4f;
+    --recover: #5fd4ff;
+    --hold: #9be8ff;
+    --navh: 52px;
+    --stage-top: 0px;
+    /* Потолок высоты видео. Ширина кадра ограничивается тем же числом через
+       16:9 — иначе при широком окне элемент растягивается по ширине, а картинка
+       внутри него стоит в чёрных полях по бокам. */
+    --vcap: 34vh;
+  }
+  /* Акцент плывёт вслед за сценой — по тем же якорям, что и видеорендерер. */
+  body[data-scene="interrogation"] { --accent: #5fd4ff; --accent-rgb: 95, 212, 255; }
+  body[data-scene="combat"]        { --accent: #ff5a4d; --accent-rgb: 255, 90, 77; }
+  body[data-scene="ice"]           { --accent: #9be8ff; --accent-rgb: 155, 232, 255; }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.45;
+  }
+  /* Все сетки на minmax(0, …) и min-width: 0. Колонка `auto` берёт ширину по
+     min-content своего содержимого, и лента рисунков растягивала карточку до
+     580 px в окне 500: на телефоне текст уезжал за край. Прятать это через
+     overflow-x: hidden нельзя — тогда уехавшее просто не прочитать. */
+  .strikes, .cols, .lists, .side, .moves, .how { min-width: 0; }
+  .figs, .beats { min-width: 0; }
+  button { font-family: inherit; color: inherit; }
+  a { color: var(--accent); }
+  h1, h2, h3, h4 { line-height: 1.2; margin: 0; }
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* ── навигация ───────────────────────────────────────────────────────── */
+  .tabs {
+    display: flex;
+    gap: 6px;
+    background: rgba(8, 8, 11, 0.96);
+    border-bottom: 1px solid var(--line);
+    padding: 6px 8px;
+    z-index: 20;
+  }
+  .tab {
+    flex: 1 1 0;
+    min-width: 0;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 8px 4px;
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .tab .key { display: none; }
+  .tab[aria-selected="true"] {
+    color: var(--text);
+    border-color: var(--accent);
+    background: rgba(var(--accent-rgb), 0.16);
+  }
+
+  /* ── плеер, прилипший сверху ─────────────────────────────────────────── */
+  .stage {
+    position: sticky;
+    top: var(--stage-top);
+    z-index: 10;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+    padding: 6px 8px 8px;
+  }
+  .screen {
+    position: relative;
+    background: #000;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    max-width: calc(var(--vcap) * 16 / 9);
+    margin: 0 auto;
+  }
+  video {
+    display: block;
+    width: 100%;
+    max-height: var(--vcap);
+    object-fit: contain;
+    background: #000;
+  }
+  .picker {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-align: center;
+    padding: 12px;
+    background: rgba(8, 8, 11, 0.92);
+    font-size: 0.9rem;
+    color: var(--muted);
+  }
+  .picker.on { display: flex; }
+  .picker label {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 14px;
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    color: var(--text);
+    cursor: pointer;
+  }
+  .picker input { display: none; }
+
+  .transport {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+  }
+  .btn {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 7px 10px;
+    font-size: 0.86rem;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .btn:hover { border-color: var(--accent); }
+  /* Кнопка петли подписана именем удара, а имя бывает длинным: без обрезки она
+     вылезала бы за край экрана телефона. */
+  #loopBtn { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .btn.on { border-color: var(--accent); background: rgba(var(--accent-rgb), 0.18); }
+  .btn.play { min-width: 46px; font-size: 1rem; }
+  .rates { display: flex; gap: 4px; }
+  .rates .btn { padding: 7px 8px; }
+  .clock { margin-left: auto; font-size: 0.95rem; color: var(--muted); }
+  .clock b { color: var(--text); font-weight: 600; }
+
+  .track {
+    position: relative;
+    height: 30px;
+    margin-top: 7px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    cursor: pointer;
+    overflow: hidden;
+    touch-action: none;
+  }
+  .track .fill {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    width: 0;
+    background: rgba(var(--accent-rgb), 0.28);
+    pointer-events: none;
+  }
+  .track .loopwin {
+    position: absolute; top: 0; bottom: 0;
+    background: rgba(255, 176, 32, 0.22);
+    border-left: 1px solid var(--speed-c);
+    border-right: 1px solid var(--speed-c);
+    display: none;
+    pointer-events: none;
+  }
+  .track .mark {
+    position: absolute; width: 2px; margin-left: -1px;
+    background: var(--muted);
+    pointer-events: none;
+  }
+  /* Класс не `move`: этим же именем названы строки списка движений, и общий
+     селектор задевал бы метки на полосе. */
+  .track .mark.m-move { top: 0; height: 10px; }
+  .track .mark.hit { bottom: 0; height: 14px; width: 3px; background: var(--contact); }
+  .track .mark.scene { top: 0; bottom: 0; background: var(--line); }
+  .track .head {
+    position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px;
+    background: #fff;
+    pointer-events: none;
+  }
+  .ruler {
+    display: flex; justify-content: space-between;
+    color: var(--muted); font-size: 0.72rem; padding: 2px 1px 0;
+  }
+
+  .now {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+    flex-wrap: wrap;
+    margin-top: 6px;
+    font-size: 0.86rem;
+    color: var(--muted);
+  }
+  .now .chip {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 3px 10px;
+  }
+  .now .chip b { color: var(--text); }
+  .now .chip.next b { color: var(--speed-c); }
+
+  /* ── общий контейнер видов ───────────────────────────────────────────── */
+  main { max-width: 1200px; margin: 0 auto; padding: 12px 10px 96px; }
+  .view { display: none; }
+  .view.on { display: block; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 14px;
+  }
+  .label {
+    font-size: 0.72rem;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* ── вид «Прогон» ────────────────────────────────────────────────────── */
+  .hero {
+    border: 2px solid var(--accent);
+    text-align: center;
+    padding: 16px 14px 18px;
+  }
+  .hero h2 { font-size: clamp(1.7rem, 6vw, 3.2rem); font-weight: 800; margin: 4px 0 6px; }
+  .hero .what { font-size: clamp(1rem, 2.6vw, 1.5rem); margin: 0 auto; max-width: 44ch; }
+  .meters { display: flex; justify-content: center; gap: clamp(18px, 6vw, 60px); margin: 12px 0 6px; }
+  .meter { text-align: center; }
+  .meter .bars { display: flex; gap: 5px; margin-top: 5px; }
+  .meter .bars span {
+    width: clamp(14px, 3vw, 26px);
+    height: clamp(20px, 3.4vh, 34px);
+    border-radius: 4px;
+    background: #23232c;
+    border: 1px solid #33333f;
+  }
+  .meter.speed .bars span.on { background: var(--speed-c); border-color: var(--speed-c); }
+  .meter.power .bars span.on { background: var(--power-c); border-color: var(--power-c); }
+  .hero .hold { color: var(--muted); font-size: 0.95rem; margin-top: 8px; }
+  .hero .hold b { color: var(--text); }
+  .grid3 {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .line { color: var(--line-c); font-style: italic; font-size: 1.05rem; min-height: 1.4em; }
+  .scenes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+  .scene {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 8px 6px;
+    text-align: center;
+    cursor: pointer;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .scene.on { color: var(--text); border-color: var(--accent); background: rgba(var(--accent-rgb), 0.14); }
+  .scene small { display: block; font-weight: 400; font-size: 0.72rem; }
+
+  /* ── вид «Бой» ───────────────────────────────────────────────────────── */
+  .strikes { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .strike { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px 14px; }
+  .strike.live { border-color: var(--accent); }
+  .strike > header { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
+  .strike h3 { font-size: clamp(1.1rem, 3vw, 1.45rem); flex: 1 1 240px; }
+  .strike .win { color: var(--muted); font-size: 0.85rem; }
+  .strike .family { color: var(--accent); font-size: 0.86rem; margin-top: 2px; width: 100%; }
+  .strike .why { color: #cfcfd8; margin: 8px 0 0; font-size: 0.95rem; }
+
+  /* Рисунки поз идут лентой и прокручиваются внутри себя: у страницы
+     горизонтальной прокрутки нет ни в одной раскладке. Выравнивание по низу —
+     чтобы линии пола совпали, рамки-то у поз разной высоты. */
+  .figs {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 10px 0 4px;
+    scrollbar-width: thin;
+  }
+  .figs figure { margin: 0; flex: 0 0 auto; text-align: center; }
+  .figs svg {
+    display: block;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    margin: 0 auto;
+  }
+  .figs figcaption { font-size: 0.72rem; color: var(--muted); margin-top: 3px; }
+  .figs figcaption b { display: block; color: var(--text); font-size: 0.8rem; }
+
+  .cols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-top: 6px; }
+  .beats { width: 100%; overflow-x: auto; }
+  table.beats-t { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+  table.beats-t td { border-top: 1px solid var(--line); padding: 7px 6px; vertical-align: top; }
+  table.beats-t tr { cursor: pointer; }
+  table.beats-t tr:hover { background: var(--panel-2); }
+  table.beats-t tr.live { background: rgba(var(--accent-rgb), 0.12); }
+  td.role { width: 5.6em; font-size: 0.74rem; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
+  td.time { width: 4.4em; white-space: nowrap; font-weight: 700; }
+  .role-windup { color: var(--windup); }
+  .role-swing { color: var(--swing); }
+  .role-contact { color: var(--contact); font-weight: 700; }
+  .role-recover { color: var(--recover); }
+  .role-hold { color: var(--hold); }
+  .beat-screen { display: block; color: var(--muted); font-size: 0.84rem; margin-top: 3px; }
+  .beat-file { color: #4d4d5c; font-size: 0.74rem; }
+
+  .side { display: grid; gap: 10px; }
+  .floor { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 8px; }
+  .floor svg { display: block; width: 100%; height: auto; max-width: 260px; margin: 0 auto; }
+  .floor .step { font-size: 0.86rem; margin-top: 6px; }
+  .floor .note { font-size: 0.82rem; color: var(--muted); margin-top: 4px; }
+  .ref { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; font-size: 0.88rem; }
+  .ref p { margin: 4px 0; }
+  .ref .verified { color: var(--muted); font-size: 0.8rem; }
+
+  .lists { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin-top: 10px; }
+  .lists h4 { font-size: 0.9rem; margin-bottom: 4px; }
+  .lists ol, .lists ul { margin: 0; padding-left: 1.2em; font-size: 0.9rem; }
+  .lists li { margin: 3px 0; }
+  .lists .bad h4 { color: var(--power-c); }
+
+  /* ── вид «Движения» ──────────────────────────────────────────────────── */
+  .moves { display: grid; gap: 8px; }
+  .move {
+    display: grid;
+    grid-template-columns: 3.6em minmax(0, 1fr);
+    gap: 4px 10px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 9px 12px;
+    cursor: pointer;
+  }
+  .move.live { border-color: var(--accent); background: rgba(var(--accent-rgb), 0.1); }
+  .move .t { font-weight: 700; color: var(--accent); }
+  .move .nm { font-weight: 700; }
+  .move .wh { grid-column: 2; font-size: 0.9rem; color: #cfcfd8; }
+  .move .hd { grid-column: 2; font-size: 0.84rem; color: var(--muted); }
+  .move .mini { grid-column: 2; display: flex; gap: 10px; font-size: 0.74rem; color: var(--muted); }
+  .move .mini i { font-style: normal; letter-spacing: 0.1em; }
+
+  /* ── вид «Как тренироваться» ─────────────────────────────────────────── */
+  .how { display: grid; gap: 12px; }
+  .how h3 { font-size: 1.1rem; margin-bottom: 6px; }
+  .how p, .how li { font-size: 0.95rem; }
+  .how ol, .how ul { padding-left: 1.3em; margin: 6px 0; }
+  .how table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  .how td, .how th { border-top: 1px solid var(--line); padding: 6px; text-align: left; vertical-align: top; }
+  .how kbd {
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px;
+    padding: 1px 6px; font-family: inherit; font-size: 0.85em;
+  }
+  .warn { border-left: 3px solid var(--power-c); padding-left: 10px; }
+
+  /* ── раскладки ───────────────────────────────────────────────────────── */
+  @media (max-width: 639px) {
+    /* Вкладки уезжают вниз: большим пальцем достаётся только низ экрана. */
+    .tabs {
+      position: fixed; left: 0; right: 0; bottom: 0;
+      border-top: 1px solid var(--line); border-bottom: 0;
+      padding-bottom: calc(6px + env(safe-area-inset-bottom));
+    }
+    .tab { font-size: 0.78rem; }
+  }
+  @media (min-width: 640px) {
+    :root { --stage-top: var(--navh); }
+    .tabs { position: sticky; top: 0; justify-content: center; }
+    .tab { flex: 0 1 210px; padding: 10px 12px; font-size: 0.95rem; }
+    .tab .key { display: inline; color: var(--muted); font-size: 0.8em; }
+    :root { --vcap: 40vh; }
+    .stage { padding: 8px 12px 10px; }
+    .grid3 { grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 1fr); }
+    .lists { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    main { padding: 14px 14px 24px; }
+  }
+  @media (min-width: 1024px) {
+    :root { --vcap: 46vh; }
+    .cols { grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); }
+  }
+  /* Телефон в повороте: без этого от видео остаётся полоска. */
+  @media (max-height: 500px) and (orientation: landscape) {
+    :root { --vcap: 62vh; }
+    .now, .ruler { display: none; }
+  }
+</style>
+
+<nav class="tabs" id="tabs" role="tablist"></nav>
+
+<section class="stage">
+  <div class="screen">
+    <video id="video" playsinline preload="metadata"></video>
+    <div class="picker" id="picker">
+      <div id="pickerText">Файл номера не найден рядом со страницей.</div>
+      <label>Выбрать файл…<input type="file" id="file" accept="video/*,audio/*"></label>
+    </div>
+  </div>
+
+  <div class="transport">
+    <button class="btn play" id="play" title="Пробел">&#9654;</button>
+    <button class="btn" id="stepBack" title="Кадр назад (,)">&#9666;|</button>
+    <button class="btn" id="stepFwd" title="Кадр вперёд (.)">|&#9656;</button>
+    <span class="rates" id="rates"></span>
+    <button class="btn" id="loopBtn" title="Петля (L)">Петля: выкл</button>
+    <span class="clock"><b id="cur">0:00.0</b> / <span id="total">1:00</span></span>
+  </div>
+
+  <div class="track" id="track" title="Клик — перейти">
+    <div class="fill" id="fill"></div>
+    <div class="loopwin" id="loopwin"></div>
+    <div id="marks"></div>
+    <div class="head" id="head"></div>
+  </div>
+  <div class="ruler"><span>0:00</span><span>0:30</span><span id="rulerEnd">1:00</span></div>
+
+  <div class="now">
+    <span class="chip">Сцена: <b id="nowScene">—</b></span>
+    <span class="chip">Сейчас: <b id="nowMove">—</b></span>
+    <span class="chip next">Через <b id="nowNextIn">—</b>: <span id="nowNext">—</span></span>
+    <span class="chip">Контакт: <b id="nowHit">—</b></span>
+  </div>
+</section>
+
+<main>
+  <section class="view" id="view-run">
+    <div class="card hero">
+      <div class="label" id="heroLabel">Движение</div>
+      <h2 id="mvName">—</h2>
+      <p class="what" id="mvWhat"></p>
+      <div class="meters">
+        <div class="meter speed">
+          <div class="label">Скорость</div>
+          <div class="bars" id="barSpeed"></div>
+        </div>
+        <div class="meter power">
+          <div class="label">Сила</div>
+          <div class="bars" id="barPower"></div>
+        </div>
+      </div>
+      <p class="hold"><b>Держать:</b> <span id="mvHold"></span></p>
+    </div>
+
+    <div class="grid3">
+      <div class="card">
+        <div class="label">Следующее движение</div>
+        <div id="nextName" style="font-weight:700">—</div>
+        <div class="num" id="nextIn" style="color:var(--speed-c)">—</div>
+      </div>
+      <div class="card" style="text-align:center">
+        <div class="label">Реплика</div>
+        <div class="line" id="lineNow"></div>
+      </div>
+      <div class="card">
+        <div class="label">На экране</div>
+        <div id="screenNow" style="font-size:0.9rem;color:#cfcfd8">—</div>
+      </div>
+    </div>
+
+    <div class="scenes" id="scenes"></div>
+  </section>
+
+  <section class="view" id="view-fight">
+    <div class="card" style="margin-bottom:12px">
+      <div class="label">Как читать карточки</div>
+      <p style="margin:6px 0 0;font-size:0.92rem">
+        Время в таблице — <b>слышимое</b>: момент, когда звук доходит до зала.
+        Оно не совпадает с таймкодом в сценарии, потому что ассет ставится
+        началом файла, а слышен пиком — у быстрого взмаха разница 0.38 с.
+        Мелким шрифтом рядом стоит время файла, если понадобится сверить со
+        сценарием. <b>Клик по строке</b> — перейти к этой доле с разгоном 1.2 с.
+      </p>
+    </div>
+    <div class="strikes" id="strikes"></div>
+  </section>
+
+  <!-- id не `moves`: имя вида уезжает в хеш адреса, и браузер сам прокрутил бы
+       страницу к элементу с таким же id, поверх нашего showView. -->
+  <section class="view" id="view-moves">
+    <div class="moves" id="movesList"></div>
+  </section>
+
+  <section class="view" id="view-how">
+    <div class="how">
+      <div class="card">
+        <h3>Что это и как этим пользоваться</h3>
+        <p>Страница собрана из того же сценария, из которого собраны дорожка и
+        видео. Все времена здесь — настоящие времена номера, а не пересказ:
+        сдвинется событие в сценарии, и после перегенерации сдвинутся все
+        цифры на этой странице.</p>
+        <ol>
+          <li><b>Прогон</b> — то, что нужно во время проходки: что делаешь
+          сейчас, что дальше, через сколько секунд, какая реплика идёт и что в
+          этот момент показывает экран за спиной.</li>
+          <li><b>Бой</b> — разбор шести боевых действий по долям: замах, взмах,
+          контакт, возврат. Здесь же рисунки позы, план площадки сверху,
+          референс и петля на кусок.</li>
+          <li><b>Движения</b> — весь номер списком, от первого шага до
+          финальной позы. Клик по строке — перейти к ней в видео.</li>
+        </ol>
+      </div>
+
+      <div class="card">
+        <h3>Главное правило: ты идёшь за звуком, а не за картинкой</h3>
+        <p>Экран за спиной зал видит, а ты — нет. Все движения номера
+        поставлены на слышимые события: свист, удар, щелчок, обрыв музыки.
+        Считать про себя не нужно нигде.</p>
+        <p class="warn">Два места, где экран тебе не поможет вообще, и это
+        проверено замером: <b>34.00</b> — в звуке удар по броне, а в картинке
+        ни вспышки, ни движения; <b>44.98</b> — контакт четвёртой вспышки, у
+        которого нет собственного звука, только пик свиста. В этих двух точках
+        удар держишь целиком сам.</p>
+      </div>
+
+      <div class="card">
+        <h3>Четыре ступени на каждое движение</h3>
+        <table>
+          <tr><th>Ступень</th><th>Скорость</th><th>Что проверяешь</th></tr>
+          <tr><td>1. Смотреть</td><td>0.25</td>
+              <td>Где начинается движение и где остановка. Не двигаешься, только смотришь и считаешь доли.</td></tr>
+          <tr><td>2. Форма</td><td>0.25–0.5</td>
+              <td>Без копья, потом с копьём. Важна форма и остановка в точке, размах не важен.</td></tr>
+          <tr><td>3. Тайминг</td><td>0.75</td>
+              <td>Попадаешь в звук. Тут же выясняется, что замах слишком большой.</td></tr>
+          <tr><td>4. Размер</td><td>1.0</td>
+              <td>Полный размах и остановка. Проверяется с десяти метров, а не в зеркале.</td></tr>
+        </table>
+        <p>Переходить на следующую ступень только когда на текущей выходит
+        три раза подряд. Скорость меняется кнопками или клавишами
+        <kbd>[</kbd> <kbd>]</kbd>.</p>
+      </div>
+
+      <div class="card">
+        <h3>Петля и шаг по кадрам</h3>
+        <ul>
+          <li><b>Петля</b> — кнопка в карточке удара или <kbd>L</kbd>. Кусок
+          играет по кругу и всегда начинается за 1.5 с до замаха: телу нужен
+          разгон, иначе петля стартует с уже начатого движения.</li>
+          <li><b>Клик по строке доли</b> — перейти к ней с разгоном 1.2 с.
+          Так гоняется одна доля, а не весь удар.</li>
+          <li><b>Шаг по кадрам</b> — <kbd>,</kbd> и <kbd>.</kbd> Нужен, чтобы
+          найти глазами кадр контакта и запомнить, как он выглядит.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>Порядок репетиции по важности</h3>
+        <ol>
+          <li><b>42.80, приём удара.</b> Самое ценное место номера и самое
+          дешёвое по силам. Голова, пауза, смех. Репетировать чаще всего
+          остального.</li>
+          <li><b>47.00, копьё в пол.</b> Промах слышен всему залу: ровно здесь
+          обрывается музыка. Плюс копьё обязано стоять само.</li>
+          <li><b>26.10–28.50, револьвер в копьё.</b> Самое узкое место
+          постановки: две с половиной секунды на то, чтобы избавиться от
+          револьвера и взять копьё. Проверяется телом, а не на бумаге.</li>
+          <li><b>Четыре вспышки.</b> По порядку, каждая по четырём ступеням.</li>
+          <li><b>Медленный шаг между вспышками.</b> Его легко забыть, а он
+          занимает больше времени, чем все удары вместе. Между вспышками ты не
+          стоишь в стойке — ты гуляешь по комнате, где тебя пытаются убить.</li>
+        </ol>
+      </div>
+
+      <div class="card">
+        <h3>Что проверять с десяти метров</h3>
+        <ul>
+          <li>Видно ли, что ты попал. Не размах, а остановка.</li>
+          <li>Меняется ли силуэт. Мимики с зала нет, работает форма тела.</li>
+          <li>Отличаются ли удары друг от друга. Четыре одинаковых зал
+          перестанет различать на втором.</li>
+          <li>Не напряжён ли ты между ударами. Он развлекается, а не
+          сражается.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>Телефон и планшет</h3>
+        <p>Страница и видео должны лежать <b>в одной папке</b>: страница ищет
+        файл рядом с собой. Скопируй на телефон оба файла —
+        <code>training.html</code> и <code>final_v2.mp4</code> — и открой
+        страницу браузером. Если файл всё равно не нашёлся, появится кнопка
+        выбора файла: укажи видео вручную.</p>
+        <p>На телефоне вкладки внизу, под большой палец. В повороте видео
+        занимает почти весь экран — так удобнее смотреть, но карточки придётся
+        листать.</p>
+      </div>
+
+      <div class="card">
+        <h3>Клавиши</h3>
+        <table>
+          <tr><td><kbd>Пробел</kbd></td><td>пуск и пауза</td></tr>
+          <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>предыдущее и следующее движение</td></tr>
+          <tr><td><kbd>,</kbd> <kbd>.</kbd></td><td>кадр назад и вперёд</td></tr>
+          <tr><td><kbd>[</kbd> <kbd>]</kbd></td><td>медленнее и быстрее</td></tr>
+          <tr><td><kbd>L</kbd></td><td>петля включить и выключить</td></tr>
+          <tr><td><kbd>1</kbd>–<kbd>4</kbd></td><td>вкладки</td></tr>
+        </table>
+      </div>
+
+      <div class="card">
+        <h3>Референсы и что с ними делать</h3>
+        <p>Кит Лоэна и его движения проверены по открытым гайдам, формы взяты с
+        кадров официального трейлера. Покадровых данных анимации в открытых
+        источниках нет, поэтому углы и высоты в карточках — с кадров, а не из
+        игры. Где движение поставлено мной, а не взято из игры, в карточке это
+        написано прямо.</p>
+        <ul>
+          <li>Официальный трейлер «Lohen: A Masterpiece» —
+          <a href="https://www.youtube.com/watch?v=PYA-iyy2fxA" target="_blank" rel="noopener">смотреть</a>.
+          Оттуда взяты формы смаха и низкого выпада.</li>
+          <li>Разбор кита —
+          <a href="https://keqingmains.com/q/lohen-quickguide/" target="_blank" rel="noopener">KQM</a>
+          и <a href="https://www.icy-veins.com/genshin-impact/lohen-profile-talents-constellations" target="_blank" rel="noopener">Icy&nbsp;Veins</a>.
+          Обычная атака — цепочка до пяти ударов «Spear of Favonius — Broken
+          Oath», заряженная — прямой выпад, взрыв «Manifest Judgment» — серия
+          быстрых ударов вперёд, атака с падения — удар в землю.</li>
+          <li>Базовая техника копья, если захочется правильной механики:
+          связка <b>лань — на — чжа</b> (перевод, захват, укол) и «восьмёрка»
+          древком.
+          <a href="https://www.plumpub.com/kaimen/2019/spear-learning/" target="_blank" rel="noopener">Разбор связки</a>,
+          <a href="https://davidbao.com/2020/06/18/spear-%E6%9E%AA-qiang/" target="_blank" rel="noopener">общее описание</a>.
+          Для номера это не обязательно — но одна выученная связка убирает
+          «махание палкой» из всех четырёх вспышек сразу.</li>
+        </ul>
+        <p class="verified" style="color:var(--muted);font-size:0.84rem">
+        Ни одного кадра из трейлера на этой странице нет намеренно: это чужой
+        материал. Рисунки нарисованы здесь же, из чисел в сценарии.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+"use strict";
+// Данные вшиты генератором src/render_training.py: из file:// внешний JSON не
+// подгрузить, а страница обязана открываться двойным щелчком без сервера.
+const DATA = /*__DATA__*/;
+
+const FPS = 30;                  // шаг кадра: номер собран на 30 кадрах в секунду
+const LINE_HOLD = 4.0;           // сколько реплика держится на экране
+const BEAT_LEAD = 1.2;           // разгон при переходе к доле
+const RATES = [0.25, 0.5, 0.75, 1];
+const VIEWS = [
+  ["run", "Прогон"],
+  ["fight", "Бой"],
+  ["moves", "Движения"],
+  ["how", "Как тренироваться"],
+];
+const ROLE_NAMES = {
+  windup: "замах", swing: "взмах", contact: "контакт",
+  recover: "возврат", hold: "держать",
+};
+
+const $ = (id) => document.getElementById(id);
+const video = $("video");
+let loopOn = false;
+let loopWin = null;              // [от, до] или null
+let ready = false;
+
+// ── мелкие помощники ──────────────────────────────────────────────────────
+function fmt(t) {
+  const s = Math.max(0, Number(t) || 0);
+  return Math.floor(s / 60) + ":" + String(Math.floor(s % 60)).padStart(2, "0");
+}
+function fmt1(t) {
+  const s = Math.max(0, Number(t) || 0);
+  return Math.floor(s / 60) + ":" + (s % 60).toFixed(1).padStart(4, "0");
+}
+function el(tag, cls, text) {
+  const node = document.createElement(tag);
+  if (cls) node.className = cls;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+// Активен последний элемент, чьё время не позже текущего. Индекс 0 —
+// безопасное значение по умолчанию, чтобы панель никогда не была пустой.
+function activeIndex(list, t) {
+  let idx = 0;
+  for (let i = 0; i < list.length; i++) {
+    if (list[i].t <= t) idx = i; else break;
+  }
+  return idx;
+}
+function seek(t, play) {
+  if (!ready) return;
+  video.currentTime = Math.max(0, Math.min(DATA.total - 0.05, t));
+  if (play && video.paused) video.play().catch(() => {});
+}
+
+// ── рисунок позы: параметрическая стик-фигура ─────────────────────────────
+// Фронтальный вид. Начало координат — точка между стопами, ось Y вниз, то есть
+// над полом координаты отрицательные. Масштаб у всех рисунков ОДИН: рамка
+// подгоняется под содержимое, а не содержимое под рамку. Иначе поза с копьём
+// вверх нарисовалась бы мельче, чем поза с копьём вбок, и сравнить их было бы
+// нельзя. Ничего, кроме чисел из strikes.json, здесь не задаётся.
+const FIG_H = 104;         // рост фигуры в пикселях
+const FIG_L = FIG_H * 1.2; // длина древка: копьё длиннее человека
+
+function figure(pose) {
+  const lean = (pose.lean || 0) * Math.PI / 180;
+  const crouch = pose.crouch == null ? 0.1 : pose.crouch;
+  const stance = pose.stance == null ? 0.8 : pose.stance;
+  const grip = pose.grip == null ? 0.35 : pose.grip;
+  const hands = pose.hands || [0.2, 0.6];
+  const headTilt = ((pose.lean || 0) + (pose.head || 0)) * Math.PI / 180;
+
+  // Пропорции человека, а не головастика: ноги примерно половина роста, корпус
+  // треть, голова около восьмой части. С головой в четверть роста фигура
+  // читается как ребёнок, и поза врёт.
+  const hipY = -FIG_H * (0.50 - 0.26 * crouch);
+  const spine = FIG_H * 0.34;
+  const sx = Math.sin(lean) * spine, sy = hipY - Math.cos(lean) * spine;
+  const headR = FIG_H * 0.062;
+  const hx = sx + Math.sin(headTilt) * headR * 2.1;
+  const hy = sy - Math.cos(headTilt) * headR * 2.1;
+
+  const half = FIG_H * 0.24 * stance;
+  const feet = [[-half, 0], [half, 0]];
+  const knees = feet.map(([fx], i) => [
+    fx / 2 + (i ? 1 : -1) * FIG_H * (0.04 + 0.10 * crouch),
+    hipY / 2 + FIG_H * 0.05 * crouch,
+  ]);
+
+  const gx = hands[0] * FIG_H * 0.24, gy = -hands[1] * FIG_H;
+  const a = (pose.spear == null ? 0 : pose.spear) * Math.PI / 180;
+  const dx = Math.cos(a), dy = Math.sin(a);
+  // Наконечник ниже пола означает «воткнут в пол» — там древко и обрывается.
+  let ahead = (1 - grip) * FIG_L;
+  if (dy > 0.01) ahead = Math.min(ahead, -gy / dy);
+  const butt = [gx - dx * grip * FIG_L, gy - dy * grip * FIG_L];
+  const tip = [gx + dx * ahead, gy + dy * ahead];
+  const back = [gx - dx * FIG_L * 0.15, gy - dy * FIG_L * 0.15];
+
+  const arm = (from, to) => {
+    const mx = (from[0] + to[0]) / 2, my = (from[1] + to[1]) / 2;
+    const ex = mx + (to[1] - from[1]) * 0.1, ey = my - (to[0] - from[0]) * 0.1;
+    return `M${from[0].toFixed(1)},${from[1].toFixed(1)} `
+         + `Q${ex.toFixed(1)},${ey.toFixed(1)} ${to[0].toFixed(1)},${to[1].toFixed(1)}`;
+  };
+  const leg = (knee, foot) =>
+    `M0,${hipY.toFixed(1)} L${knee[0].toFixed(1)},${knee[1].toFixed(1)} `
+    + `L${foot[0].toFixed(1)},${foot[1].toFixed(1)}`;
+
+  const pts = [[hx - headR, hy - headR], [hx + headR, hy + headR],
+               butt, tip, [gx, gy], [sx, sy], [0, hipY]]
+    .concat(feet).concat(knees);
+  const pad = 7;
+  const minX = Math.min(...pts.map((p) => p[0])) - pad;
+  const maxX = Math.max(...pts.map((p) => p[0])) + pad;
+  const minY = Math.min(...pts.map((p) => p[1])) - pad;
+  const maxY = pad;                       // пол всегда нижняя граница рамки
+  const w = maxX - minX, h = maxY - minY;
+
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox",
+    `${minX.toFixed(1)} ${minY.toFixed(1)} ${w.toFixed(1)} ${h.toFixed(1)}`);
+  svg.setAttribute("width", Math.round(w));
+  svg.setAttribute("height", Math.round(h));
+  // Порядок важен: руки под корпусом, древко поверх всего. Иначе рука,
+  // проходящая по линии позвоночника, читается как ошибка рисунка.
+  svg.innerHTML =
+    `<line x1="${minX + 2}" y1="0" x2="${maxX - 2}" y2="0" stroke="#33333f" stroke-width="1"/>`
+    + `<path d="${arm([sx, sy], [gx, gy])}" fill="none" stroke="#b9b9c6" stroke-width="1.8"/>`
+    + `<path d="${arm([sx, sy], back)}" fill="none" stroke="#8b8b98" stroke-width="1.8"/>`
+    + `<path d="${leg(knees[0], feet[0])}" fill="none" stroke="#9a9aa8" stroke-width="2.4" stroke-linejoin="round"/>`
+    + `<path d="${leg(knees[1], feet[1])}" fill="none" stroke="#f2f2f5" stroke-width="2.4" stroke-linejoin="round"/>`
+    + `<line x1="0" y1="${hipY.toFixed(1)}" x2="${sx.toFixed(1)}" y2="${sy.toFixed(1)}" stroke="#f2f2f5" stroke-width="3"/>`
+    + `<circle cx="${hx.toFixed(1)}" cy="${hy.toFixed(1)}" r="${headR.toFixed(1)}" fill="#08080b" stroke="#f2f2f5" stroke-width="2.2"/>`
+    + `<line x1="${butt[0].toFixed(1)}" y1="${butt[1].toFixed(1)}" x2="${tip[0].toFixed(1)}" y2="${tip[1].toFixed(1)}" stroke="#5fd4ff" stroke-width="2.6"/>`
+    + `<circle cx="${gx.toFixed(1)}" cy="${gy.toFixed(1)}" r="2.6" fill="#f2f2f5"/>`
+    + `<circle cx="${tip[0].toFixed(1)}" cy="${tip[1].toFixed(1)}" r="3.2" fill="#9be8ff"/>`;
+  return svg;
+}
+
+// ── план площадки сверху ──────────────────────────────────────────────────
+// x −1 его лево, +1 его право; y −1 глубина сцены, +1 зал. Углов нет
+// намеренно: об угле надо договариваться, о точке — нет.
+function floorPlan(floor) {
+  const W = 260, H = 210;
+  const mx = (x) => 22 + (x + 1) / 2 * (W - 44);
+  const my = (y) => 22 + (y + 1) / 2 * (H - 52);
+  const arc = floor.arc || [[-0.6, 0.2], [0, 0.5], [0.6, 0.3]];
+  const enemy = floor.enemy || [0.5, 0.3];
+  const feet = floor.feet || {};
+  const p = (pt) => `${mx(pt[0]).toFixed(1)},${my(pt[1]).toFixed(1)}`;
+  const foot = (pt, fill) => pt
+    ? `<ellipse cx="${mx(pt[0]).toFixed(1)}" cy="${my(pt[1]).toFixed(1)}" rx="7" ry="10" fill="${fill}" opacity="0.85"/>`
+    : "";
+
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.innerHTML =
+    `<rect x="12" y="12" width="${W - 24}" height="${H - 42}" rx="10" fill="#101017" stroke="#262633"/>`
+    + `<text x="${W / 2}" y="${H - 8}" fill="#8b8b98" font-size="11" text-anchor="middle" font-family="sans-serif">ЗАЛ</text>`
+    + `<text x="18" y="26" fill="#4d4d5c" font-size="10" font-family="sans-serif">его лево</text>`
+    + `<text x="${W - 18}" y="26" fill="#4d4d5c" font-size="10" text-anchor="end" font-family="sans-serif">его право</text>`
+    + foot(feet.back, "#4d4d5c") + foot(feet.front, "#8b8b98")
+    + `<path d="M${p(arc[0])} Q${p(arc[1])} ${p(arc[2])}" fill="none" stroke="#ffb020" stroke-width="2.4" stroke-dasharray="6 4" marker-end="url(#ar)"/>`
+    + `<defs><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">`
+    + `<path d="M0,0 L10,5 L0,10 z" fill="#ffb020"/></marker></defs>`
+    + `<circle cx="${mx(0)}" cy="${my(0)}" r="9" fill="#5fd4ff"/>`
+    + `<text x="${mx(0)}" y="${my(0) + 3.5}" fill="#08080b" font-size="9" text-anchor="middle" font-family="sans-serif">ты</text>`
+    + `<g stroke="#ff4d4f" stroke-width="2.6">`
+    + `<line x1="${mx(enemy[0]) - 7}" y1="${my(enemy[1]) - 7}" x2="${mx(enemy[0]) + 7}" y2="${my(enemy[1]) + 7}"/>`
+    + `<line x1="${mx(enemy[0]) + 7}" y1="${my(enemy[1]) - 7}" x2="${mx(enemy[0]) - 7}" y2="${my(enemy[1]) + 7}"/></g>`;
+  return svg;
+}
+
+// ── навигация ─────────────────────────────────────────────────────────────
+let currentView = "run";
+function showView(name) {
+  if (!VIEWS.some(([id]) => id === name)) name = "run";
+  currentView = name;
+  VIEWS.forEach(([id]) => {
+    $("view-" + id).classList.toggle("on", id === name);
+    const tab = $("tab-" + id);
+    if (tab) tab.setAttribute("aria-selected", String(id === name));
+  });
+  if (location.hash.slice(1) !== name) history.replaceState(null, "", "#" + name);
+  window.scrollTo({ top: 0 });
+}
+VIEWS.forEach(([id, title], i) => {
+  const b = el("button", "tab");
+  b.id = "tab-" + id;
+  b.type = "button";
+  b.setAttribute("role", "tab");
+  b.innerHTML = title + ` <span class="key">${i + 1}</span>`;
+  b.addEventListener("click", () => showView(id));
+  $("tabs").appendChild(b);
+});
+
+// ── плеер ─────────────────────────────────────────────────────────────────
+function setReady(src, label) {
+  video.src = src;
+  ready = true;
+  $("picker").classList.remove("on");
+  if (label) $("pickerText").textContent = label;
+}
+video.addEventListener("error", () => {
+  if (!video.src) return;
+  ready = false;
+  $("picker").classList.add("on");
+  $("pickerText").textContent =
+    "Не удалось прочитать «" + DATA.video + "» рядом со страницей. "
+    + "Положите файл в ту же папку или выберите его вручную.";
+});
+video.addEventListener("loadedmetadata", () => { ready = true; });
+$("file").addEventListener("change", (ev) => {
+  const f = ev.target.files && ev.target.files[0];
+  if (f) setReady(URL.createObjectURL(f));
+});
+setReady(DATA.video);
+
+function togglePlay() {
+  if (!ready) return;
+  if (video.paused) video.play().catch(() => {}); else video.pause();
+}
+$("play").addEventListener("click", togglePlay);
+video.addEventListener("play", () => { $("play").innerHTML = "&#10074;&#10074;"; });
+video.addEventListener("pause", () => { $("play").innerHTML = "&#9654;"; });
+$("stepBack").addEventListener("click", () => { video.pause(); seek(video.currentTime - 1 / FPS); });
+$("stepFwd").addEventListener("click", () => { video.pause(); seek(video.currentTime + 1 / FPS); });
+
+RATES.forEach((r) => {
+  const b = el("button", "btn rate", r === 1 ? "1×" : r + "×");
+  b.type = "button";
+  b.dataset.rate = String(r);
+  b.addEventListener("click", () => setRate(r));
+  $("rates").appendChild(b);
+});
+function setRate(r) {
+  video.playbackRate = r;
+  document.querySelectorAll(".rate").forEach((b) => {
+    b.classList.toggle("on", Number(b.dataset.rate) === r);
+  });
+}
+function shiftRate(step) {
+  const i = RATES.indexOf(video.playbackRate);
+  setRate(RATES[Math.max(0, Math.min(RATES.length - 1, (i < 0 ? 3 : i) + step))]);
+}
+setRate(1);
+
+function setLoop(win, name) {
+  loopWin = win;
+  loopOn = Boolean(win);
+  $("loopBtn").classList.toggle("on", loopOn);
+  $("loopBtn").textContent = loopOn
+    ? "Петля: " + (name || (win[0].toFixed(1) + "–" + win[1].toFixed(1)))
+    : "Петля: выкл";
+  const box = $("loopwin");
+  if (loopOn) {
+    box.style.display = "block";
+    box.style.left = (win[0] / DATA.total * 100) + "%";
+    box.style.width = ((win[1] - win[0]) / DATA.total * 100) + "%";
+    seek(win[0], true);
+  } else {
+    box.style.display = "none";
+  }
+  document.querySelectorAll(".loop-btn").forEach((b) => {
+    b.classList.toggle("on", loopOn && b.dataset.id === (name || ""));
+  });
+}
+$("loopBtn").addEventListener("click", () => {
+  if (loopOn) { setLoop(null); return; }
+  // Без выбранного удара петля берёт текущую сцену: это единственное
+  // осмысленное окно, которое можно вывести из позиции головы.
+  const sc = DATA.scenes[activeIndex(DATA.scenes, video.currentTime)];
+  setLoop([sc.t, sc.end], sc.name);
+});
+
+$("track").addEventListener("click", (ev) => {
+  const r = $("track").getBoundingClientRect();
+  seek((ev.clientX - r.left) / r.width * DATA.total);
+});
+
+// ── метки на полосе ───────────────────────────────────────────────────────
+(function marks() {
+  const box = $("marks");
+  DATA.scenes.forEach((s) => {
+    if (s.t <= 0) return;
+    const m = el("div", "mark scene");
+    m.style.left = (s.t / DATA.total * 100) + "%";
+    box.appendChild(m);
+  });
+  DATA.movements.forEach((m) => {
+    const node = el("div", "mark m-move");
+    node.style.left = (m.t / DATA.total * 100) + "%";
+    node.title = m.name;
+    box.appendChild(node);
+  });
+  DATA.hits.forEach((h) => {
+    const node = el("div", "mark hit");
+    node.style.left = (h.t / DATA.total * 100) + "%";
+    node.title = h.label;
+    box.appendChild(node);
+  });
+})();
+
+// ── вид «Прогон» ──────────────────────────────────────────────────────────
+[["barSpeed", 5], ["barPower", 5]].forEach(([id, n]) => {
+  for (let i = 0; i < n; i++) $(id).appendChild(el("span"));
+});
+DATA.scenes.forEach((s) => {
+  const b = el("div", "scene");
+  b.innerHTML = s.name + "<small>" + fmt(s.t) + "–" + fmt(s.end) + "</small>";
+  b.addEventListener("click", () => seek(s.t));
+  $("scenes").appendChild(b);
+});
+function bars(id, value) {
+  const kids = $(id).children;
+  for (let i = 0; i < kids.length; i++) kids[i].classList.toggle("on", i < value);
+}
+
+// ── вид «Бой» ─────────────────────────────────────────────────────────────
+DATA.strikes.forEach((s) => {
+  const card = el("article", "strike");
+  card.id = "strike-" + s.id;
+
+  const head = el("header");
+  const h3 = el("h3", null, s.title);
+  const win = el("span", "win num",
+    s.beats[0].heard.toFixed(2) + " → " + s.beats[s.beats.length - 1].heard.toFixed(2) + " с");
+  const loopBtn = el("button", "btn loop-btn",
+    "Петля " + s.loop[0].toFixed(1) + "–" + s.loop[1].toFixed(1));
+  const short = s.title.split(":")[0];
+  loopBtn.type = "button";
+  loopBtn.dataset.id = short;
+  loopBtn.addEventListener("click", () => {
+    if (loopOn && loopWin && loopWin[0] === s.loop[0]) setLoop(null);
+    else setLoop([s.loop[0], s.loop[1]], short);
+  });
+  head.appendChild(h3);
+  head.appendChild(win);
+  head.appendChild(loopBtn);
+  if (s.family) head.appendChild(el("div", "family", s.family));
+  card.appendChild(head);
+  if (s.why) card.appendChild(el("p", "why", s.why));
+
+  const figs = el("div", "figs");
+  s.beats.forEach((b) => {
+    if (!b.pose || !Object.keys(b.pose).length) return;
+    const f = el("figure");
+    f.appendChild(figure(b.pose));
+    const cap = el("figcaption");
+    cap.appendChild(el("b", null, b.heard.toFixed(2)));
+    cap.appendChild(el("span", "role-" + b.role, ROLE_NAMES[b.role]));
+    f.appendChild(cap);
+    figs.appendChild(f);
+  });
+  if (figs.children.length) card.appendChild(figs);
+
+  const cols = el("div", "cols");
+  const beatsBox = el("div", "beats");
+  const table = el("table", "beats-t");
+  s.beats.forEach((b, i) => {
+    const tr = el("tr");
+    tr.dataset.t = String(b.heard);
+    // До какого момента доля считается текущей: до следующей доли, но не
+    // дольше 0.4 с. Без верхней границы «держать» светилось бы полсекунды
+    // после конца удара, без нижней — соседние доли светились бы вдвоём.
+    const nextBeat = s.beats[i + 1];
+    tr.dataset.until = String(Math.min(b.heard + 0.4,
+      nextBeat ? nextBeat.heard - 0.03 : b.heard + 0.4));
+    tr.appendChild(el("td", "role role-" + b.role, ROLE_NAMES[b.role]));
+    const time = el("td", "time num", b.heard.toFixed(2));
+    tr.appendChild(time);
+    const td = el("td");
+    td.appendChild(el("span", null, b.what));
+    if (b.screen) td.appendChild(el("span", "beat-screen", "Экран: " + b.screen));
+    td.appendChild(el("span", "beat-file",
+      "файл " + b.t.toFixed(2) + " · " + b.trigger));
+    tr.appendChild(td);
+    tr.addEventListener("click", () => seek(b.heard - BEAT_LEAD, true));
+    table.appendChild(tr);
+  });
+  beatsBox.appendChild(table);
+  cols.appendChild(beatsBox);
+
+  const side = el("div", "side");
+  if (s.floor) {
+    const fl = el("div", "floor");
+    fl.appendChild(floorPlan(s.floor));
+    if (s.floor.step) fl.appendChild(el("div", "step", s.floor.step));
+    if (s.floor.note) fl.appendChild(el("div", "note", s.floor.note));
+    side.appendChild(fl);
+  }
+  if (s.reference) {
+    const r = el("div", "ref");
+    r.appendChild(el("div", "label", "Референс"));
+    if (s.reference.kit) r.appendChild(el("p", null, s.reference.kit));
+    if (s.reference.watch) r.appendChild(el("p", null, s.reference.watch));
+    if (s.reference.url) {
+      const p = el("p");
+      const a = el("a", null, "Смотреть источник");
+      a.href = s.reference.url;
+      a.target = "_blank";
+      a.rel = "noopener";
+      p.appendChild(a);
+      r.appendChild(p);
+    }
+    if (s.reference.verified) r.appendChild(el("p", "verified", s.reference.verified));
+    side.appendChild(r);
+  }
+  cols.appendChild(side);
+  card.appendChild(cols);
+
+  const lists = el("div", "lists");
+  if (s.drill.length) {
+    const good = el("div", "good");
+    good.appendChild(el("h4", null, "Как разучивать"));
+    const ol = el("ol");
+    s.drill.forEach((x) => ol.appendChild(el("li", null, x)));
+    good.appendChild(ol);
+    lists.appendChild(good);
+  }
+  if (s.mistakes.length) {
+    const bad = el("div", "bad");
+    bad.appendChild(el("h4", null, "Типичные ошибки"));
+    const ul = el("ul");
+    s.mistakes.forEach((x) => ul.appendChild(el("li", null, x)));
+    bad.appendChild(ul);
+    lists.appendChild(bad);
+  }
+  if (lists.children.length) card.appendChild(lists);
+
+  $("strikes").appendChild(card);
+});
+
+// ── вид «Движения» ────────────────────────────────────────────────────────
+DATA.movements.forEach((m, i) => {
+  const row = el("div", "move");
+  row.id = "move-" + m.id;
+  row.appendChild(el("div", "t num", m.t.toFixed(2)));
+  row.appendChild(el("div", "nm", (i + 1) + ". " + m.name));
+  row.appendChild(el("div", "wh", m.what));
+  if (m.hold) row.appendChild(el("div", "hd", "Держать: " + m.hold));
+  const mini = el("div", "mini");
+  mini.innerHTML = "<i>скорость " + "■".repeat(m.speed) + "</i>"
+    + "<i>сила " + "■".repeat(m.power) + "</i>"
+    + "<i>" + m.duration.toFixed(1) + " с</i><i>звук: " + m.trigger + "</i>";
+  row.appendChild(mini);
+  row.addEventListener("click", () => seek(m.t, false));
+  $("movesList").appendChild(row);
+});
+
+// ── клавиатура ────────────────────────────────────────────────────────────
+window.addEventListener("keydown", (ev) => {
+  if (ev.target && /^(INPUT|TEXTAREA|SELECT)$/.test(ev.target.tagName)) return;
+  const t = ready ? video.currentTime : 0;
+  switch (ev.key) {
+    case " ": ev.preventDefault(); togglePlay(); break;
+    case "ArrowRight": {
+      ev.preventDefault();
+      const next = DATA.movements[activeIndex(DATA.movements, t) + 1];
+      if (next) seek(next.t);
+      break;
+    }
+    case "ArrowLeft": {
+      ev.preventDefault();
+      const i = activeIndex(DATA.movements, t);
+      // Если только что вошли в движение, шаг назад ведёт к предыдущему, а не
+      // к началу текущего: иначе стрелка «влево» на месте топчется.
+      const prev = (t - DATA.movements[i].t < 0.5)
+        ? DATA.movements[i - 1] : DATA.movements[i];
+      seek(prev ? prev.t : 0);
+      break;
+    }
+    case ",": ev.preventDefault(); video.pause(); seek(t - 1 / FPS); break;
+    case ".": ev.preventDefault(); video.pause(); seek(t + 1 / FPS); break;
+    case "[": ev.preventDefault(); shiftRate(-1); break;
+    case "]": ev.preventDefault(); shiftRate(1); break;
+    case "l": case "L": case "д": case "Д":
+      ev.preventDefault(); $("loopBtn").click(); break;
+    case "1": case "2": case "3": case "4": {
+      const v = VIEWS[Number(ev.key) - 1];
+      if (v) { ev.preventDefault(); showView(v[0]); }
+      break;
+    }
+  }
+});
+
+// ── цикл отрисовки ────────────────────────────────────────────────────────
+let lastMove = -1, lastScene = -1, lastStrike = "";
+function render(t) {
+  const si = activeIndex(DATA.scenes, t);
+  const scene = DATA.scenes[si];
+  if (si !== lastScene) {
+    lastScene = si;
+    document.body.dataset.scene = scene.key;
+    const kids = $("scenes").children;
+    for (let i = 0; i < kids.length; i++) kids[i].classList.toggle("on", i === si);
+    $("nowScene").textContent = scene.name;
+  }
+
+  const mi = activeIndex(DATA.movements, t);
+  const move = DATA.movements[mi];
+  if (mi !== lastMove) {
+    lastMove = mi;
+    $("heroLabel").textContent = "Движение " + (mi + 1) + " из " + DATA.movements.length;
+    $("mvName").textContent = move.name;
+    $("mvWhat").textContent = move.what;
+    $("mvHold").textContent = move.hold || "—";
+    bars("barSpeed", move.speed);
+    bars("barPower", move.power);
+    $("nowMove").textContent = move.name;
+    const next = DATA.movements[mi + 1];
+    $("nextName").textContent = next ? next.name : "финал номера";
+    $("nowNext").textContent = next ? next.name : "конец";
+    document.querySelectorAll(".move").forEach((n) => n.classList.remove("live"));
+    const row = $("move-" + move.id);
+    if (row) row.classList.add("live");
+  }
+  const next = DATA.movements[mi + 1];
+  $("nextIn").textContent = next ? (next.t - t).toFixed(1) + " с" : "—";
+  $("nowNextIn").textContent = next ? (next.t - t).toFixed(1) + " с" : "—";
+
+  // Реплика: держится LINE_HOLD секунд после начала, потом гаснет.
+  let line = null;
+  for (const l of DATA.lines) { if (l.t <= t) line = l; else break; }
+  $("lineNow").textContent = (line && t - line.t <= LINE_HOLD) ? line.text : "";
+
+  const shot = DATA.shots[activeIndex(DATA.shots, t)];
+  $("screenNow").textContent = shot ? shot.screen : "—";
+
+  const hit = DATA.hits.find((h) => h.t >= t - 0.05);
+  $("nowHit").textContent = hit
+    ? hit.t.toFixed(2) + " (" + Math.max(0, hit.t - t).toFixed(1) + " с)" : "—";
+
+  const pct = Math.max(0, Math.min(1, t / DATA.total)) * 100 + "%";
+  $("fill").style.width = pct;
+  $("head").style.left = pct;
+  $("cur").textContent = fmt1(t);
+
+  // Подсветка живой карточки и живой доли — только на виде «Бой»: перебирать
+  // строки на каждом кадре в остальных видах незачем.
+  if (currentView === "fight") {
+    const live = DATA.strikes.find((s) => t >= s.beats[0].heard - 0.6
+      && t <= s.beats[s.beats.length - 1].heard + 0.6);
+    const id = live ? live.id : "";
+    if (id !== lastStrike) {
+      lastStrike = id;
+      document.querySelectorAll(".strike").forEach((n) => n.classList.remove("live"));
+      if (id) $("strike-" + id).classList.add("live");
+    }
+    document.querySelectorAll(".beats-t tr").forEach((tr) => {
+      const bt = Number(tr.dataset.t);
+      tr.classList.toggle("live", t >= bt - 0.08 && t < Number(tr.dataset.until));
+    });
+  }
+}
+
+function frame() {
+  try {
+    const t = ready ? (video.currentTime || 0) : 0;
+    if (loopOn && loopWin && (t >= loopWin[1] || t < loopWin[0] - 0.3)) {
+      seek(loopWin[0], !video.paused);
+    }
+    render(t);
+  } catch (err) {
+    // Один сбойный кадр не должен останавливать цикл: страница замерла бы
+    // молча, и репетиция шла бы вслепую.
+    if (window.console) console.error(err);
+  } finally {
+    requestAnimationFrame(frame);
+  }
+}
+
+$("total").textContent = fmt(DATA.total);
+$("rulerEnd").textContent = fmt(DATA.total);
+showView(location.hash.slice(1) || "run");
+window.addEventListener("hashchange", () => showView(location.hash.slice(1)));
+requestAnimationFrame(frame);
+</script>
