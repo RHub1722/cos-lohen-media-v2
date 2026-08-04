@@ -120,6 +120,45 @@ def rows(project):
         return list(csv.DictReader(fh))
 
 
+# --- сколько это стоит -------------------------------------------------------
+# Прежняя таблица цен говорила, что 720p дороже 480p на девять процентов, а по
+# живым ответам он дороже в 2.16 раза. Сорок три теста прошли мимо этого, потому
+# что стоимость не проверял ни один: она печатается перед тратой и на поведение
+# не влияет. Ошибка была вдвое и вниз — то есть в сторону, в которую бюджет
+# кончается раньше, чем ожидаешь.
+
+
+def cost(duration: float, resolution: str) -> float:
+    shot = BaseShot(anchor="combat", clip="c.mp4", duration=duration,
+                    resolution=resolution)
+    return atlas.estimate(shot, resolution)
+
+
+def test_seven_seconds_of_720p_cost_as_much_as_fifteen_of_480p():
+    """Замер, который проще всего запомнить и труднее всего сломать незаметно:
+    152100 токенов против 151078."""
+    assert cost(7, "720p") == pytest.approx(cost(15, "480p"), rel=0.03)
+
+
+def test_720p_costs_twice_480p_per_second_not_a_tenth_more():
+    assert cost(10, "720p") / cost(10, "480p") == pytest.approx(2.16, rel=0.02)
+
+
+def test_an_unmeasured_resolution_does_not_pretend_to_be_free():
+    """Ноль выглядел бы как «бесплатно» и потерялся бы в сумме, ничего не
+    изменив. nan виден и в строке кадра, и в итоге."""
+    import math
+    assert math.isnan(cost(5, "1080p-SR"))
+    assert math.isnan(cost(5, "нет такого"))
+
+
+def test_the_four_pilot_generations_still_come_out_at_the_known_price():
+    """443608 токенов на $2.46 — единственная привязка к деньгам, что у нас есть.
+    Если цена токена уедет, эти четыре кадра перестанут сходиться."""
+    pilot = cost(15, "480p") * 2 + cost(7, "480p") * 2
+    assert pilot == pytest.approx(2.46, abs=0.05)
+
+
 def run(monkeypatch, *argv):
     monkeypatch.setattr(sys, "argv", ["atlas_gen.py", "--shots",
                                       "scenario/shots.json", *argv])

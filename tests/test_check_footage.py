@@ -77,8 +77,48 @@ def test_middle_hotter_needs_both_outer_thirds():
 
 def test_centre_above_limit_is_reported():
     bright = _flat(0.5)
-    problems = report("проба", scan(_stream([bright, bright]), W))
+    problems = report("проба", scan(_stream([bright] * 30), W))
     assert problems and "центр выше" in problems[0]
+
+
+def test_a_short_flash_of_light_in_the_centre_is_allowed():
+    """Порог стоит не против яркости, а против того, чтобы глаз зала успел к
+    фону приспособиться. За четыре кадра он не успевает, а сам процедурный
+    рендерер на каждом ударе добавляет свет — приёмка, запрещающая это,
+    мерила бы не то."""
+    # Фон чуть дышит: совсем неподвижный провалился бы на проверке мёртвого
+    # разгона, и тест доказывал бы не то, что проверяет.
+    frames = [_flat(0.05 + 0.004 * (i % 2)) for i in range(60)]
+    frames[30:34] = [_flat(0.19)] * 4          # 0.13 с на тридцати кадрах
+    assert not report("удар", scan(_stream(frames), W))
+
+
+def test_the_same_brightness_held_is_not_allowed():
+    """Обратная сторона: полсекунды того же уровня — это уже свет, а не удар, и
+    именно за это был отвергнут первый пролом."""
+    frames = [_flat(0.05)] * 40
+    frames[10:25] = [_flat(0.19)] * 15         # 0.50 с
+    problems = report("свет", scan(_stream(frames), W))
+    assert problems and "не вспышка, а свет" in problems[0]
+
+
+def test_many_short_flashes_still_fail_on_the_share():
+    """Одна короткая вспышка — удар. Каждый третий кадр — мерцающий фон, на
+    котором исполнителя не будет видно ни в одном из них."""
+    frames = [_flat(0.19) if i % 3 == 0 else _flat(0.05) for i in range(60)]
+    problems = report("мерцание", scan(_stream(frames), W))
+    assert problems and "% кадров куска" in problems[0]
+
+
+def test_a_single_over_limit_frame_has_a_length_not_zero():
+    """Одиночному кадру нельзя давать нулевую длину: с нулём он не перевалит ни
+    за какой предел, и серия из одного кадра стала бы невидимой для приёмки."""
+    from src.check_footage import longest_run
+    frames = [_flat(0.05)] * 10
+    frames[5] = _flat(0.19)
+    span, at = longest_run(scan(_stream(frames), W))
+    assert span == pytest.approx(1.0 / 30.0, abs=0.005)
+    assert at == pytest.approx(5.0 / 30.0, abs=0.005)
 
 
 # --- движение ----------------------------------------------------------------

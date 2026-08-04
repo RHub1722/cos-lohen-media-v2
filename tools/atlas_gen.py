@@ -43,10 +43,27 @@ ROOT = Path(__file__).resolve().parents[1]
 API = "https://api.atlascloud.ai/api/v1/model"
 MODEL = "bytedance/seedance-2.0-mini/reference-to-video"
 
-# Оценка, а не факт: списывает Atlas в токенах, и настоящее число приезжает в
-# ответе полем total_tokens. Нужна, чтобы знать сумму до отправки.
-RATE_PER_SECOND = {"480p": 0.056, "720p": 0.061,
-                   "720p-SR": 0.061, "1080p-SR": 0.075, "1440p-SR": 0.090}
+# Списывает Atlas в токенах, и настоящее число приезжает в ответе полем
+# total_tokens. Оценка до отправки считается через токены, а не мимо них — так
+# видно, откуда берётся сумма.
+#
+# Токены на секунду сняты с живых ответов, а не взяты из прайса:
+#   480p   15 с → 151078,  7 с →  70726   ≈ 10090 токенов/с
+#   720p    7 с → 152100,  6 с → 130500,  5 с → 108900  ≈ 21750 токенов/с
+#
+# То есть 720p дороже 480p в 2.16 раза, а не на девять процентов, как говорила
+# прежняя таблица. Семь секунд на 720p стоят ровно столько же, сколько пятнадцать
+# на 480p. Ошибка была вдвое и вниз — самая неприятная сторона.
+TOKENS_PER_SECOND = {"480p": 10090, "720p": 21750}
+
+# Цена токена выведена из первых четырёх генераций: 443608 токенов на $2.46. Это
+# единственное число здесь, которое не снято напрямую, — сверить с дашбордом.
+USD_PER_MILLION_TOKENS = 5.545
+
+# Разрешения выше 720p не проверялись ни разу. Ставить им множитель наугад
+# значит печатать перед тратой цифру, которой никто не мерил, поэтому их тут нет:
+# estimate() на них честно скажет, что не знает.
+UNMEASURED = ("720p-SR", "1080p-SR", "1440p-SR")
 
 VIDEO = ROOT / "assets" / "video"
 # Попытки лежат отдельно от слотов, которые читает рендер. Слот один на кадр, а
@@ -275,7 +292,15 @@ def attempt_number(anchor: str) -> int:
 
 
 def estimate(shot: BaseShot, resolution: str) -> float:
-    return RATE_PER_SECOND.get(resolution, 0.061) * shot.duration
+    """Ожидаемая стоимость кадра в долларах, или nan, если её никто не мерил.
+
+    Ноль тут был бы хуже всего: он выглядит как «бесплатно» и суммируется в
+    итоговую строку, не меняя её. nan виден и в строке, и в сумме.
+    """
+    rate = TOKENS_PER_SECOND.get(resolution)
+    if rate is None:
+        return float("nan")
+    return rate * shot.duration * USD_PER_MILLION_TOKENS / 1_000_000.0
 
 
 def generate(shot: BaseShot, resolution: str, stamp: str) -> None:
@@ -409,7 +434,14 @@ def main() -> int:
     chosen = [b for b in bases if args.all or b.anchor in args.only]
 
     total = sum(estimate(b, args.resolution or b.resolution) for b in chosen)
-    print(f"кадров: {len(chosen)}, ожидаемая стоимость ${total:.2f}\n")
+    print(f"кадров: {len(chosen)}, ожидаемая стоимость ${total:.2f}")
+    unknown = sorted({args.resolution or b.resolution for b in chosen}
+                     - set(TOKENS_PER_SECOND))
+    if unknown:
+        print(f"ВНИМАНИЕ: расход на {', '.join(unknown)} никто не мерил, "
+              f"сумма выше неполная. Известны: "
+              f"{', '.join(TOKENS_PER_SECOND)}.")
+    print()
 
     if args.dry_run:
         for shot in chosen:
