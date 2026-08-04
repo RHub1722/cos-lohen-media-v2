@@ -149,6 +149,78 @@ def test_the_real_timeline_ducks_every_masked_impact():
     assert by["hit_on_lohen"] >= by["burst1_impact"]
 
 
+def test_the_phantom_hit_of_burst_three_stays_gone():
+    """На 38.60 в картинке нет удара: прирост яркости 0.0010 при 0.4037 у
+    настоящей первой вспышки на 39.89. Там стоял burst3_impact_a, и это второй
+    фантом номера после burst4_impact — оба нашлись глазами пользователя, а не
+    приёмкой.
+
+    На 38.60 теперь automaton_advance: машина входит в кадр и наступает на камеру
+    1.3 с. Это не удар, поэтому провала музыки у него быть не должно — провал
+    трапеция с полкой 0.30 с, и под непрерывной фактурой он дал бы дыру.
+    """
+    tl = Timeline.load("scenario/timeline.json")
+    by = {e.id: e for e in tl.events}
+    assert "burst3_impact_a" not in by, (
+        "фантомный удар серии 3 вернулся: в картинке на 38.60 удара нет")
+    adv = by["automaton_advance"]
+    assert adv.t == 38.6
+    assert adv.duck_db == 0.0, "наступление не удар, провал ему не нужен"
+    # Оба настоящих удара стоят на вспышках снятого материала: 39.89 и 40.89.
+    assert by["burst3_impact_b"].t == 39.87
+    assert by["burst3_impact_c"].t == 40.9
+    # Взмах обязан вести в первый настоящий удар, а не в место, где его нет.
+    assert 0.2 <= by["burst3_impact_b"].t - by["burst3_whoosh"].t <= 0.45
+
+
+def test_the_chamber_clicks_sit_on_the_measured_turns():
+    """Барабан в клипе 02_revolver проворачивается ровно четыре раза, и щелчков
+    столько же.
+
+    Ходы по замеру диска покадрово (24 кадра/с), пики: 16.78, 17.62, 18.62,
+    20.12. Пятый ход, 21.28–21.49, делает взвод курка — на него звук уже стоял.
+    Паузы между ходами растут: 0.84, 1.00, 1.52. Шесть щелчков, которые тут были
+    раньше, шли с шагом 0.70, 0.70, 0.60, 0.50, 0.50 — то есть ускорялись, и
+    рассинхрон был не в смещении, а в направлении.
+
+    Пик внутри ассета стоит на 0.045 с, а событие ставит НАЧАЛО файла: сравнивать
+    надо t + 0.045, иначе тест проверял бы не то, что слышно.
+    """
+    turns = (16.78, 17.62, 18.62, 20.12)
+    peak_in_file = 0.045
+    tl = Timeline.load("scenario/timeline.json")
+    clicks = sorted((e for e in tl.events
+                     if e.id.startswith("revolver_chamber_")),
+                    key=lambda e: e.t)
+    assert len(clicks) == len(turns), (
+        f"щелчков {len(clicks)}, ходов барабана в картинке {len(turns)}")
+    for click, turn in zip(clicks, turns):
+        heard = click.t + peak_in_file
+        assert abs(heard - turn) < 0.02, (
+            f"{click.id} слышен на {heard:.3f}, ход барабана на {turn:.2f}")
+
+
+def test_the_cylinder_spin_ends_before_the_barrel_is_shown():
+    """Раскрутка это заряжание, и заряжают до того, как наводят.
+
+    Ассет — 20 щелчков за 1.28 с, шаг 0.06 с; барабан на экране проворачивается
+    раз в 0.84–1.34 с. Пока раскрутка стояла на 16.20, одновременно со склейкой на
+    ствол, звук шёл в шестнадцать раз быстрее картинки и читался как заряжание —
+    на это и была претензия. Ратчет обязан затихнуть до 16.20.
+    """
+    tl = Timeline.load("scenario/timeline.json")
+    by = {e.id: e for e in tl.events}
+    spin = by["revolver_cylinder_spin"]
+    ratchet_ends = spin.t + 1.30      # последний щелчок внутри файла
+    assert ratchet_ends <= 16.2 + 1e-9, (
+        f"раскрутка звучит до {ratchet_ends:.2f}, а ствол на экране с 16.20")
+    # Щелчки начинаются уже под стволом: с 16.20 барабан на экране, и с этого
+    # места он идёт по одному ходу, а не свободной раскруткой.
+    first_click = min(e.t for e in tl.events
+                      if e.id.startswith("revolver_chamber_"))
+    assert first_click > 16.2, "первый щелчок должен звучать уже под стволом"
+
+
 def test_the_final_blow_is_not_ducked():
     """На 47.00 музыка обрывается по сценарию, на 55.20 играет только дрон на
     −20 dB. Провал там нечего уводить, и дописывать его «для симметрии» нельзя."""

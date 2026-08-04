@@ -251,8 +251,12 @@ def test_attempts_are_counted_per_anchor(project):
 
 
 def test_an_anchor_ending_in_a_is_not_confused_with_its_attempt_number(project):
-    """burst3_impact_a — настоящий якорь номера. Отрезать номер поиском «_a»
-    в имени файла нельзя: у этого кадра «_a» встречается дважды."""
+    """Якорь, сам кончающийся на «_a». Отрезать номер попытки поиском «_a» в
+    имени файла нельзя: тогда «_a» встречается дважды и парсер берёт не то.
+
+    burst3_impact_a таким якорем в номере был, пока в картинке на 38.60 не
+    оказалось никакого удара; теперь там automaton_advance. Имя оставлено как
+    синтетический случай: ловушка в разборе имени от переименования не исчезла."""
     attempt(project, "x").parent.mkdir(parents=True, exist_ok=True)
     attempt(project, "burst3_impact_a_a2.mp4").write_bytes(b"x")
     assert atlas.attempts("burst3_impact_a") == [2]

@@ -62,7 +62,7 @@ EVENT_SHOTS = {
     "combat": "дверь вылетает один раз",
     "burst1_whoosh": "удар на 28.80 один",
     "burst2_whoosh": "два удара на 33.40 и 33.85, и оба один раз",
-    "burst3_impact_a": "два удара на 38.60 и 39.20",
+    "automaton_advance": "автоматон входит один раз, два удара на 39.87 и 40.90",
     "burst4_whoosh": "копьё входит в пол на 47.00 один раз",
 }
 
@@ -234,7 +234,7 @@ def test_resolve_takes_times_from_the_scenario(tmp_path):
     path = _write(tmp_path, {
         "base": [{"anchor": "ice", "clip": "i.mp4"},
                  {"anchor": "interrogation", "clip": "a.mp4"}],
-        "fx": [{"anchor": "burst3_impact_a", "clip": "f.mov"}],
+        "fx": [{"anchor": "automaton_advance", "clip": "f.mov"}],
     })
     bases, fx = resolve(*load_shots(path), _real_plan())
     assert [b.t for b in bases] == [0.0, 47.0]
@@ -288,8 +288,8 @@ def test_the_real_shot_list_resolves_against_the_real_scenario():
     восемь минут."""
     bases, fx = resolve(*load_shots("scenario/shots.json"), _real_plan())
     assert [b.anchor for b in bases] == [
-        "interrogation", "revolver_cylinder_spin", "combat", "burst1_whoosh",
-        "burst2_whoosh", "burst3_impact_a", "hit_on_lohen", "burst4_whoosh",
+        "interrogation", "music_tick", "combat", "burst1_whoosh",
+        "burst2_whoosh", "automaton_advance", "hit_on_lohen", "burst4_whoosh",
         "ice", "ice_final_impact",
     ]
     # Рисованных эффектов с альфа-каналом больше нет: генерация альфу не отдаёт,
