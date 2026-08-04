@@ -22,6 +22,10 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from src.models import Timeline  # noqa: E402
+
 for stream in (sys.stdout, sys.stderr):
     if hasattr(stream, "reconfigure"):
         stream.reconfigure(encoding="utf-8", errors="replace")
@@ -67,34 +71,35 @@ BANDS = (
     ("верх", "highpass=f=2000"),
 )
 
-# Удары, которые обязаны пробиваться сквозь музыку. Копьё в пол и финальный тут
-# не нужны: на 47.00 музыка обрывается по сценарию, на 55.20 играет только дрон.
-IMPACTS = [
-    (22.30, "дверь"),
-    (28.80, "серия 1"),
-    (33.85, "серия 2"),
-    (38.60, "серия 3 А"),
-    (39.20, "серия 3 Б"),
-    (42.80, "удар по нему"),
-    (44.90, "серия 4"),
-]
-
 VOICES = ROOT / "output/voices_v2.wav"
+SCENARIO = ROOT / "scenario/timeline.json"
 
 # Область разборчивости речи. Ниже 300 и выше 4000 Гц на понимание слова почти не
 # влияет, а музыка там есть, и широкополосный замер из-за неё врёт.
 SPEECH_BAND = "highpass=f=300,lowpass=f=4000"
 
-# Реплики боя. В допросе запас 21–38 dB и проверять там нечего; в бою он был
-# 1.7–7.2, то есть под подложку ушёл весь речевой слой. Крик охранника на 22.70
-# сюда не входит намеренно: 11.8 dB, и это возглас из толпы, ему разборчивость
-# нужна не так, как репликам Лоэна.
-LINES = [
-    (26.10, 1.4, "Finally"),
-    (31.20, 1.6, "Feel that?"),
-    (36.40, 1.6, "Is that all you brought?"),
-    (41.60, 1.2, "...Really?"),
-]
+# Окно замера реплики. Столько же, сколько держится провал музыки под ней: фраза
+# в номере длится от 0.8 до 1.6 с.
+LINE_WINDOW = 1.20
+
+
+def to_check() -> tuple[list, list]:
+    """Что проверять — берётся из таймлайна, а не выписывается здесь.
+
+    Список ударов и реплик равен списку событий с провалом музыки: провал ставится
+    ровно там, где что-то обязано пробиться. Выписанные руками таймкоды разошлись
+    бы с первой же правкой — а правки как раз и идут: удар серии 1 переехал с 28.80
+    на 29.13, серии 3 с 39.20 на 39.87, и добавились два новых на 36.53 и 40.90.
+
+    Копьё в пол и финальный удар в список не попадают сами: провала у них нет,
+    потому что на 47.00 музыка обрывается по сценарию, а на 55.20 играет только
+    дрон. Крик охранника — тоже нет: он пробивается и без провала.
+    """
+    tl = Timeline.load(SCENARIO)
+    hits = [(e.t, e.id) for e in tl.events if e.stem == "sfx" and e.duck_db > 0]
+    lines = [(e.t, LINE_WINDOW, e.id) for e in tl.events
+             if e.stem == "voices" and e.duck_db > 0]
+    return sorted(hits), sorted(lines)
 
 
 def peak(start: float, end: float) -> float | None:
@@ -130,9 +135,9 @@ def audibility() -> list[str]:
 
     print(f"  запас удара над музыкой в те же {BODY * 1000:.0f} мс, "
           f"норма от {MARGIN_DB:.0f} dB")
-    print(f"  {'удар':16} {'широко':>8} " + " ".join(f"{n:>7}" for n, _ in BANDS))
+    print(f"  {'удар':20} {'широко':>8} " + " ".join(f"{n:>7}" for n, _ in BANDS))
     failed = []
-    for t, name in IMPACTS:
+    for t, name in to_check()[0]:
         a, b = t, t + BODY
         wide = [mean(SFX, a, b), mean(MUSIC, a, b)]
         if any(v is None for v in wide):
@@ -162,7 +167,7 @@ def audibility() -> list[str]:
             elif value < BAND_THIN_DB:
                 marks.append(f"тонко в «{label}»")
         tail = "  " + ", ".join(marks) if marks else ""
-        print(f"  {name:16} " + " ".join(f"{v:7.1f}" for v in margins) + tail)
+        print(f"  {name:20} " + " ".join(f"{v:7.1f}" for v in margins) + tail)
     return failed
 
 
@@ -180,7 +185,7 @@ def dialogue() -> list[str]:
           f"норма от {MARGIN_DB:.0f} dB")
     print(f"  {'реплика':26} {'голос':>7} {'музыка':>7} {'запас':>7}")
     failed = []
-    for t, dur, name in LINES:
+    for t, dur, name in to_check()[1]:
         v = mean(VOICES, t, t + dur, SPEECH_BAND)
         m = mean(MUSIC, t, t + dur, SPEECH_BAND)
         if v is None or m is None:
