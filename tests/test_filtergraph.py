@@ -131,13 +131,19 @@ def test_negative_duck_is_refused():
 
 
 def test_the_real_timeline_ducks_every_masked_impact():
-    """Четыре удара были измерены как маскирующиеся: серия 2, серия 3 Б, удар по
-    нему и серия 4. Ни один не должен остаться без провала."""
+    """Три удара были измерены как маскирующиеся: серия 2, серия 3 Б и удар по
+    нему. Ни один не должен остаться без провала.
+
+    Четвёртым был burst4_impact, и он больше не существует: в картинке в окне
+    44.60–47.00 удара нет вовсе, клип держит поднятое копьё почти две секунды. Удар
+    был фантомным, и его убрали, а не приглушили.
+    """
     tl = Timeline.load("scenario/timeline.json")
     ducked = {e.id for e in tl.events if e.duck_db > 0}
-    for anchor in ("burst2_impact", "burst3_impact_b", "hit_on_lohen",
-                   "burst4_impact"):
+    for anchor in ("burst2_impact", "burst3_impact_b", "hit_on_lohen"):
         assert anchor in ducked, f"{anchor} измерен как маскирующийся, но без провала"
+    assert "burst4_impact" not in {e.id for e in tl.events}, (
+        "фантомный удар серии 4 вернулся: в картинке там нет удара")
     # Самый глухой удар обязан получить провал не меньше остальных серий.
     by = {e.id: e.duck_db for e in tl.events}
     assert by["hit_on_lohen"] >= by["burst1_impact"]
