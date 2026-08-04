@@ -74,6 +74,23 @@ IMPACTS = [
     (44.90, "серия 4"),
 ]
 
+VOICES = ROOT / "output/voices_v2.wav"
+
+# Область разборчивости речи. Ниже 300 и выше 4000 Гц на понимание слова почти не
+# влияет, а музыка там есть, и широкополосный замер из-за неё врёт.
+SPEECH_BAND = "highpass=f=300,lowpass=f=4000"
+
+# Реплики боя. В допросе запас 21–38 dB и проверять там нечего; в бою он был
+# 1.7–7.2, то есть под подложку ушёл весь речевой слой. Крик охранника на 22.70
+# сюда не входит намеренно: 11.8 dB, и это возглас из толпы, ему разборчивость
+# нужна не так, как репликам Лоэна.
+LINES = [
+    (26.10, 1.4, "Finally"),
+    (31.20, 1.6, "Feel that?"),
+    (36.40, 1.6, "Is that all you brought?"),
+    (41.60, 1.2, "...Really?"),
+]
+
 
 def peak(start: float, end: float) -> float | None:
     """None означает, что замер не удался.
@@ -144,6 +161,35 @@ def audibility() -> list[str]:
     return failed
 
 
+def dialogue() -> list[str]:
+    """Разборчивы ли реплики боя. Возвращает список провалов.
+
+    Удар зал может достроить по картинке, реплику нет. Поэтому норма здесь та же
+    десятка, но окно шире: фраза длится от 0.8 до 1.6 с, и мерить её сотыми
+    долями бессмысленно.
+    """
+    if not (VOICES.is_file() and MUSIC.is_file()):
+        return [f"нет стемов {VOICES.name} и {MUSIC.name} — речь не проверить"]
+
+    print(f"  запас реплики над музыкой в области разборчивости, "
+          f"норма от {MARGIN_DB:.0f} dB")
+    print(f"  {'реплика':26} {'голос':>7} {'музыка':>7} {'запас':>7}")
+    failed = []
+    for t, dur, name in LINES:
+        v = mean(VOICES, t, t + dur, SPEECH_BAND)
+        m = mean(MUSIC, t, t + dur, SPEECH_BAND)
+        if v is None or m is None:
+            failed.append(f"«{name}»: замер сорван")
+            continue
+        margin = v - m
+        mark = "  ТОНЕТ" if margin < MARGIN_DB else ""
+        print(f"  {name[:26]:26} {v:7.1f} {m:7.1f} {margin:7.1f}{mark}")
+        if margin < MARGIN_DB:
+            failed.append(f"«{name}»: запас {margin:.1f} dB при норме "
+                          f"{MARGIN_DB:.0f} — музыка перебивает реплику")
+    return failed
+
+
 def main() -> int:
     if not PREMASTER.is_file():
         print(f"нет файла {PREMASTER} — сначала собери мастер")
@@ -167,12 +213,14 @@ def main() -> int:
 
     drowned = audibility()
     print()
+    drowned += dialogue()
+    print()
     if drowned:
         print(f"  НЕ СЛЫШНО {len(drowned)}:")
         for line in drowned:
             print(f"    — {line}")
         return 1
-    print("  Каждый удар пробивается сквозь музыку.")
+    print("  Каждый удар и каждая реплика пробиваются сквозь музыку.")
     return 0
 
 

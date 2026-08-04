@@ -2,8 +2,8 @@ import re
 
 import pytest
 
-from src.filtergraph import (DUCK_ATTACK, DUCK_HOLD, DUCK_RELEASE,
-                             build_stem_graph, duck_expression,
+from src.filtergraph import (DUCK_ATTACK, DUCK_HOLD, DUCK_HOLD_VOICE,
+                             DUCK_RELEASE, build_stem_graph, duck_expression,
                              ffmpeg_input_args, pan_gains)
 from src.models import ScenarioError, Timeline
 
@@ -93,6 +93,36 @@ def test_duck_on_a_music_event_is_refused():
     with pytest.raises(ScenarioError, match="duck_db"):
         _tl([{"id": "bed", "t": 0.0, "asset": "b.wav", "stem": "music",
               "duration": 60.0, "duck_db": 6.0}])
+
+
+def test_a_line_holds_the_duck_longer_than_an_impact():
+    """Удар длится сотые доли, фраза от 0.8 до 1.6 с. С полкой удара музыка
+    вернулась бы на середине слова, и это слышно хуже, чем если бы её не
+    уводили вовсе."""
+    hit = duck_expression(_tl([_hit("a", 10.0, duck=6.0)]))
+    line = duck_expression(_tl([{"id": "l", "t": 10.0, "asset": "l.wav",
+                                 "stem": "voices", "duck_db": 6.0}]))
+    assert f"({10.0 + DUCK_HOLD + DUCK_RELEASE:.4f}-t)" in hit
+    assert f"({10.0 + DUCK_HOLD_VOICE + DUCK_RELEASE:.4f}-t)" in line
+    assert DUCK_HOLD_VOICE > DUCK_HOLD
+
+
+def test_the_drowned_lines_of_the_fight_are_all_ducked():
+    """Замер: «Finally» 1.7 dB, «...Really?» 2.4, «Feel that?» 6.0, «Is that
+    all» 7.2 — при 21–38 dB у тех же реплик в допросе."""
+    tl = Timeline.load("scenario/timeline.json")
+    ducked = {e.id for e in tl.events if e.duck_db > 0 and e.stem == "voices"}
+    for anchor in ("lohen_finally", "lohen_really", "lohen_feel", "lohen_thatall"):
+        assert anchor in ducked, f"{anchor} измерена как тонущая, но без провала"
+
+
+def test_the_interrogation_lines_are_not_ducked():
+    """В допросе музыка стоит на пороге слышимости, запас реплик 21–38 dB.
+    Провал там убрал бы подложку, которой и так почти нет."""
+    tl = Timeline.load("scenario/timeline.json")
+    for ev in tl.events:
+        if ev.stem == "voices" and ev.t < 22.3:
+            assert ev.duck_db == 0.0, f"{ev.id} в допросе, провал не нужен"
 
 
 def test_negative_duck_is_refused():
