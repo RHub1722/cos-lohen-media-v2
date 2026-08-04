@@ -14,7 +14,8 @@ import numpy as np
 import pytest
 
 from src.check_footage import (CENTRE_LIMIT, QUIET_MOTION_LIMIT, Sample,
-                               clip_stream, quiet_windows, report, scan, zones)
+                               clip_stream, flash_windows, quiet_windows,
+                               report, scan, zones)
 from src.models import Timeline
 from src.video_plan import build_plan
 
@@ -174,6 +175,46 @@ def test_the_final_pose_is_in_a_quiet_window():
     номере, чтобы за спиной исполнителя что-то шевелилось."""
     windows = quiet_windows(_plan())
     assert any(a <= 57.0 < b for a, b in windows)
+
+
+# --- белая вспышка: единственное исключение из порога ------------------------
+
+
+def test_the_white_flash_is_the_only_exemption_and_it_comes_from_the_timeline():
+    plan = _plan()
+    flashes = flash_windows(plan)
+    assert len(flashes) == 1, ("исключение должно быть ровно одно на весь номер — "
+                              f"нашлось {len(flashes)}")
+    start, end = flashes[0]
+    assert start == pytest.approx(42.8, abs=0.3), \
+        "вспышка не там, где удар по нему"
+    assert end > start
+
+
+def test_a_blinding_centre_inside_the_flash_is_not_a_violation():
+    """Вспышка обязана быть яркой и центральной: это удар, пришедший в глаза.
+    Приёмка, которая кричит на замысел, перестаёт работать целиком."""
+    white = _flat(0.95)
+    samples = scan(_stream([white, white]), W, flashes=[(0.0, 10.0)])
+    assert all(s.flash for s in samples)
+    assert not report("вспышка", samples)
+
+
+def test_the_same_brightness_outside_the_flash_is_a_violation():
+    """Обратная сторона: исключение не должно погасить порог вообще."""
+    white = _flat(0.95)
+    samples = scan(_stream([white, white]), W, flashes=[(100.0, 110.0)])
+    problems = report("не вспышка", samples)
+    assert problems and "центр выше" in problems[0]
+
+
+def test_the_flash_peak_is_still_printed(capsys):
+    """Исключить из суда — не значит перестать показывать. Если вспышка вдруг
+    станет вдвое ярче задуманного, это должно быть видно в отчёте."""
+    samples = scan(_stream([_flat(0.95), _flat(0.95)]), W, flashes=[(0.0, 10.0)])
+    report("вспышка", samples)
+    out = capsys.readouterr().out
+    assert "белая вспышка" in out and "0.95" in out
 
 
 # --- предохранитель в замере файла -------------------------------------------

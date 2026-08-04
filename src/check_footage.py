@@ -92,6 +92,9 @@ class Sample:
     motion: float
     motion_centre: float
     quiet: bool = False
+    # Кадр внутри белой вспышки. Порог яркости к нему не применяется: вспышка
+    # центральная и яркая намеренно, это удар в глаза на 42.8.
+    flash: bool = False
 
     @property
     def middle_hotter(self) -> bool:
@@ -114,9 +117,11 @@ def zones(width: int) -> dict[str, np.ndarray]:
 
 
 def scan(stream: Iterable[tuple[float, np.ndarray]], width: int,
-         quiet: list[tuple[float, float]] | None = None) -> list[Sample]:
+         quiet: list[tuple[float, float]] | None = None,
+         flashes: list[tuple[float, float]] | None = None) -> list[Sample]:
     masks = zones(width)
     windows = quiet or []
+    bright = flashes or []
     prev: np.ndarray | None = None
     out: list[Sample] = []
     for t, rgb in stream:
@@ -137,6 +142,7 @@ def scan(stream: Iterable[tuple[float, np.ndarray]], width: int,
             motion=motion,
             motion_centre=motion_centre,
             quiet=any(a <= t < b for a, b in windows),
+            flash=any(a <= t < b for a, b in bright),
         ))
     return out
 
@@ -212,6 +218,19 @@ def quiet_windows(plan: VideoPlan) -> list[tuple[float, float]]:
     return sorted(windows)
 
 
+def flash_windows(plan: VideoPlan) -> list[tuple[float, float]]:
+    """Где яркий центр — это замысел, а не провал приёмки.
+
+    Одно место на весь номер: белая вспышка на 42.8. Она обязана быть яркой и
+    обязана быть центральной — это удар, пришедший в глаза, и он единственное
+    исключение из порога. Окно берётся из якоря, а не выписывается временем:
+    приёмка, которая кричит на замысел, перестаёт работать целиком, а приёмка с
+    руками вписанным таймкодом переживёт правку сценария и начнёт врать.
+    """
+    return sorted((cue.t, cue.end) for cue in plan.cues
+                  if cue.kind == "whiteflash")
+
+
 # --- отчёт -------------------------------------------------------------------
 
 
@@ -236,9 +255,11 @@ def report(title: str, samples: list[Sample], step: float = 0.5,
             continue
         shown = s.t
         mark = ""
-        if s.centre > CENTRE_LIMIT:
+        if s.flash:
+            mark += " вспышка"
+        elif s.centre > CENTRE_LIMIT:
             mark += " ЦЕНТР"
-        if s.middle_hotter:
+        if s.middle_hotter and not s.flash:
             mark += " серединаЯрче"
         if s is samples[0] and not np.isnan(s.motion):
             # Разница у первого кадра куска — это стык с предыдущим куском.
@@ -250,9 +271,13 @@ def report(title: str, samples: list[Sample], step: float = 0.5,
         print(f"  {s.t:6.2f} {s.left:7.3f} {s.middle:9.3f} {s.right:7.3f} "
               f"{s.centre:7.3f} {s.motion:7.4f} {s.motion_centre:7.4f}{mark}")
 
-    hot = [s for s in samples if s.centre > CENTRE_LIMIT]
-    hotter = [s for s in samples if s.middle_hotter]
-    worst = max(samples, key=lambda s: s.centre)
+    # Кадры белой вспышки из суда по яркости исключены целиком: и порог, и
+    # «середина ярче краёв» на ней срабатывают по замыслу, а не по ошибке.
+    judged = [s for s in samples if not s.flash]
+    flashes = [s for s in samples if s.flash]
+    hot = [s for s in judged if s.centre > CENTRE_LIMIT]
+    hotter = [s for s in judged if s.middle_hotter]
+    worst = max(judged, key=lambda s: s.centre) if judged else samples[0]
 
     # Первый кадр окна: его «движение» — это разница с последним кадром
     # предыдущего кадра списка, то есть сама склейка, а не движение внутри
@@ -269,9 +294,17 @@ def report(title: str, samples: list[Sample], step: float = 0.5,
     if cut is not None:
         print(f"  склейка на входе: {cut.motion:.4f}, в полосе "
               f"{cut.motion_centre:.4f} (это стык, а не движение клипа)")
-    print(f"  центр: максимум {worst.centre:.3f} на {worst.t:.2f} с, "
-          f"порог {CENTRE_LIMIT:.2f}, выше порога {len(hot)} "
-          f"({100.0 * len(hot) / len(samples):.0f}%)")
+    if judged:
+        print(f"  центр: максимум {worst.centre:.3f} на {worst.t:.2f} с, "
+              f"порог {CENTRE_LIMIT:.2f}, выше порога {len(hot)} "
+              f"({100.0 * len(hot) / len(judged):.0f}%)")
+    else:
+        print("  центр: судить нечего — все кадры внутри белой вспышки")
+    if flashes:
+        peak = max(flashes, key=lambda s: s.centre)
+        print(f"  белая вспышка: {len(flashes)} кадров вне суда по яркости, "
+              f"центр в пике {peak.centre:.3f} на {peak.t:.2f} с — "
+              f"это замысел, удар в глаза")
     print(f"  середина ярче обеих крайних третей: {len(hotter)} "
           f"({100.0 * len(hotter) / len(samples):.0f}%)")
     print(f"  движение в полосе: медиана {percentile(centre_motion, 50):.4f}, "
@@ -297,7 +330,12 @@ def report(title: str, samples: list[Sample], step: float = 0.5,
                             f"кадрах, максимум {peak.motion_centre:.4f} "
                             f"на {peak.t:.2f} с")
 
-    edge = [s for s in samples if s.t <= samples[0].t + EDGE_WINDOW]
+    # Мусор по краям ищется только среди кадров, за которые отвечает модель.
+    # Окно hit_on_lohen начинается ровно там, где стоит белая вспышка, и без
+    # этого исключения приёмка требовала бы подрезать start_at у кадра, начало
+    # которого сделано нами и нарочно.
+    edge = [s for s in samples
+            if s.t <= samples[0].t + EDGE_WINDOW and not s.flash]
     if edge:
         flash = max(edge, key=lambda s: s.middle)
         still = [s for s in edge[1:] if not np.isnan(s.motion) and s.motion < 0.002]
@@ -410,13 +448,16 @@ def main() -> int:
     source = FootageSource(resolved, resolved_fx, Path(args.assets),
                            args.width, args.height, args.fps)
     windows = quiet_windows(plan)
-    print(f"спокойные окна: "
+    flashes = flash_windows(plan)
+    print("спокойные окна: "
           + ", ".join(f"{a:.1f}–{b:.1f}" for a, b in windows))
+    print("вспышки вне суда по яркости: "
+          + (", ".join(f"{a:.1f}–{b:.1f}" for a, b in flashes) or "нет"))
 
     stream = pipeline_stream(canvas, plan, source, args.fps, upto)
     if args.stills:
         stream = keep_worst(stream, keep, 2.0)
-    samples = scan(stream, args.width, windows)
+    samples = scan(stream, args.width, windows, flashes)
 
     for shot in have:
         inside = [s for s in samples if shot.t <= s.t < shot.end]

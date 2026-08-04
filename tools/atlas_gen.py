@@ -155,10 +155,20 @@ def submit(shot: BaseShot, refs: list[str], resolution: str) -> str:
     return job
 
 
-def wait(job: str, timeout: float = 900.0) -> tuple[str, int]:
-    """Опрашивает задание и возвращает ссылку на результат и списанные токены."""
-    deadline = time.monotonic() + timeout
+def wait(job: str, timeout: float = 900.0, beat: float = 30.0) -> tuple[str, int]:
+    """Опрашивает задание и возвращает ссылку на результат и списанные токены.
+
+    Раз в `beat` секунд печатает, что ждём и сколько уже: генерация идёт минуты,
+    а на восьми кадрах подряд молчащий скрипт неотличим от зависшего.
+    """
+    started = time.monotonic()
+    deadline = started + timeout
+    spoken = 0.0
     while time.monotonic() < deadline:
+        waited = time.monotonic() - started
+        if waited - spoken >= beat:
+            spoken = waited
+            print(f"    ждём {job}: {waited:.0f} с", flush=True)
         response = requests.get(f"{API}/prediction/{job}",
                                 headers=headers(), timeout=60)
         if response.status_code >= 400:
@@ -273,7 +283,7 @@ def generate(shot: BaseShot, resolution: str, stamp: str) -> None:
     cost = estimate(shot, resolution)
     target = attempt_path(shot.anchor, attempt)
     print(f"[{shot.anchor}] попытка {attempt}, {shot.duration:g} с "
-          f"{resolution}, ожидаемо ${cost:.2f}")
+          f"{resolution}, ожидаемо ${cost:.2f}", flush=True)
 
     row = {"timestamp": stamp, "shot": shot.anchor, "model": MODEL,
            "resolution": resolution, "duration": shot.duration,
@@ -299,7 +309,7 @@ def generate(shot: BaseShot, resolution: str, stamp: str) -> None:
     row["total_tokens"] = tokens
     note(row)
     print(f"[{shot.anchor}] готово: {target.relative_to(ROOT)} -> {shot.clip}, "
-          f"токенов {tokens}, prediction {job}")
+          f"токенов {tokens}, prediction {job}", flush=True)
 
 
 def use_attempts(pairs: list[str], slots: dict[str, BaseShot]) -> int:
