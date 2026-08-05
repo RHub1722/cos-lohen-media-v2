@@ -909,8 +909,18 @@ function setReady(src, label) {
   $("picker").classList.remove("on");
   if (label) $("pickerText").textContent = label;
 }
+// Запасной адрес пробуется один раз и только после ошибки: файл рядом читается
+// — в сеть страница не ходит вовсе. Нужен для прокси, которые отдают mp4 с типом
+// application/octet-stream: Safari на планшете такой файл не проигрывает.
+let triedFallback = false;
 video.addEventListener("error", () => {
   if (!video.src) return;
+  if (DATA.video_fallback && !triedFallback) {
+    triedFallback = true;
+    $("pickerText").textContent = "Файл рядом не читается, беру видео из сети…";
+    setReady(DATA.video_fallback);
+    return;
+  }
   ready = false;
   $("picker").classList.add("on");
   $("pickerText").textContent =

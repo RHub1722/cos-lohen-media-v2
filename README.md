@@ -93,13 +93,17 @@ python src/render_training.py --site
 
 | способ | адрес | что нужно |
 |---|---|---|
-| **GitHub Pages** | `https://rhub1722.github.io/cos-lohen-media-v2/site/` | включить один раз: Settings → Pages → Source: Deploy from a branch → `master` / `/ (root)` |
-| **Без настроек** | `https://raw.githack.com/RHub1722/cos-lohen-media-v2/master/site/index.html` | ничего, работает сразу на публичном репозитории |
+| **GitHub Pages** | `https://rhub1722.github.io/cos-lohen-media-v2/site/` | включить один раз: Settings → Pages → Source: Deploy from a branch → `master` / `/ (root)`. Дальше обновляется само при каждом пуше |
+| **Без настроек** | `https://raw.githack.com/RHub1722/cos-lohen-media-v2/master/site/index.html` | ничего, но прокси показывает свою страницу-предупреждение с рекламой, и mp4 отдаёт типом `application/octet-stream` |
 | **Локально** | `site/index.html` | скачать репозиторий целиком, открыть файл |
 
-Сам `index.html` в отрыве от папки не работает: он ищет видео рядом с собой.
-Открывать по ссылке на **папку** (Pages) или на файл внутри репозитория, а не на
-скачанный отдельно html.
+Pages лучше: правильные типы файлов, свой домен, никаких посредников.
+
+`index.html` ищет видео рядом с собой, поэтому открывать надо ссылку на **папку**
+(Pages) или файл внутри репозитория, а не отдельно скачанный html. Если видео
+рядом не прочиталось, страница один раз пробует запасной адрес на jsDelivr —
+это единственный случай, когда она обращается в сеть, и нужен он ровно для
+прокси с неправильным типом файла: Safari на планшете `octet-stream` не играет.
 
 Через PowerShell:
 

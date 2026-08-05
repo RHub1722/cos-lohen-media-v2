@@ -52,6 +52,18 @@ SITE_SCALE = "960:540"
 SITE_CRF = "24"
 MASTER_VIDEO = ROOT / "output/final_v2.mp4"
 
+# Запасной адрес видео для опубликованной копии. Нужен ровно одному случаю:
+# страницу открыли через прокси вроде raw.githack, который отдаёт mp4 с типом
+# application/octet-stream, и Safari на планшете такой файл проигрывать
+# отказывается. jsDelivr отдаёт video/mp4, но HTML у него уходит как text/plain,
+# то есть заменить прокси целиком он не может — только выручить видео.
+# Срабатывает только после ошибки загрузки: когда файл лежит рядом и читается,
+# в сеть страница не ходит вовсе.
+SITE_VIDEO_FALLBACK = (
+    "https://cdn.jsdelivr.net/gh/RHub1722/cos-lohen-media-v2@master/site/"
+    + SITE_VIDEO
+)
+
 # Ключ с описанием кадра по-русски: он адресован человеку, и рядом с ним в
 # shots.json лежат такие же русские «почему так». Схему кадра он не трогает —
 # load_shots читает только известные ему поля.
@@ -69,7 +81,7 @@ def build_shots(raw_shots: dict, plan) -> list[dict]:
             for shot in placed]
 
 
-def build_payload(video: str) -> dict:
+def build_payload(video: str, video_fallback: str = "") -> dict:
     scenario = ROOT / "scenario/timeline.json"
     tl = Timeline.load(scenario)
     with open(scenario, encoding="utf-8") as fh:
@@ -104,6 +116,7 @@ def build_payload(video: str) -> dict:
     return {
         "total": tl.total_duration,
         "video": video,
+        "video_fallback": video_fallback,
         "scenes": build_scenes(raw["events"], tl.total_duration),
         "movements": [
             {"id": m.id, "t": m.t, "name": m.name, "what": m.what,
@@ -184,16 +197,19 @@ def main() -> int:
                     help="собрать версионируемую копию в site/ со сжатым видео")
     ap.add_argument("--force-video", action="store_true",
                     help="перекодировать видео для site/ даже если оно свежее")
+    ap.add_argument("--video-fallback", default="",
+                    help="куда идти за видео, если файл рядом не читается")
     args = ap.parse_args()
 
     if args.site:
         args.out = str(SITE_DIR / "index.html")
         args.video = SITE_VIDEO
+        args.video_fallback = args.video_fallback or SITE_VIDEO_FALLBACK
         packed = pack_video(force=args.force_video)
         print(f"Видео для сайта: {packed.relative_to(ROOT)} "
               f"({packed.stat().st_size / 1024 / 1024:.1f} МБ, {SITE_SCALE}, crf {SITE_CRF})")
 
-    payload = build_payload(args.video)
+    payload = build_payload(args.video, args.video_fallback)
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(render(payload), encoding="utf-8")

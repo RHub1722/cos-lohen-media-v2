@@ -56,7 +56,11 @@ def test_the_published_copy_is_whole():
     video = SITE_DIR / SITE_VIDEO
     assert index.exists(), "нет site/index.html: python src/render_training.py --site"
     assert video.exists(), f"нет site/{SITE_VIDEO}: страница откроет диалог выбора файла"
-    assert f'"video": "{SITE_VIDEO}"' in index.read_text(encoding="utf-8")
+    html = index.read_text(encoding="utf-8")
+    assert f'"video": "{SITE_VIDEO}"' in html
+    # Запасной адрес нужен прокси, которые отдают mp4 как octet-stream: без него
+    # на планшете вместо видео открывается диалог выбора файла.
+    assert f'"video_fallback": "https://' in html
     megabytes = video.stat().st_size / 1024 / 1024
     assert megabytes < 12, (
         f"{megabytes:.1f} МБ — многовато и для репозитория, и для мобильной связи; "
