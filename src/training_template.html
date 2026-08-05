@@ -20,12 +20,14 @@
     --contact: #ff4d4f;
     --recover: #5fd4ff;
     --hold: #9be8ff;
-    --navh: 52px;
-    --stage-top: 0px;
-    /* Потолок высоты видео. Ширина кадра ограничивается тем же числом через
-       16:9 — иначе при широком окне элемент растягивается по ширине, а картинка
-       внутри него стоит в чёрных полях по бокам. */
-    --vcap: 34vh;
+    --navh: 50px;
+    /* Ширина левого рельса с видео. Видео здесь спутник, а не главное:
+       разучивают по тексту в центре, а на экран смотрят, чтобы свериться. */
+    --railw: 260px;
+    /* Высоту нижней панели проставляет JS по её настоящему размеру: на телефоне
+       кнопки переносятся, и угадывать число вручную значит однажды закрыть
+       панелью последнюю строку контента. */
+    --barh: 96px;
   }
   /* Акцент плывёт вслед за сценой — по тем же якорям, что и видеорендерер. */
   body[data-scene="interrogation"] { --accent: #5fd4ff; --accent-rgb: 95, 212, 255; }
@@ -53,8 +55,10 @@
   h1, h2, h3, h4 { line-height: 1.2; margin: 0; }
   .num { font-variant-numeric: tabular-nums; }
 
-  /* ── навигация ───────────────────────────────────────────────────────── */
+  /* ── навигация: всегда на самом верху ────────────────────────────────── */
   .tabs {
+    position: sticky;
+    top: 0;
     display: flex;
     gap: 6px;
     background: rgba(8, 8, 11, 0.96);
@@ -84,14 +88,23 @@
     background: rgba(var(--accent-rgb), 0.16);
   }
 
-  /* ── плеер, прилипший сверху ─────────────────────────────────────────── */
-  .stage {
-    position: sticky;
-    top: var(--stage-top);
-    z-index: 10;
-    background: var(--bg);
-    border-bottom: 1px solid var(--line);
-    padding: 6px 8px 8px;
+  /* ── раскладка: видео слева маленьким, действие в центре ─────────────── */
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 8px 10px 0;
+  }
+  /* Рельс прилипает под навигацией и уезжает вверх вместе со страницей
+     только тогда, когда контента больше, чем экрана. */
+  .rail {
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    align-items: flex-start;
+    min-width: 0;
   }
   .screen {
     position: relative;
@@ -99,16 +112,13 @@
     border: 1px solid var(--line);
     border-radius: 10px;
     overflow: hidden;
-    display: flex;
-    justify-content: center;
-    width: 100%;
-    max-width: calc(var(--vcap) * 16 / 9);
-    margin: 0 auto;
+    flex: 0 0 46%;
+    max-width: 240px;
   }
   video {
     display: block;
     width: 100%;
-    max-height: var(--vcap);
+    aspect-ratio: 16 / 9;
     object-fit: contain;
     background: #000;
   }
@@ -138,6 +148,18 @@
   }
   .picker input { display: none; }
 
+  /* ── нижняя панель: таймлайн и транспорт ─────────────────────────────── */
+  .bar {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 30;
+    /* Непрозрачная: под полупрозрачной сквозь таймлайн просвечивал текст
+       карточек и читался как грязь на полосе. */
+    background: var(--bg);
+    border-top: 1px solid var(--line);
+    padding: 6px 10px calc(6px + env(safe-area-inset-bottom));
+  }
+  .bar-inner { max-width: 1400px; margin: 0 auto; }
   .transport {
     display: flex;
     align-items: center;
@@ -167,8 +189,7 @@
 
   .track {
     position: relative;
-    height: 30px;
-    margin-top: 7px;
+    height: 26px;
     background: var(--panel);
     border: 1px solid var(--line);
     border-radius: 8px;
@@ -210,26 +231,30 @@
     color: var(--muted); font-size: 0.72rem; padding: 2px 1px 0;
   }
 
+  /* Спутник видео: где мы в номере. Читается и когда открыт не «Прогон». */
   .now {
     display: flex;
-    gap: 8px;
-    align-items: baseline;
-    flex-wrap: wrap;
-    margin-top: 6px;
-    font-size: 0.86rem;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1 1 0;
+    min-width: 0;
+    font-size: 0.82rem;
     color: var(--muted);
   }
   .now .chip {
     background: var(--panel);
     border: 1px solid var(--line);
-    border-radius: 999px;
-    padding: 3px 10px;
+    border-radius: 8px;
+    padding: 3px 9px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .now .chip b { color: var(--text); }
   .now .chip.next b { color: var(--speed-c); }
 
   /* ── общий контейнер видов ───────────────────────────────────────────── */
-  main { max-width: 1200px; margin: 0 auto; padding: 12px 10px 96px; }
+  main { min-width: 0; padding: 0 0 12px; }
   .view { display: none; }
   .view.on { display: block; }
   .card {
@@ -246,10 +271,16 @@
   }
 
   /* ── вид «Прогон» ────────────────────────────────────────────────────── */
+  /* Главная панель занимает свой экран целиком: то, что делаешь сейчас, не
+     должно требовать прокрутки — за этим страницу и открывают. */
   .hero {
     border: 2px solid var(--accent);
     text-align: center;
     padding: 16px 14px 18px;
+    min-height: clamp(200px, 44vh, 420px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
   }
   .hero h2 { font-size: clamp(1.7rem, 6vw, 3.2rem); font-weight: 800; margin: 4px 0 6px; }
   .hero .what { font-size: clamp(1rem, 2.6vw, 1.5rem); margin: 0 auto; max-width: 44ch; }
@@ -387,39 +418,47 @@
 
   /* ── раскладки ───────────────────────────────────────────────────────── */
   @media (max-width: 639px) {
-    /* Вкладки уезжают вниз: большим пальцем достаётся только низ экрана. */
-    .tabs {
-      position: fixed; left: 0; right: 0; bottom: 0;
-      border-top: 1px solid var(--line); border-bottom: 0;
-      padding-bottom: calc(6px + env(safe-area-inset-bottom));
-    }
-    .tab { font-size: 0.78rem; }
+    .tab { font-size: 0.78rem; padding: 7px 3px; }
+    /* Шаг по кадрам на телефоне не нужен, а место в нижней панели дорогое. */
+    #stepBack, #stepFwd { display: none; }
   }
   @media (min-width: 640px) {
-    :root { --stage-top: var(--navh); }
-    .tabs { position: sticky; top: 0; justify-content: center; }
+    .tabs { justify-content: center; }
     .tab { flex: 0 1 210px; padding: 10px 12px; font-size: 0.95rem; }
     .tab .key { display: inline; color: var(--muted); font-size: 0.8em; }
-    :root { --vcap: 40vh; }
-    .stage { padding: 8px 12px 10px; }
+    /* Видео уезжает в левую колонку и остаётся на месте при прокрутке. */
+    .layout {
+      grid-template-columns: var(--railw) minmax(0, 1fr);
+      gap: 14px;
+      padding: 12px 14px 0;
+    }
+    .rail {
+      flex-direction: column;
+      position: sticky;
+      top: calc(var(--navh) + 8px);
+      align-self: start;
+    }
+    .screen { flex: none; max-width: none; width: 100%; }
+    .now { flex: none; width: 100%; font-size: 0.86rem; }
     .grid3 { grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 1fr); }
     .lists { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-    main { padding: 14px 14px 24px; }
   }
   @media (min-width: 1024px) {
-    :root { --vcap: 46vh; }
+    :root { --railw: 320px; }
     .cols { grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); }
   }
-  /* Телефон в повороте: без этого от видео остаётся полоска. */
+  /* Телефон в повороте: экрана по высоте почти нет, панель ужимается. */
   @media (max-height: 500px) and (orientation: landscape) {
-    :root { --vcap: 62vh; }
-    .now, .ruler { display: none; }
+    .ruler { display: none; }
+    .hero { min-height: 0; }
+    .screen { max-width: 180px; }
   }
 </style>
 
 <nav class="tabs" id="tabs" role="tablist"></nav>
 
-<section class="stage">
+<div class="layout">
+<aside class="rail">
   <div class="screen">
     <video id="video" playsinline preload="metadata"></video>
     <div class="picker" id="picker">
@@ -427,31 +466,13 @@
       <label>Выбрать файл…<input type="file" id="file" accept="video/*,audio/*"></label>
     </div>
   </div>
-
-  <div class="transport">
-    <button class="btn play" id="play" title="Пробел">&#9654;</button>
-    <button class="btn" id="stepBack" title="Кадр назад (,)">&#9666;|</button>
-    <button class="btn" id="stepFwd" title="Кадр вперёд (.)">|&#9656;</button>
-    <span class="rates" id="rates"></span>
-    <button class="btn" id="loopBtn" title="Петля (L)">Петля: выкл</button>
-    <span class="clock"><b id="cur">0:00.0</b> / <span id="total">1:00</span></span>
-  </div>
-
-  <div class="track" id="track" title="Клик — перейти">
-    <div class="fill" id="fill"></div>
-    <div class="loopwin" id="loopwin"></div>
-    <div id="marks"></div>
-    <div class="head" id="head"></div>
-  </div>
-  <div class="ruler"><span>0:00</span><span>0:30</span><span id="rulerEnd">1:00</span></div>
-
   <div class="now">
     <span class="chip">Сцена: <b id="nowScene">—</b></span>
     <span class="chip">Сейчас: <b id="nowMove">—</b></span>
     <span class="chip next">Через <b id="nowNextIn">—</b>: <span id="nowNext">—</span></span>
     <span class="chip">Контакт: <b id="nowHit">—</b></span>
   </div>
-</section>
+</aside>
 
 <main>
   <section class="view" id="view-run">
@@ -660,6 +681,27 @@
     </div>
   </section>
 </main>
+</div>
+
+<footer class="bar">
+  <div class="bar-inner">
+    <div class="track" id="track" title="Клик — перейти">
+      <div class="fill" id="fill"></div>
+      <div class="loopwin" id="loopwin"></div>
+      <div id="marks"></div>
+      <div class="head" id="head"></div>
+    </div>
+    <div class="ruler"><span>0:00</span><span>0:30</span><span id="rulerEnd">1:00</span></div>
+    <div class="transport">
+      <button class="btn play" id="play" title="Пробел">&#9654;</button>
+      <button class="btn" id="stepBack" title="Кадр назад (,)">&#9666;|</button>
+      <button class="btn" id="stepFwd" title="Кадр вперёд (.)">|&#9656;</button>
+      <span class="rates" id="rates"></span>
+      <button class="btn" id="loopBtn" title="Петля (L)">Петля: выкл</button>
+      <span class="clock"><b id="cur">0:00.0</b> / <span id="total">1:00</span></span>
+    </div>
+  </div>
+</footer>
 
 <script>
 "use strict";
@@ -1235,6 +1277,19 @@ function frame() {
     requestAnimationFrame(frame);
   }
 }
+
+// Нижняя панель висит поверх страницы, и её высота гуляет: на узком экране
+// кнопки переносятся на вторую строку. Отступ снизу берётся по настоящему
+// размеру панели — константа однажды закрыла бы последнюю строку контента.
+const bar = document.querySelector(".bar");
+function fitBar() {
+  const h = bar.offsetHeight;
+  document.documentElement.style.setProperty("--barh", h + "px");
+  document.body.style.paddingBottom = (h + 10) + "px";
+}
+if (window.ResizeObserver) new ResizeObserver(fitBar).observe(bar);
+window.addEventListener("resize", fitBar);
+fitBar();
 
 $("total").textContent = fmt(DATA.total);
 $("rulerEnd").textContent = fmt(DATA.total);
