@@ -1,0 +1,196 @@
+"""Голосовые подсказки исполнителю: какое слово, когда и почему их меньше долей.
+
+Задача, из которой это выросло: попадать ударами в звук. На сам удар реагировать
+физически нельзя — реакция на звук 0.15–0.20 с, взмах копьём от покоя 0.3–0.6 с,
+и к моменту контакта движение уже должно идти. Значит подсказка нужна не на
+ударе, а на подготовке к нему.
+
+Времена не выписываются здесь. Они берутся из долей `scenario/strikes.json`, у
+которых уже есть и опорное событие, и смещение, и учёт пика внутри ассета
+(`Beat.heard`). Сдвинулся удар в сценарии — подсказка уехала за ним.
+
+Две дорожки, и разница между ними принципиальная, а не в громкости.
+
+СЦЕНИЧЕСКАЯ идёт в наушник с телефона, запущенного вручную параллельно с залом.
+Расхождение хода двух устройств за минуту меньше 3 мс, но момент нажатия play
+даёт промах 0.25 с систематически и ±0.1 с разброса. Поэтому в неё попадает
+только ПЕРВАЯ доля каждого действия: подсказка «готовь» за секунду до удара
+переживёт промах 0.15 с и останется полезной, а слово в точку контакта при том
+же промахе превращается из помощи во вредительство. Момент контакта несёт взмах
+в самом шоу — он звучит из зала, но он сэмпл-точен, потому что он и есть шоу.
+
+РЕПЕТИЦИОННАЯ идёт одним файлом в наушники дома, где никакого второго источника
+нет и промаха старта не существует. В неё попадают все доли, какие влезают.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Iterable, Sequence
+
+# Роль доли -> слово. Слова короткие и разные на слух: в наушнике под музыку
+# «готовь» и «держи» с одинаковым началом путались бы.
+ROLE_WORDS: dict[str, str] = {
+    "windup": "ready",      # готовь
+    "swing": "go",          # пошёл
+    "contact": "hit",       # бей
+    "hold": "hold",         # держи
+    "recover": "slow",      # медленно
+}
+
+# Все слова, включая те, что ставятся только через переопределение в доле.
+WORDS: dict[str, str] = {
+    "ready": "готовь",
+    "go": "пошёл",
+    "hit": "бей",
+    "hold": "держи",
+    "slow": "медленно",
+    "wait": "жди",
+    "head": "голова",
+}
+
+# Кто уступает место при наложении. Подготовка важнее контакта намеренно:
+# контакт исполнитель и так слышит — в этот момент в дорожке играет сам удар, —
+# а подготовку не слышит никто, кроме этой подсказки.
+PRIORITY: dict[str, int] = {
+    "windup": 0,
+    "contact": 1,
+    "hold": 2,
+    "swing": 3,
+    "recover": 4,
+}
+
+# Пауза между концом одного слова и началом следующего. Меньше — слова
+# наезжают и оба перестают читаться.
+MIN_GAP = 0.08
+
+
+class CueError(Exception):
+    """Подсказку не из чего собрать."""
+
+
+@dataclass(frozen=True)
+class Cue:
+    """Одно слово в одну точку времени.
+
+    t — время в дорожке номера, то есть когда слово должно быть УСЛЫШАНО.
+    Файл слова обрезан от самой атаки, поэтому t это и начало файла тоже.
+    """
+
+    t: float
+    word: str
+    role: str
+    strike: str
+    what: str = ""
+
+    @property
+    def text(self) -> str:
+        return WORDS[self.word]
+
+    def asset(self) -> str:
+        return f"cues/cue_{self.word}.wav"
+
+
+def word_for(beat) -> str:
+    """Слово доли: переопределение в сценарии, иначе по роли.
+
+    Переопределение нужно там, где слово по роли врёт. У приёма удара роль
+    contact, но бьёт не он, а его — «бей» было бы прямым обманом.
+    """
+    override = getattr(beat, "cue", "")
+    word = override or ROLE_WORDS.get(beat.role, "")
+    if not word:
+        raise CueError(f"нет слова для роли {beat.role!r}")
+    if word not in WORDS:
+        raise CueError(
+            f"слово {word!r} не из набора, есть {sorted(WORDS)}"
+        )
+    return word
+
+
+def all_cues(strikes: Iterable) -> list[Cue]:
+    """Подсказка на каждую долю каждого действия, без разбора наложений."""
+    out: list[Cue] = []
+    for strike in strikes:
+        for beat in strike.beats:
+            if beat.heard < 0:
+                raise CueError(
+                    f"{strike.id}/{beat.role}: доля без времени. "
+                    "Сначала resolve_strikes, потом подсказки."
+                )
+            out.append(Cue(t=beat.heard, word=word_for(beat), role=beat.role,
+                           strike=strike.id, what=beat.what))
+    return sorted(out, key=lambda c: (c.t, PRIORITY[c.role]))
+
+
+def first_cues(strikes: Iterable) -> list[Cue]:
+    """По одной подсказке на действие — самая ранняя доля.
+
+    Это и есть сценический набор. Одно слово на действие, за 0.3–1.3 с до
+    первого контакта: столько, сколько дала постановка, а не сколько хотелось.
+    """
+    out: list[Cue] = []
+    for strike in strikes:
+        beats = [b for b in strike.beats if b.heard >= 0]
+        if not beats:
+            raise CueError(f"{strike.id}: ни одной доли со временем")
+        first = min(beats, key=lambda b: b.heard)
+        out.append(Cue(t=first.heard, word=word_for(first), role=first.role,
+                       strike=strike.id, what=first.what))
+    return sorted(out, key=lambda c: c.t)
+
+
+def resolve_overlaps(cues: Sequence[Cue], lengths: dict[str, float],
+                     min_gap: float = MIN_GAP) -> tuple[list[Cue], list[Cue]]:
+    """Убирает наложения. Возвращает (что осталось, что снято).
+
+    Снятое возвращается, а не выбрасывается молча: у первой же вспышки четыре
+    доли укладываются в 1.47 с, а четыре слова занимают 1.8 с — что-то обязано
+    уйти, и исполнитель должен знать, что именно, иначе он будет ждать слово,
+    которого нет.
+
+    При наложении остаётся доля с более важной ролью. Замена не может создать
+    новое наложение с предыдущей оставленной: новая доля начинается позже
+    заменённой, а заменённая уже не пересекалась с предыдущей.
+    """
+    for cue in cues:
+        if cue.word not in lengths:
+            raise CueError(f"не известна длина слова {cue.word!r}")
+
+    kept: list[Cue] = []
+    dropped: list[Cue] = []
+    for cue in sorted(cues, key=lambda c: (c.t, PRIORITY[c.role])):
+        if kept:
+            last = kept[-1]
+            busy_until = last.t + lengths[last.word] + min_gap
+            if cue.t < busy_until:
+                if PRIORITY[cue.role] < PRIORITY[last.role]:
+                    dropped.append(last)
+                    kept[-1] = cue
+                else:
+                    dropped.append(cue)
+                continue
+        kept.append(cue)
+    return kept, sorted(dropped, key=lambda c: c.t)
+
+
+def shift(cues: Sequence[Cue], start_at: float) -> list[Cue]:
+    """Сдвиг под ручной старт телефона.
+
+    start_at — время НОМЕРА, в которое нажат play. Всё, что было до этого
+    момента, в файл не попадает: оно уже прошло.
+    """
+    if start_at < 0:
+        raise CueError(f"start_at={start_at} отрицательный")
+    return [Cue(t=round(c.t - start_at, 4), word=c.word, role=c.role,
+                strike=c.strike, what=c.what)
+            for c in cues if c.t - start_at >= 0]
+
+
+def lengths_of(assets: str | Path, words: Iterable[str],
+               probe) -> dict[str, float]:
+    """Длины слов через переданный замерщик. Замерщик передаётся снаружи,
+    чтобы логику подсказок можно было проверить без ffmpeg."""
+    root = Path(assets)
+    return {w: round(probe(root / f"cues/cue_{w}.wav"), 4) for w in set(words)}

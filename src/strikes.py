@@ -55,6 +55,10 @@ class Beat:
     pose: dict = field(default_factory=dict)
     t: float = -1.0
     heard: float = -1.0
+    # Слово голосовой подсказки, если слово по роли врёт. У приёма удара роль
+    # contact, но бьёт не он, а его: «бей» было бы прямым обманом. Набор слов
+    # и соответствие роль -> слово живут в src/cues.py.
+    cue: str = ""
 
     @staticmethod
     def from_dict(raw: dict, owner: str) -> "Beat":
@@ -74,6 +78,7 @@ class Beat:
             screen=str(raw.get("screen", "")),
             peak=bool(raw.get("peak", True)),
             pose=dict(raw.get("pose", {})),
+            cue=str(raw.get("cue", "")),
         )
 
 
