@@ -1,0 +1,3191 @@
+[
+  {
+    "file": "video_2026-08-05_16-15-26.mp4",
+    "duration": 34.867,
+    "fps": 60,
+    "trim": {
+      "start": 1.6,
+      "end": 34.75,
+      "reason": "возня с камерой по звуку: в начале срезано 1.60 с, в конце срезано 0.12 с"
+    },
+    "scale_source": "разброс",
+    "size_fix": "по росту в кадре из позы, поправка зажата в 0.5..2 от медианы",
+    "floor": 0.5142,
+    "action_level": 0.7478,
+    "strike_level": 0.9814,
+    "dip_ratio_median": 0.35,
+    "strikes": 34,
+    "transitions": 33,
+    "dead_stops": 13,
+    "longest_action": 1.55,
+    "longest_stillness": 3.85,
+    "windup_median": 0.467,
+    "stop_median": 0.442,
+    "pose": {
+      "used": true,
+      "why": "mediapipe и модель на месте (pose_landmarker_full.task)",
+      "coverage": 0.996,
+      "hip_lead": 0.0,
+      "stance_median": 1.42,
+      "grip_median": 1.72
+    },
+    "hits": [
+      {
+        "t_peak": 1.642,
+        "peak": 11.404,
+        "windup": 0.033,
+        "stop": 0.3,
+        "gap_before": null,
+        "dip_ratio": null,
+        "dead_stop_before": null
+      },
+      {
+        "t_peak": 2.142,
+        "peak": 2.332,
+        "windup": 0.5,
+        "stop": 0.467,
+        "gap_before": 0.5,
+        "dip_ratio": 0.51,
+        "dead_stop_before": false
+      },
+      {
+        "t_peak": 2.608,
+        "peak": 1.602,
+        "windup": 0.467,
+        "stop": 0.633,
+        "gap_before": 0.467,
+        "dip_ratio": 0.32,
+        "dead_stop_before": false
+      },
+      {
+        "t_peak": 3.242,
+        "peak": 1.357,
+        "windup": 0.633,
+        "stop": 0.65,
+        "gap_before": 0.633,
+        "dip_ratio": 0.51,
+        "dead_stop_before": false
+      },
+      {
+        "t_peak": 3.892,
+        "peak": 1.791,
+        "windup": 0.65,
+        "stop": 0.45,
+        "gap_before": 0.65,
+        "dip_ratio": 0.47,
+        "dead_stop_before": false
+      },
+      {
+        "t_peak": 4.342,
+        "peak": 1.148,
+        "windup": 0.45,
+        "stop": 0.533,
+        "gap_before": 0.45,
+        "dip_ratio": 0.94,
+        "dead_stop_before": false
+      },
+      {
+        "t_peak": 4.875,
+        "peak": 1.153,
+        "windup": 0.533,
+        "stop": 0.083,
+        "gap_before": 0.533,
+        "dip_ratio": 0.35,
+        "dead_stop_before": false
+      },
+      {
+        "t_peak": 8.858,
+        "peak": 1.109,
+        "windup": 0.167,
+        "stop": 0.4,
+        "gap_before": 3.983,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 12.242,
+        "peak": 1.339,
+        "windup": 0.6,
+        "stop": 0.683,
+        "gap_before": 3.383,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 12.925,
+        "peak": 1.997,
+        "windup": 0.683,
+        "stop": 0.4,
+        "gap_before": 0.683,
+        "dip_ratio": 0.78,
+        "dead_stop_before": false
+      },
+      {
+        "t_peak": 13.325,
+        "peak": 1.477,
+        "windup": 0.4,
+        "stop": 0.467,
+        "gap_before": 0.4,
+        "dip_ratio": 0.96,
+        "dead_stop_before": false
+      },
+      {
+        "t_peak": 13.792,
+        "peak": 1.054,
+        "windup": 0.467,
+        "stop": 0.417,
+        "gap_before": 0.467,
+        "dip_ratio": 0.42,
+        "dead_stop_before": false
+      },
+      {
+        "t_peak": 15.442,
+        "peak": 1.767,
+        "windup": 0.317,
+        "stop": 0.5,
+        "gap_before": 1.65,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 17.725,
+        "peak": 1.285,
+        "windup": 0.767,
+        "stop": 0.45,
+        "gap_before": 2.283,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 18.175,
+        "peak": 2.764,
+        "windup": 0.45,
+        "stop": 0.367,
+        "gap_before": 0.45,
+        "dip_ratio": 0.81,
+        "dead_stop_before": false
+      },
+      {
+        "t_peak": 18.542,
+        "peak": 1.655,
+        "windup": 0.367,
+        "stop": 0.483,
+        "gap_before": 0.367,
+        "dip_ratio": 0.97,
+        "dead_stop_before": false
+      },
+      {
+        "t_peak": 19.025,
+        "peak": 1.677,
+        "windup": 0.483,
+        "stop": 0.6,
+        "gap_before": 0.483,
+        "dip_ratio": 0.29,
+        "dead_stop_before": false
+      },
+      {
+        "t_peak": 19.625,
+        "peak": 1.449,
+        "windup": 0.6,
+        "stop": 0.4,
+        "gap_before": 0.6,
+        "dip_ratio": 0.58,
+        "dead_stop_before": false
+      },
+      {
+        "t_peak": 20.608,
+        "peak": 1.478,
+        "windup": 0.467,
+        "stop": 0.217,
+        "gap_before": 0.983,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 21.608,
+        "peak": 1.483,
+        "windup": 0.383,
+        "stop": 0.517,
+        "gap_before": 1.0,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 23.675,
+        "peak": 1.167,
+        "windup": 0.683,
+        "stop": 0.167,
+        "gap_before": 2.067,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 24.308,
+        "peak": 0.993,
+        "windup": 0.233,
+        "stop": 1.067,
+        "gap_before": 0.633,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 25.375,
+        "peak": 2.677,
+        "windup": 0.85,
+        "stop": 0.467,
+        "gap_before": 1.067,
+        "dip_ratio": 0.32,
+        "dead_stop_before": false
+      },
+      {
+        "t_peak": 25.842,
+        "peak": 1.159,
+        "windup": 0.467,
+        "stop": 0.433,
+        "gap_before": 0.467,
+        "dip_ratio": 0.45,
+        "dead_stop_before": false
+      },
+      {
+        "t_peak": 26.275,
+        "peak": 1.149,
+        "windup": 0.433,
+        "stop": 0.317,
+        "gap_before": 0.433,
+        "dip_ratio": 0.5,
+        "dead_stop_before": false
+      },
+      {
+        "t_peak": 27.342,
+        "peak": 2.199,
+        "windup": 0.717,
+        "stop": 0.25,
+        "gap_before": 1.067,
+        "dip_ratio": 0.02,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 27.775,
+        "peak": 1.015,
+        "windup": 0.433,
+        "stop": 0.4,
+        "gap_before": 0.433,
+        "dip_ratio": 0.22,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 28.792,
+        "peak": 1.845,
+        "windup": 0.433,
+        "stop": 0.417,
+        "gap_before": 1.017,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 29.208,
+        "peak": 1.896,
+        "windup": 0.417,
+        "stop": 0.45,
+        "gap_before": 0.417,
+        "dip_ratio": 0.8,
+        "dead_stop_before": false
+      },
+      {
+        "t_peak": 29.658,
+        "peak": 1.324,
+        "windup": 0.45,
+        "stop": 0.583,
+        "gap_before": 0.45,
+        "dip_ratio": 0.81,
+        "dead_stop_before": false
+      },
+      {
+        "t_peak": 30.242,
+        "peak": 1.41,
+        "windup": 0.583,
+        "stop": 0.4,
+        "gap_before": 0.583,
+        "dip_ratio": 0.4,
+        "dead_stop_before": false
+      },
+      {
+        "t_peak": 31.625,
+        "peak": 1.707,
+        "windup": 0.6,
+        "stop": 0.65,
+        "gap_before": 1.383,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 32.275,
+        "peak": 1.553,
+        "windup": 0.65,
+        "stop": 0.333,
+        "gap_before": 0.65,
+        "dip_ratio": 0.51,
+        "dead_stop_before": false
+      },
+      {
+        "t_peak": 34.442,
+        "peak": 1.048,
+        "windup": 0.317,
+        "stop": 0.3,
+        "gap_before": 2.167,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      }
+    ],
+    "segments": [
+      {
+        "role": "удар",
+        "start": 1.608,
+        "end": 2.325
+      },
+      {
+        "role": "покой",
+        "start": 2.342,
+        "end": 2.392
+      },
+      {
+        "role": "удар",
+        "start": 2.408,
+        "end": 2.825
+      },
+      {
+        "role": "покой",
+        "start": 2.842,
+        "end": 2.858
+      },
+      {
+        "role": "удар",
+        "start": 2.875,
+        "end": 2.875
+      },
+      {
+        "role": "покой",
+        "start": 2.892,
+        "end": 2.892
+      },
+      {
+        "role": "удар",
+        "start": 2.908,
+        "end": 3.408
+      },
+      {
+        "role": "покой",
+        "start": 3.425,
+        "end": 3.458
+      },
+      {
+        "role": "удар",
+        "start": 3.475,
+        "end": 4.408
+      },
+      {
+        "role": "покой",
+        "start": 4.425,
+        "end": 4.858
+      },
+      {
+        "role": "удар",
+        "start": 4.875,
+        "end": 4.925
+      },
+      {
+        "role": "покой",
+        "start": 4.942,
+        "end": 8.792
+      },
+      {
+        "role": "удар",
+        "start": 8.808,
+        "end": 8.875
+      },
+      {
+        "role": "покой",
+        "start": 8.892,
+        "end": 8.942
+      },
+      {
+        "role": "удар",
+        "start": 8.958,
+        "end": 8.992
+      },
+      {
+        "role": "покой",
+        "start": 9.008,
+        "end": 11.742
+      },
+      {
+        "role": "удар",
+        "start": 11.758,
+        "end": 11.825
+      },
+      {
+        "role": "покой",
+        "start": 11.842,
+        "end": 11.942
+      },
+      {
+        "role": "удар",
+        "start": 11.958,
+        "end": 13.508
+      },
+      {
+        "role": "покой",
+        "start": 13.525,
+        "end": 13.742
+      },
+      {
+        "role": "удар",
+        "start": 13.758,
+        "end": 13.792
+      },
+      {
+        "role": "покой",
+        "start": 13.808,
+        "end": 15.175
+      },
+      {
+        "role": "удар",
+        "start": 15.192,
+        "end": 15.758
+      },
+      {
+        "role": "покой",
+        "start": 15.775,
+        "end": 17.508
+      },
+      {
+        "role": "удар",
+        "start": 17.525,
+        "end": 18.708
+      },
+      {
+        "role": "покой",
+        "start": 18.725,
+        "end": 18.892
+      },
+      {
+        "role": "удар",
+        "start": 18.908,
+        "end": 19.725
+      },
+      {
+        "role": "покой",
+        "start": 19.742,
+        "end": 20.292
+      },
+      {
+        "role": "удар",
+        "start": 20.308,
+        "end": 20.725
+      },
+      {
+        "role": "покой",
+        "start": 20.742,
+        "end": 21.425
+      },
+      {
+        "role": "удар",
+        "start": 21.442,
+        "end": 21.758
+      },
+      {
+        "role": "покой",
+        "start": 21.775,
+        "end": 23.542
+      },
+      {
+        "role": "удар",
+        "start": 23.558,
+        "end": 23.625
+      },
+      {
+        "role": "покой",
+        "start": 23.642,
+        "end": 23.642
+      },
+      {
+        "role": "удар",
+        "start": 23.658,
+        "end": 23.758
+      },
+      {
+        "role": "покой",
+        "start": 23.775,
+        "end": 24.292
+      },
+      {
+        "role": "удар",
+        "start": 24.308,
+        "end": 24.308
+      },
+      {
+        "role": "покой",
+        "start": 24.325,
+        "end": 24.925
+      },
+      {
+        "role": "удар",
+        "start": 24.942,
+        "end": 25.675
+      },
+      {
+        "role": "покой",
+        "start": 25.692,
+        "end": 25.792
+      },
+      {
+        "role": "удар",
+        "start": 25.808,
+        "end": 25.908
+      },
+      {
+        "role": "покой",
+        "start": 25.925,
+        "end": 25.958
+      },
+      {
+        "role": "удар",
+        "start": 25.975,
+        "end": 25.975
+      },
+      {
+        "role": "покой",
+        "start": 25.992,
+        "end": 26.125
+      },
+      {
+        "role": "удар",
+        "start": 26.142,
+        "end": 26.142
+      },
+      {
+        "role": "покой",
+        "start": 26.158,
+        "end": 26.158
+      },
+      {
+        "role": "удар",
+        "start": 26.175,
+        "end": 26.342
+      },
+      {
+        "role": "покой",
+        "start": 26.358,
+        "end": 26.658
+      },
+      {
+        "role": "удар",
+        "start": 26.675,
+        "end": 26.675
+      },
+      {
+        "role": "покой",
+        "start": 26.692,
+        "end": 26.692
+      },
+      {
+        "role": "удар",
+        "start": 26.708,
+        "end": 26.708
+      },
+      {
+        "role": "покой",
+        "start": 26.725,
+        "end": 26.725
+      },
+      {
+        "role": "удар",
+        "start": 26.742,
+        "end": 26.742
+      },
+      {
+        "role": "покой",
+        "start": 26.758,
+        "end": 26.758
+      },
+      {
+        "role": "удар",
+        "start": 26.775,
+        "end": 26.775
+      },
+      {
+        "role": "покой",
+        "start": 26.792,
+        "end": 26.792
+      },
+      {
+        "role": "удар",
+        "start": 26.808,
+        "end": 26.808
+      },
+      {
+        "role": "покой",
+        "start": 26.825,
+        "end": 26.825
+      },
+      {
+        "role": "удар",
+        "start": 26.842,
+        "end": 27.542
+      },
+      {
+        "role": "покой",
+        "start": 27.558,
+        "end": 27.658
+      },
+      {
+        "role": "удар",
+        "start": 27.675,
+        "end": 27.675
+      },
+      {
+        "role": "покой",
+        "start": 27.692,
+        "end": 27.758
+      },
+      {
+        "role": "удар",
+        "start": 27.775,
+        "end": 27.775
+      },
+      {
+        "role": "покой",
+        "start": 27.792,
+        "end": 28.425
+      },
+      {
+        "role": "удар",
+        "start": 28.442,
+        "end": 29.808
+      },
+      {
+        "role": "покой",
+        "start": 29.825,
+        "end": 29.942
+      },
+      {
+        "role": "удар",
+        "start": 29.958,
+        "end": 30.492
+      },
+      {
+        "role": "покой",
+        "start": 30.508,
+        "end": 31.092
+      },
+      {
+        "role": "удар",
+        "start": 31.108,
+        "end": 32.458
+      },
+      {
+        "role": "покой",
+        "start": 32.475,
+        "end": 34.358
+      },
+      {
+        "role": "удар",
+        "start": 34.375,
+        "end": 34.375
+      },
+      {
+        "role": "покой",
+        "start": 34.392,
+        "end": 34.392
+      },
+      {
+        "role": "удар",
+        "start": 34.408,
+        "end": 34.408
+      },
+      {
+        "role": "покой",
+        "start": 34.425,
+        "end": 34.425
+      },
+      {
+        "role": "удар",
+        "start": 34.442,
+        "end": 34.442
+      },
+      {
+        "role": "покой",
+        "start": 34.458,
+        "end": 34.458
+      },
+      {
+        "role": "удар",
+        "start": 34.475,
+        "end": 34.475
+      },
+      {
+        "role": "покой",
+        "start": 34.492,
+        "end": 34.558
+      },
+      {
+        "role": "удар",
+        "start": 34.575,
+        "end": 34.575
+      },
+      {
+        "role": "покой",
+        "start": 34.592,
+        "end": 34.592
+      },
+      {
+        "role": "удар",
+        "start": 34.608,
+        "end": 34.608
+      },
+      {
+        "role": "покой",
+        "start": 34.625,
+        "end": 34.625
+      },
+      {
+        "role": "удар",
+        "start": 34.642,
+        "end": 34.642
+      },
+      {
+        "role": "покой",
+        "start": 34.658,
+        "end": 34.742
+      }
+    ],
+    "pictures": {
+      "обзор": "video_2026-08-05_16-15-26-overview.png",
+      "удар 1": "video_2026-08-05_16-15-26-strike-01.png",
+      "удар 2": "video_2026-08-05_16-15-26-strike-02.png",
+      "удар 3": "video_2026-08-05_16-15-26-strike-03.png",
+      "удар 4": "video_2026-08-05_16-15-26-strike-04.png",
+      "удар 5": "video_2026-08-05_16-15-26-strike-05.png",
+      "удар 6": "video_2026-08-05_16-15-26-strike-06.png",
+      "удар 7": "video_2026-08-05_16-15-26-strike-07.png",
+      "удар 8": "video_2026-08-05_16-15-26-strike-08.png",
+      "удар 9": "video_2026-08-05_16-15-26-strike-09.png",
+      "удар 10": "video_2026-08-05_16-15-26-strike-10.png",
+      "удар 11": "video_2026-08-05_16-15-26-strike-11.png",
+      "удар 12": "video_2026-08-05_16-15-26-strike-12.png",
+      "удар 13": "video_2026-08-05_16-15-26-strike-13.png",
+      "удар 14": "video_2026-08-05_16-15-26-strike-14.png",
+      "удар 15": "video_2026-08-05_16-15-26-strike-15.png",
+      "удар 16": "video_2026-08-05_16-15-26-strike-16.png",
+      "удар 17": "video_2026-08-05_16-15-26-strike-17.png",
+      "удар 18": "video_2026-08-05_16-15-26-strike-18.png",
+      "удар 19": "video_2026-08-05_16-15-26-strike-19.png",
+      "удар 20": "video_2026-08-05_16-15-26-strike-20.png",
+      "удар 21": "video_2026-08-05_16-15-26-strike-21.png",
+      "удар 22": "video_2026-08-05_16-15-26-strike-22.png",
+      "удар 23": "video_2026-08-05_16-15-26-strike-23.png",
+      "удар 24": "video_2026-08-05_16-15-26-strike-24.png",
+      "удар 25": "video_2026-08-05_16-15-26-strike-25.png",
+      "удар 26": "video_2026-08-05_16-15-26-strike-26.png",
+      "удар 27": "video_2026-08-05_16-15-26-strike-27.png",
+      "удар 28": "video_2026-08-05_16-15-26-strike-28.png",
+      "удар 29": "video_2026-08-05_16-15-26-strike-29.png",
+      "удар 30": "video_2026-08-05_16-15-26-strike-30.png",
+      "удар 31": "video_2026-08-05_16-15-26-strike-31.png",
+      "удар 32": "video_2026-08-05_16-15-26-strike-32.png",
+      "удар 33": "video_2026-08-05_16-15-26-strike-33.png",
+      "удар 34": "video_2026-08-05_16-15-26-strike-34.png"
+    }
+  },
+  {
+    "file": "video_2026-08-05_16-15-42.mp4",
+    "duration": 52.317,
+    "fps": 60,
+    "trim": {
+      "start": 1.017,
+      "end": 51.433,
+      "reason": "возня с камерой по звуку: в начале срезано 1.02 с, в конце срезано 0.88 с"
+    },
+    "scale_source": "разброс",
+    "size_fix": "по росту в кадре из позы, поправка зажата в 0.5..2 от медианы",
+    "floor": 1.2669,
+    "action_level": 1.7867,
+    "strike_level": 2.3065,
+    "dip_ratio_median": 0.0,
+    "strikes": 68,
+    "transitions": 67,
+    "dead_stops": 54,
+    "longest_action": 1.217,
+    "longest_stillness": 1.5,
+    "windup_median": 0.333,
+    "stop_median": 0.208,
+    "pose": {
+      "used": true,
+      "why": "mediapipe и модель на месте (pose_landmarker_full.task)",
+      "coverage": 1.0,
+      "hip_lead": 0.033,
+      "stance_median": 0.57,
+      "grip_median": 2.02
+    },
+    "hits": [
+      {
+        "t_peak": 1.308,
+        "peak": 3.658,
+        "windup": 0.283,
+        "stop": 0.383,
+        "gap_before": null,
+        "dip_ratio": null,
+        "dead_stop_before": null
+      },
+      {
+        "t_peak": 1.692,
+        "peak": 4.643,
+        "windup": 0.15,
+        "stop": 0.2,
+        "gap_before": 0.383,
+        "dip_ratio": 0.12,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 2.108,
+        "peak": 4.022,
+        "windup": 0.2,
+        "stop": 0.15,
+        "gap_before": 0.417,
+        "dip_ratio": 0.08,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 2.508,
+        "peak": 4.316,
+        "windup": 0.183,
+        "stop": 0.15,
+        "gap_before": 0.4,
+        "dip_ratio": 0.03,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 3.225,
+        "peak": 4.137,
+        "windup": 0.133,
+        "stop": 0.183,
+        "gap_before": 0.717,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 3.642,
+        "peak": 3.457,
+        "windup": 0.183,
+        "stop": 0.167,
+        "gap_before": 0.417,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 4.025,
+        "peak": 2.923,
+        "windup": 0.167,
+        "stop": 0.2,
+        "gap_before": 0.383,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 4.625,
+        "peak": 2.715,
+        "windup": 0.167,
+        "stop": 0.633,
+        "gap_before": 0.6,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 5.258,
+        "peak": 5.537,
+        "windup": 0.4,
+        "stop": 0.6,
+        "gap_before": 0.633,
+        "dip_ratio": 0.28,
+        "dead_stop_before": false
+      },
+      {
+        "t_peak": 5.858,
+        "peak": 3.688,
+        "windup": 0.6,
+        "stop": 0.083,
+        "gap_before": 0.6,
+        "dip_ratio": 0.3,
+        "dead_stop_before": false
+      },
+      {
+        "t_peak": 6.392,
+        "peak": 2.722,
+        "windup": 0.083,
+        "stop": 0.083,
+        "gap_before": 0.533,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 7.258,
+        "peak": 3.126,
+        "windup": 0.317,
+        "stop": 0.45,
+        "gap_before": 0.867,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 7.708,
+        "peak": 4.413,
+        "windup": 0.45,
+        "stop": 0.383,
+        "gap_before": 0.45,
+        "dip_ratio": 0.26,
+        "dead_stop_before": false
+      },
+      {
+        "t_peak": 8.092,
+        "peak": 2.818,
+        "windup": 0.383,
+        "stop": 0.15,
+        "gap_before": 0.383,
+        "dip_ratio": 0.53,
+        "dead_stop_before": false
+      },
+      {
+        "t_peak": 9.158,
+        "peak": 3.713,
+        "windup": 0.467,
+        "stop": 0.083,
+        "gap_before": 1.067,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 9.692,
+        "peak": 3.962,
+        "windup": 0.4,
+        "stop": 0.75,
+        "gap_before": 0.533,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 10.442,
+        "peak": 3.691,
+        "windup": 0.75,
+        "stop": 0.183,
+        "gap_before": 0.75,
+        "dip_ratio": 0.45,
+        "dead_stop_before": false
+      },
+      {
+        "t_peak": 10.825,
+        "peak": 2.419,
+        "windup": 0.067,
+        "stop": 0.033,
+        "gap_before": 0.383,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 11.792,
+        "peak": 2.505,
+        "windup": 0.05,
+        "stop": 0.05,
+        "gap_before": 0.967,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 12.525,
+        "peak": 4.129,
+        "windup": 0.6,
+        "stop": 0.3,
+        "gap_before": 0.733,
+        "dip_ratio": 0.05,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 13.725,
+        "peak": 3.844,
+        "windup": 0.217,
+        "stop": 0.15,
+        "gap_before": 1.2,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 14.425,
+        "peak": 3.369,
+        "windup": 0.283,
+        "stop": 0.65,
+        "gap_before": 0.7,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 15.075,
+        "peak": 3.918,
+        "windup": 0.267,
+        "stop": 0.617,
+        "gap_before": 0.65,
+        "dip_ratio": 0.13,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 15.692,
+        "peak": 4.719,
+        "windup": 0.617,
+        "stop": 0.083,
+        "gap_before": 0.617,
+        "dip_ratio": 0.44,
+        "dead_stop_before": false
+      },
+      {
+        "t_peak": 17.225,
+        "peak": 4.094,
+        "windup": 0.383,
+        "stop": 0.5,
+        "gap_before": 1.533,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 17.725,
+        "peak": 4.691,
+        "windup": 0.5,
+        "stop": 0.1,
+        "gap_before": 0.5,
+        "dip_ratio": 0.38,
+        "dead_stop_before": false
+      },
+      {
+        "t_peak": 18.108,
+        "peak": 2.854,
+        "windup": 0.383,
+        "stop": 0.1,
+        "gap_before": 0.383,
+        "dip_ratio": 0.12,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 18.575,
+        "peak": 2.817,
+        "windup": 0.1,
+        "stop": 0.483,
+        "gap_before": 0.467,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 19.358,
+        "peak": 3.286,
+        "windup": 0.15,
+        "stop": 0.167,
+        "gap_before": 0.783,
+        "dip_ratio": 0.05,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 19.958,
+        "peak": 4.533,
+        "windup": 0.217,
+        "stop": 0.65,
+        "gap_before": 0.6,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 20.608,
+        "peak": 4.801,
+        "windup": 0.65,
+        "stop": 0.233,
+        "gap_before": 0.65,
+        "dip_ratio": 0.23,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 21.658,
+        "peak": 3.381,
+        "windup": 0.083,
+        "stop": 0.4,
+        "gap_before": 1.05,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 22.575,
+        "peak": 5.518,
+        "windup": 0.467,
+        "stop": 0.083,
+        "gap_before": 0.917,
+        "dip_ratio": 0.07,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 23.175,
+        "peak": 2.931,
+        "windup": 0.6,
+        "stop": 0.15,
+        "gap_before": 0.6,
+        "dip_ratio": 0.18,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 24.542,
+        "peak": 5.641,
+        "windup": 0.433,
+        "stop": 0.417,
+        "gap_before": 1.367,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 24.958,
+        "peak": 6.346,
+        "windup": 0.417,
+        "stop": 0.417,
+        "gap_before": 0.417,
+        "dip_ratio": 0.22,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 25.375,
+        "peak": 3.981,
+        "windup": 0.417,
+        "stop": 0.45,
+        "gap_before": 0.417,
+        "dip_ratio": 0.21,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 27.558,
+        "peak": 4.594,
+        "windup": 0.5,
+        "stop": 0.483,
+        "gap_before": 2.183,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 28.475,
+        "peak": 3.378,
+        "windup": 0.417,
+        "stop": 0.083,
+        "gap_before": 0.917,
+        "dip_ratio": 0.09,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 28.975,
+        "peak": 2.498,
+        "windup": 0.267,
+        "stop": 0.083,
+        "gap_before": 0.5,
+        "dip_ratio": 0.01,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 29.958,
+        "peak": 2.353,
+        "windup": 0.233,
+        "stop": 0.25,
+        "gap_before": 0.983,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 31.242,
+        "peak": 2.688,
+        "windup": 0.1,
+        "stop": 0.267,
+        "gap_before": 1.283,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 31.958,
+        "peak": 5.362,
+        "windup": 0.167,
+        "stop": 0.35,
+        "gap_before": 0.717,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 32.308,
+        "peak": 4.655,
+        "windup": 0.35,
+        "stop": 0.367,
+        "gap_before": 0.35,
+        "dip_ratio": 0.16,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 32.675,
+        "peak": 2.761,
+        "windup": 0.367,
+        "stop": 0.15,
+        "gap_before": 0.367,
+        "dip_ratio": 0.32,
+        "dead_stop_before": false
+      },
+      {
+        "t_peak": 33.458,
+        "peak": 3.538,
+        "windup": 0.167,
+        "stop": 0.333,
+        "gap_before": 0.783,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 34.375,
+        "peak": 4.602,
+        "windup": 0.417,
+        "stop": 0.367,
+        "gap_before": 0.917,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 34.742,
+        "peak": 3.514,
+        "windup": 0.367,
+        "stop": 0.433,
+        "gap_before": 0.367,
+        "dip_ratio": 0.37,
+        "dead_stop_before": false
+      },
+      {
+        "t_peak": 35.175,
+        "peak": 3.619,
+        "windup": 0.433,
+        "stop": 0.267,
+        "gap_before": 0.433,
+        "dip_ratio": 0.42,
+        "dead_stop_before": false
+      },
+      {
+        "t_peak": 35.742,
+        "peak": 3.742,
+        "windup": 0.183,
+        "stop": 0.083,
+        "gap_before": 0.567,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 37.358,
+        "peak": 2.683,
+        "windup": 0.083,
+        "stop": 0.083,
+        "gap_before": 1.617,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 38.175,
+        "peak": 6.25,
+        "windup": 0.633,
+        "stop": 0.217,
+        "gap_before": 0.817,
+        "dip_ratio": 0.03,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 38.608,
+        "peak": 2.745,
+        "windup": 0.433,
+        "stop": 0.167,
+        "gap_before": 0.433,
+        "dip_ratio": 0.13,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 39.325,
+        "peak": 4.143,
+        "windup": 0.133,
+        "stop": 0.133,
+        "gap_before": 0.717,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 40.275,
+        "peak": 7.612,
+        "windup": 0.15,
+        "stop": 0.45,
+        "gap_before": 0.95,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 40.908,
+        "peak": 3.373,
+        "windup": 0.633,
+        "stop": 0.133,
+        "gap_before": 0.633,
+        "dip_ratio": 0.18,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 41.625,
+        "peak": 3.762,
+        "windup": 0.383,
+        "stop": 0.083,
+        "gap_before": 0.717,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 43.742,
+        "peak": 5.972,
+        "windup": 0.683,
+        "stop": 0.15,
+        "gap_before": 2.117,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 44.208,
+        "peak": 3.121,
+        "windup": 0.267,
+        "stop": 0.083,
+        "gap_before": 0.467,
+        "dip_ratio": 0.09,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 44.975,
+        "peak": 3.191,
+        "windup": 0.233,
+        "stop": 0.3,
+        "gap_before": 0.767,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 45.508,
+        "peak": 4.452,
+        "windup": 0.15,
+        "stop": 0.6,
+        "gap_before": 0.533,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 46.108,
+        "peak": 4.6,
+        "windup": 0.6,
+        "stop": 0.15,
+        "gap_before": 0.6,
+        "dip_ratio": 0.4,
+        "dead_stop_before": false
+      },
+      {
+        "t_peak": 46.925,
+        "peak": 3.364,
+        "windup": 0.167,
+        "stop": 0.117,
+        "gap_before": 0.817,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 47.958,
+        "peak": 5.324,
+        "windup": 0.217,
+        "stop": 0.367,
+        "gap_before": 1.033,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 48.325,
+        "peak": 3.736,
+        "windup": 0.367,
+        "stop": 0.367,
+        "gap_before": 0.367,
+        "dip_ratio": 0.57,
+        "dead_stop_before": false
+      },
+      {
+        "t_peak": 49.675,
+        "peak": 4.128,
+        "windup": 0.433,
+        "stop": 0.25,
+        "gap_before": 1.35,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 50.275,
+        "peak": 5.094,
+        "windup": 0.317,
+        "stop": 1.117,
+        "gap_before": 0.6,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 51.392,
+        "peak": 7.236,
+        "windup": 1.117,
+        "stop": 0.033,
+        "gap_before": 1.117,
+        "dip_ratio": 0.28,
+        "dead_stop_before": false
+      }
+    ],
+    "segments": [
+      {
+        "role": "покой",
+        "start": 1.025,
+        "end": 1.025
+      },
+      {
+        "role": "удар",
+        "start": 1.042,
+        "end": 1.092
+      },
+      {
+        "role": "покой",
+        "start": 1.108,
+        "end": 1.175
+      },
+      {
+        "role": "удар",
+        "start": 1.192,
+        "end": 1.458
+      },
+      {
+        "role": "покой",
+        "start": 1.475,
+        "end": 1.592
+      },
+      {
+        "role": "удар",
+        "start": 1.608,
+        "end": 1.842
+      },
+      {
+        "role": "покой",
+        "start": 1.858,
+        "end": 1.908
+      },
+      {
+        "role": "удар",
+        "start": 1.925,
+        "end": 2.192
+      },
+      {
+        "role": "покой",
+        "start": 2.208,
+        "end": 2.375
+      },
+      {
+        "role": "удар",
+        "start": 2.392,
+        "end": 2.592
+      },
+      {
+        "role": "покой",
+        "start": 2.608,
+        "end": 2.725
+      },
+      {
+        "role": "удар",
+        "start": 2.742,
+        "end": 2.975
+      },
+      {
+        "role": "покой",
+        "start": 2.992,
+        "end": 3.125
+      },
+      {
+        "role": "удар",
+        "start": 3.142,
+        "end": 3.342
+      },
+      {
+        "role": "покой",
+        "start": 3.358,
+        "end": 3.525
+      },
+      {
+        "role": "удар",
+        "start": 3.542,
+        "end": 3.725
+      },
+      {
+        "role": "покой",
+        "start": 3.742,
+        "end": 3.875
+      },
+      {
+        "role": "удар",
+        "start": 3.892,
+        "end": 4.108
+      },
+      {
+        "role": "покой",
+        "start": 4.125,
+        "end": 4.592
+      },
+      {
+        "role": "удар",
+        "start": 4.608,
+        "end": 4.625
+      },
+      {
+        "role": "покой",
+        "start": 4.642,
+        "end": 4.642
+      },
+      {
+        "role": "удар",
+        "start": 4.658,
+        "end": 4.692
+      },
+      {
+        "role": "покой",
+        "start": 4.708,
+        "end": 4.708
+      },
+      {
+        "role": "удар",
+        "start": 4.725,
+        "end": 4.742
+      },
+      {
+        "role": "покой",
+        "start": 4.758,
+        "end": 4.758
+      },
+      {
+        "role": "удар",
+        "start": 4.775,
+        "end": 4.775
+      },
+      {
+        "role": "покой",
+        "start": 4.792,
+        "end": 4.858
+      },
+      {
+        "role": "удар",
+        "start": 4.875,
+        "end": 5.758
+      },
+      {
+        "role": "покой",
+        "start": 5.775,
+        "end": 5.775
+      },
+      {
+        "role": "удар",
+        "start": 5.792,
+        "end": 5.792
+      },
+      {
+        "role": "покой",
+        "start": 5.808,
+        "end": 5.808
+      },
+      {
+        "role": "удар",
+        "start": 5.825,
+        "end": 5.908
+      },
+      {
+        "role": "покой",
+        "start": 5.925,
+        "end": 6.375
+      },
+      {
+        "role": "удар",
+        "start": 6.392,
+        "end": 6.408
+      },
+      {
+        "role": "покой",
+        "start": 6.425,
+        "end": 7.175
+      },
+      {
+        "role": "удар",
+        "start": 7.192,
+        "end": 7.358
+      },
+      {
+        "role": "покой",
+        "start": 7.375,
+        "end": 7.408
+      },
+      {
+        "role": "удар",
+        "start": 7.425,
+        "end": 7.508
+      },
+      {
+        "role": "покой",
+        "start": 7.525,
+        "end": 7.525
+      },
+      {
+        "role": "удар",
+        "start": 7.542,
+        "end": 7.758
+      },
+      {
+        "role": "покой",
+        "start": 7.775,
+        "end": 7.808
+      },
+      {
+        "role": "удар",
+        "start": 7.825,
+        "end": 8.108
+      },
+      {
+        "role": "покой",
+        "start": 8.125,
+        "end": 8.125
+      },
+      {
+        "role": "удар",
+        "start": 8.142,
+        "end": 8.158
+      },
+      {
+        "role": "покой",
+        "start": 8.175,
+        "end": 8.792
+      },
+      {
+        "role": "удар",
+        "start": 8.808,
+        "end": 8.925
+      },
+      {
+        "role": "покой",
+        "start": 8.942,
+        "end": 9.058
+      },
+      {
+        "role": "удар",
+        "start": 9.075,
+        "end": 9.208
+      },
+      {
+        "role": "покой",
+        "start": 9.225,
+        "end": 9.342
+      },
+      {
+        "role": "удар",
+        "start": 9.358,
+        "end": 10.508
+      },
+      {
+        "role": "покой",
+        "start": 10.525,
+        "end": 10.758
+      },
+      {
+        "role": "удар",
+        "start": 10.775,
+        "end": 10.775
+      },
+      {
+        "role": "покой",
+        "start": 10.792,
+        "end": 10.808
+      },
+      {
+        "role": "удар",
+        "start": 10.825,
+        "end": 10.842
+      },
+      {
+        "role": "покой",
+        "start": 10.858,
+        "end": 11.742
+      },
+      {
+        "role": "удар",
+        "start": 11.758,
+        "end": 11.825
+      },
+      {
+        "role": "покой",
+        "start": 11.842,
+        "end": 12.008
+      },
+      {
+        "role": "удар",
+        "start": 12.025,
+        "end": 12.025
+      },
+      {
+        "role": "покой",
+        "start": 12.042,
+        "end": 12.075
+      },
+      {
+        "role": "удар",
+        "start": 12.092,
+        "end": 12.092
+      },
+      {
+        "role": "покой",
+        "start": 12.108,
+        "end": 12.242
+      },
+      {
+        "role": "удар",
+        "start": 12.258,
+        "end": 12.642
+      },
+      {
+        "role": "покой",
+        "start": 12.658,
+        "end": 12.725
+      },
+      {
+        "role": "удар",
+        "start": 12.742,
+        "end": 12.792
+      },
+      {
+        "role": "покой",
+        "start": 12.808,
+        "end": 13.625
+      },
+      {
+        "role": "удар",
+        "start": 13.642,
+        "end": 13.792
+      },
+      {
+        "role": "покой",
+        "start": 13.808,
+        "end": 13.942
+      },
+      {
+        "role": "удар",
+        "start": 13.958,
+        "end": 13.992
+      },
+      {
+        "role": "покой",
+        "start": 14.008,
+        "end": 14.175
+      },
+      {
+        "role": "удар",
+        "start": 14.192,
+        "end": 14.192
+      },
+      {
+        "role": "покой",
+        "start": 14.208,
+        "end": 14.208
+      },
+      {
+        "role": "удар",
+        "start": 14.225,
+        "end": 14.475
+      },
+      {
+        "role": "покой",
+        "start": 14.492,
+        "end": 14.558
+      },
+      {
+        "role": "удар",
+        "start": 14.575,
+        "end": 14.575
+      },
+      {
+        "role": "покой",
+        "start": 14.592,
+        "end": 14.608
+      },
+      {
+        "role": "удар",
+        "start": 14.625,
+        "end": 14.625
+      },
+      {
+        "role": "покой",
+        "start": 14.642,
+        "end": 14.692
+      },
+      {
+        "role": "удар",
+        "start": 14.708,
+        "end": 14.775
+      },
+      {
+        "role": "покой",
+        "start": 14.792,
+        "end": 14.908
+      },
+      {
+        "role": "удар",
+        "start": 14.925,
+        "end": 15.742
+      },
+      {
+        "role": "покой",
+        "start": 15.758,
+        "end": 16.658
+      },
+      {
+        "role": "удар",
+        "start": 16.675,
+        "end": 16.742
+      },
+      {
+        "role": "покой",
+        "start": 16.758,
+        "end": 16.875
+      },
+      {
+        "role": "удар",
+        "start": 16.892,
+        "end": 17.792
+      },
+      {
+        "role": "покой",
+        "start": 17.808,
+        "end": 17.908
+      },
+      {
+        "role": "удар",
+        "start": 17.925,
+        "end": 18.142
+      },
+      {
+        "role": "покой",
+        "start": 18.158,
+        "end": 18.542
+      },
+      {
+        "role": "удар",
+        "start": 18.558,
+        "end": 18.642
+      },
+      {
+        "role": "покой",
+        "start": 18.658,
+        "end": 18.825
+      },
+      {
+        "role": "удар",
+        "start": 18.842,
+        "end": 18.858
+      },
+      {
+        "role": "покой",
+        "start": 18.875,
+        "end": 19.242
+      },
+      {
+        "role": "удар",
+        "start": 19.258,
+        "end": 19.475
+      },
+      {
+        "role": "покой",
+        "start": 19.492,
+        "end": 19.775
+      },
+      {
+        "role": "удар",
+        "start": 19.792,
+        "end": 20.192
+      },
+      {
+        "role": "покой",
+        "start": 20.208,
+        "end": 20.292
+      },
+      {
+        "role": "удар",
+        "start": 20.308,
+        "end": 20.758
+      },
+      {
+        "role": "покой",
+        "start": 20.775,
+        "end": 21.575
+      },
+      {
+        "role": "удар",
+        "start": 21.592,
+        "end": 21.608
+      },
+      {
+        "role": "покой",
+        "start": 21.625,
+        "end": 21.625
+      },
+      {
+        "role": "удар",
+        "start": 21.642,
+        "end": 21.658
+      },
+      {
+        "role": "покой",
+        "start": 21.675,
+        "end": 21.675
+      },
+      {
+        "role": "удар",
+        "start": 21.692,
+        "end": 21.708
+      },
+      {
+        "role": "покой",
+        "start": 21.725,
+        "end": 22.125
+      },
+      {
+        "role": "удар",
+        "start": 22.142,
+        "end": 22.642
+      },
+      {
+        "role": "покой",
+        "start": 22.658,
+        "end": 22.725
+      },
+      {
+        "role": "удар",
+        "start": 22.742,
+        "end": 22.775
+      },
+      {
+        "role": "покой",
+        "start": 22.792,
+        "end": 22.792
+      },
+      {
+        "role": "удар",
+        "start": 22.808,
+        "end": 22.808
+      },
+      {
+        "role": "покой",
+        "start": 22.825,
+        "end": 22.858
+      },
+      {
+        "role": "удар",
+        "start": 22.875,
+        "end": 22.908
+      },
+      {
+        "role": "покой",
+        "start": 22.925,
+        "end": 23.092
+      },
+      {
+        "role": "удар",
+        "start": 23.108,
+        "end": 23.208
+      },
+      {
+        "role": "покой",
+        "start": 23.225,
+        "end": 24.158
+      },
+      {
+        "role": "удар",
+        "start": 24.175,
+        "end": 24.175
+      },
+      {
+        "role": "покой",
+        "start": 24.192,
+        "end": 24.192
+      },
+      {
+        "role": "удар",
+        "start": 24.208,
+        "end": 24.675
+      },
+      {
+        "role": "покой",
+        "start": 24.692,
+        "end": 24.692
+      },
+      {
+        "role": "удар",
+        "start": 24.708,
+        "end": 25.042
+      },
+      {
+        "role": "покой",
+        "start": 25.058,
+        "end": 25.058
+      },
+      {
+        "role": "удар",
+        "start": 25.075,
+        "end": 25.108
+      },
+      {
+        "role": "покой",
+        "start": 25.125,
+        "end": 25.225
+      },
+      {
+        "role": "удар",
+        "start": 25.242,
+        "end": 25.592
+      },
+      {
+        "role": "покой",
+        "start": 25.608,
+        "end": 25.642
+      },
+      {
+        "role": "удар",
+        "start": 25.658,
+        "end": 25.708
+      },
+      {
+        "role": "покой",
+        "start": 25.725,
+        "end": 27.075
+      },
+      {
+        "role": "удар",
+        "start": 27.092,
+        "end": 27.142
+      },
+      {
+        "role": "покой",
+        "start": 27.158,
+        "end": 27.158
+      },
+      {
+        "role": "удар",
+        "start": 27.175,
+        "end": 27.842
+      },
+      {
+        "role": "покой",
+        "start": 27.858,
+        "end": 28.125
+      },
+      {
+        "role": "удар",
+        "start": 28.142,
+        "end": 28.525
+      },
+      {
+        "role": "покой",
+        "start": 28.542,
+        "end": 28.942
+      },
+      {
+        "role": "удар",
+        "start": 28.958,
+        "end": 29.008
+      },
+      {
+        "role": "покой",
+        "start": 29.025,
+        "end": 29.942
+      },
+      {
+        "role": "удар",
+        "start": 29.958,
+        "end": 29.975
+      },
+      {
+        "role": "покой",
+        "start": 29.992,
+        "end": 31.192
+      },
+      {
+        "role": "удар",
+        "start": 31.208,
+        "end": 31.275
+      },
+      {
+        "role": "покой",
+        "start": 31.292,
+        "end": 31.408
+      },
+      {
+        "role": "удар",
+        "start": 31.425,
+        "end": 31.458
+      },
+      {
+        "role": "покой",
+        "start": 31.475,
+        "end": 31.825
+      },
+      {
+        "role": "удар",
+        "start": 31.842,
+        "end": 32.025
+      },
+      {
+        "role": "покой",
+        "start": 32.042,
+        "end": 32.092
+      },
+      {
+        "role": "удар",
+        "start": 32.108,
+        "end": 32.142
+      },
+      {
+        "role": "покой",
+        "start": 32.158,
+        "end": 32.175
+      },
+      {
+        "role": "удар",
+        "start": 32.192,
+        "end": 32.475
+      },
+      {
+        "role": "покой",
+        "start": 32.492,
+        "end": 32.558
+      },
+      {
+        "role": "удар",
+        "start": 32.575,
+        "end": 32.758
+      },
+      {
+        "role": "покой",
+        "start": 32.775,
+        "end": 33.375
+      },
+      {
+        "role": "удар",
+        "start": 33.392,
+        "end": 33.592
+      },
+      {
+        "role": "покой",
+        "start": 33.608,
+        "end": 34.025
+      },
+      {
+        "role": "удар",
+        "start": 34.042,
+        "end": 34.442
+      },
+      {
+        "role": "покой",
+        "start": 34.458,
+        "end": 34.458
+      },
+      {
+        "role": "удар",
+        "start": 34.475,
+        "end": 34.925
+      },
+      {
+        "role": "покой",
+        "start": 34.942,
+        "end": 34.942
+      },
+      {
+        "role": "удар",
+        "start": 34.958,
+        "end": 34.975
+      },
+      {
+        "role": "покой",
+        "start": 34.992,
+        "end": 35.008
+      },
+      {
+        "role": "удар",
+        "start": 35.025,
+        "end": 35.242
+      },
+      {
+        "role": "покой",
+        "start": 35.258,
+        "end": 35.342
+      },
+      {
+        "role": "удар",
+        "start": 35.358,
+        "end": 35.358
+      },
+      {
+        "role": "покой",
+        "start": 35.375,
+        "end": 35.592
+      },
+      {
+        "role": "удар",
+        "start": 35.608,
+        "end": 35.792
+      },
+      {
+        "role": "покой",
+        "start": 35.808,
+        "end": 37.308
+      },
+      {
+        "role": "удар",
+        "start": 37.325,
+        "end": 37.392
+      },
+      {
+        "role": "покой",
+        "start": 37.408,
+        "end": 37.658
+      },
+      {
+        "role": "удар",
+        "start": 37.675,
+        "end": 38.275
+      },
+      {
+        "role": "покой",
+        "start": 38.292,
+        "end": 38.292
+      },
+      {
+        "role": "удар",
+        "start": 38.308,
+        "end": 38.342
+      },
+      {
+        "role": "покой",
+        "start": 38.358,
+        "end": 38.542
+      },
+      {
+        "role": "удар",
+        "start": 38.558,
+        "end": 38.658
+      },
+      {
+        "role": "покой",
+        "start": 38.675,
+        "end": 38.975
+      },
+      {
+        "role": "удар",
+        "start": 38.992,
+        "end": 38.992
+      },
+      {
+        "role": "покой",
+        "start": 39.008,
+        "end": 39.242
+      },
+      {
+        "role": "удар",
+        "start": 39.258,
+        "end": 39.408
+      },
+      {
+        "role": "покой",
+        "start": 39.425,
+        "end": 40.125
+      },
+      {
+        "role": "удар",
+        "start": 40.142,
+        "end": 40.658
+      },
+      {
+        "role": "покой",
+        "start": 40.675,
+        "end": 40.858
+      },
+      {
+        "role": "удар",
+        "start": 40.875,
+        "end": 40.992
+      },
+      {
+        "role": "покой",
+        "start": 41.008,
+        "end": 41.242
+      },
+      {
+        "role": "удар",
+        "start": 41.258,
+        "end": 41.675
+      },
+      {
+        "role": "покой",
+        "start": 41.692,
+        "end": 42.925
+      },
+      {
+        "role": "удар",
+        "start": 42.942,
+        "end": 43.025
+      },
+      {
+        "role": "покой",
+        "start": 43.042,
+        "end": 43.125
+      },
+      {
+        "role": "удар",
+        "start": 43.142,
+        "end": 43.808
+      },
+      {
+        "role": "покой",
+        "start": 43.825,
+        "end": 44.042
+      },
+      {
+        "role": "удар",
+        "start": 44.058,
+        "end": 44.242
+      },
+      {
+        "role": "покой",
+        "start": 44.258,
+        "end": 44.842
+      },
+      {
+        "role": "удар",
+        "start": 44.858,
+        "end": 45.092
+      },
+      {
+        "role": "покой",
+        "start": 45.108,
+        "end": 45.175
+      },
+      {
+        "role": "удар",
+        "start": 45.192,
+        "end": 45.242
+      },
+      {
+        "role": "покой",
+        "start": 45.258,
+        "end": 45.392
+      },
+      {
+        "role": "удар",
+        "start": 45.408,
+        "end": 46.242
+      },
+      {
+        "role": "покой",
+        "start": 46.258,
+        "end": 46.858
+      },
+      {
+        "role": "удар",
+        "start": 46.875,
+        "end": 46.975
+      },
+      {
+        "role": "покой",
+        "start": 46.992,
+        "end": 47.808
+      },
+      {
+        "role": "удар",
+        "start": 47.825,
+        "end": 48.375
+      },
+      {
+        "role": "покой",
+        "start": 48.392,
+        "end": 48.425
+      },
+      {
+        "role": "удар",
+        "start": 48.442,
+        "end": 48.442
+      },
+      {
+        "role": "покой",
+        "start": 48.458,
+        "end": 49.308
+      },
+      {
+        "role": "удар",
+        "start": 49.325,
+        "end": 49.475
+      },
+      {
+        "role": "покой",
+        "start": 49.492,
+        "end": 49.575
+      },
+      {
+        "role": "удар",
+        "start": 49.592,
+        "end": 49.792
+      },
+      {
+        "role": "покой",
+        "start": 49.808,
+        "end": 50.042
+      },
+      {
+        "role": "удар",
+        "start": 50.058,
+        "end": 50.175
+      },
+      {
+        "role": "покой",
+        "start": 50.192,
+        "end": 50.192
+      },
+      {
+        "role": "удар",
+        "start": 50.208,
+        "end": 51.425
+      }
+    ],
+    "pictures": {
+      "обзор": "video_2026-08-05_16-15-42-overview.png",
+      "удар 1": "video_2026-08-05_16-15-42-strike-01.png",
+      "удар 2": "video_2026-08-05_16-15-42-strike-02.png",
+      "удар 3": "video_2026-08-05_16-15-42-strike-03.png",
+      "удар 4": "video_2026-08-05_16-15-42-strike-04.png",
+      "удар 5": "video_2026-08-05_16-15-42-strike-05.png",
+      "удар 6": "video_2026-08-05_16-15-42-strike-06.png",
+      "удар 7": "video_2026-08-05_16-15-42-strike-07.png",
+      "удар 8": "video_2026-08-05_16-15-42-strike-08.png",
+      "удар 9": "video_2026-08-05_16-15-42-strike-09.png",
+      "удар 10": "video_2026-08-05_16-15-42-strike-10.png",
+      "удар 11": "video_2026-08-05_16-15-42-strike-11.png",
+      "удар 12": "video_2026-08-05_16-15-42-strike-12.png",
+      "удар 13": "video_2026-08-05_16-15-42-strike-13.png",
+      "удар 14": "video_2026-08-05_16-15-42-strike-14.png",
+      "удар 15": "video_2026-08-05_16-15-42-strike-15.png",
+      "удар 16": "video_2026-08-05_16-15-42-strike-16.png",
+      "удар 17": "video_2026-08-05_16-15-42-strike-17.png",
+      "удар 18": "video_2026-08-05_16-15-42-strike-18.png",
+      "удар 19": "video_2026-08-05_16-15-42-strike-19.png",
+      "удар 20": "video_2026-08-05_16-15-42-strike-20.png",
+      "удар 21": "video_2026-08-05_16-15-42-strike-21.png",
+      "удар 22": "video_2026-08-05_16-15-42-strike-22.png",
+      "удар 23": "video_2026-08-05_16-15-42-strike-23.png",
+      "удар 24": "video_2026-08-05_16-15-42-strike-24.png",
+      "удар 25": "video_2026-08-05_16-15-42-strike-25.png",
+      "удар 26": "video_2026-08-05_16-15-42-strike-26.png",
+      "удар 27": "video_2026-08-05_16-15-42-strike-27.png",
+      "удар 28": "video_2026-08-05_16-15-42-strike-28.png",
+      "удар 29": "video_2026-08-05_16-15-42-strike-29.png",
+      "удар 30": "video_2026-08-05_16-15-42-strike-30.png",
+      "удар 31": "video_2026-08-05_16-15-42-strike-31.png",
+      "удар 32": "video_2026-08-05_16-15-42-strike-32.png",
+      "удар 33": "video_2026-08-05_16-15-42-strike-33.png",
+      "удар 34": "video_2026-08-05_16-15-42-strike-34.png",
+      "удар 35": "video_2026-08-05_16-15-42-strike-35.png",
+      "удар 36": "video_2026-08-05_16-15-42-strike-36.png",
+      "удар 37": "video_2026-08-05_16-15-42-strike-37.png",
+      "удар 38": "video_2026-08-05_16-15-42-strike-38.png",
+      "удар 39": "video_2026-08-05_16-15-42-strike-39.png",
+      "удар 40": "video_2026-08-05_16-15-42-strike-40.png",
+      "удар 41": "video_2026-08-05_16-15-42-strike-41.png",
+      "удар 42": "video_2026-08-05_16-15-42-strike-42.png",
+      "удар 43": "video_2026-08-05_16-15-42-strike-43.png",
+      "удар 44": "video_2026-08-05_16-15-42-strike-44.png",
+      "удар 45": "video_2026-08-05_16-15-42-strike-45.png",
+      "удар 46": "video_2026-08-05_16-15-42-strike-46.png",
+      "удар 47": "video_2026-08-05_16-15-42-strike-47.png",
+      "удар 48": "video_2026-08-05_16-15-42-strike-48.png",
+      "удар 49": "video_2026-08-05_16-15-42-strike-49.png",
+      "удар 50": "video_2026-08-05_16-15-42-strike-50.png",
+      "удар 51": "video_2026-08-05_16-15-42-strike-51.png",
+      "удар 52": "video_2026-08-05_16-15-42-strike-52.png",
+      "удар 53": "video_2026-08-05_16-15-42-strike-53.png",
+      "удар 54": "video_2026-08-05_16-15-42-strike-54.png",
+      "удар 55": "video_2026-08-05_16-15-42-strike-55.png",
+      "удар 56": "video_2026-08-05_16-15-42-strike-56.png",
+      "удар 57": "video_2026-08-05_16-15-42-strike-57.png",
+      "удар 58": "video_2026-08-05_16-15-42-strike-58.png",
+      "удар 59": "video_2026-08-05_16-15-42-strike-59.png",
+      "удар 60": "video_2026-08-05_16-15-42-strike-60.png",
+      "удар 61": "video_2026-08-05_16-15-42-strike-61.png",
+      "удар 62": "video_2026-08-05_16-15-42-strike-62.png",
+      "удар 63": "video_2026-08-05_16-15-42-strike-63.png",
+      "удар 64": "video_2026-08-05_16-15-42-strike-64.png",
+      "удар 65": "video_2026-08-05_16-15-42-strike-65.png",
+      "удар 66": "video_2026-08-05_16-15-42-strike-66.png",
+      "удар 67": "video_2026-08-05_16-15-42-strike-67.png",
+      "удар 68": "video_2026-08-05_16-15-42-strike-68.png"
+    }
+  },
+  {
+    "file": "video_2026-08-05_16-16-38.mp4",
+    "duration": 21.767,
+    "fps": 30,
+    "trim": {
+      "start": 0.0,
+      "end": 20.433,
+      "reason": "возня с камерой по звуку: в конце срезано 1.33 с"
+    },
+    "scale_source": "разброс",
+    "size_fix": "по росту в кадре из позы, поправка зажата в 0.5..2 от медианы",
+    "floor": 1.4348,
+    "action_level": 1.8295,
+    "strike_level": 2.2242,
+    "dip_ratio_median": 0.03,
+    "strikes": 27,
+    "transitions": 26,
+    "dead_stops": 18,
+    "longest_action": 1.533,
+    "longest_stillness": 2.067,
+    "windup_median": 0.333,
+    "stop_median": 0.367,
+    "pose": {
+      "used": true,
+      "why": "mediapipe и модель на месте (pose_landmarker_full.task)",
+      "coverage": 0.969,
+      "hip_lead": 0.0,
+      "stance_median": 0.65,
+      "grip_median": 2.6
+    },
+    "hits": [
+      {
+        "t_peak": 0.183,
+        "peak": 4.027,
+        "windup": 0.067,
+        "stop": 0.067,
+        "gap_before": null,
+        "dip_ratio": null,
+        "dead_stop_before": null
+      },
+      {
+        "t_peak": 1.05,
+        "peak": 7.77,
+        "windup": 0.6,
+        "stop": 0.367,
+        "gap_before": 0.867,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 1.417,
+        "peak": 5.072,
+        "windup": 0.367,
+        "stop": 0.367,
+        "gap_before": 0.367,
+        "dip_ratio": 0.74,
+        "dead_stop_before": false
+      },
+      {
+        "t_peak": 1.783,
+        "peak": 3.379,
+        "windup": 0.367,
+        "stop": 0.367,
+        "gap_before": 0.367,
+        "dip_ratio": 0.97,
+        "dead_stop_before": false
+      },
+      {
+        "t_peak": 2.55,
+        "peak": 2.568,
+        "windup": 0.333,
+        "stop": 0.5,
+        "gap_before": 0.767,
+        "dip_ratio": 0.04,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 3.317,
+        "peak": 3.192,
+        "windup": 0.233,
+        "stop": 0.633,
+        "gap_before": 0.767,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 3.95,
+        "peak": 2.343,
+        "windup": 0.633,
+        "stop": 0.067,
+        "gap_before": 0.633,
+        "dip_ratio": 0.44,
+        "dead_stop_before": false
+      },
+      {
+        "t_peak": 6.083,
+        "peak": 2.411,
+        "windup": 0.133,
+        "stop": 0.2,
+        "gap_before": 2.133,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 6.683,
+        "peak": 2.593,
+        "windup": 0.2,
+        "stop": 0.133,
+        "gap_before": 0.6,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 7.117,
+        "peak": 2.292,
+        "windup": 0.067,
+        "stop": 0.4,
+        "gap_before": 0.433,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 7.817,
+        "peak": 3.63,
+        "windup": 0.1,
+        "stop": 0.467,
+        "gap_before": 0.7,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 8.283,
+        "peak": 2.648,
+        "windup": 0.467,
+        "stop": 0.2,
+        "gap_before": 0.467,
+        "dip_ratio": 0.23,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 8.783,
+        "peak": 3.357,
+        "windup": 0.233,
+        "stop": 0.633,
+        "gap_before": 0.5,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 9.883,
+        "peak": 2.872,
+        "windup": 0.333,
+        "stop": 0.433,
+        "gap_before": 1.1,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 10.317,
+        "peak": 3.21,
+        "windup": 0.433,
+        "stop": 0.167,
+        "gap_before": 0.433,
+        "dip_ratio": 0.56,
+        "dead_stop_before": false
+      },
+      {
+        "t_peak": 10.717,
+        "peak": 3.336,
+        "windup": 0.2,
+        "stop": 0.4,
+        "gap_before": 0.4,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 11.117,
+        "peak": 2.551,
+        "windup": 0.4,
+        "stop": 0.7,
+        "gap_before": 0.4,
+        "dip_ratio": 0.35,
+        "dead_stop_before": false
+      },
+      {
+        "t_peak": 11.817,
+        "peak": 3.418,
+        "windup": 0.3,
+        "stop": 0.167,
+        "gap_before": 0.7,
+        "dip_ratio": 0.15,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 12.283,
+        "peak": 3.29,
+        "windup": 0.267,
+        "stop": 0.367,
+        "gap_before": 0.467,
+        "dip_ratio": 0.09,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 12.65,
+        "peak": 3.442,
+        "windup": 0.367,
+        "stop": 0.5,
+        "gap_before": 0.367,
+        "dip_ratio": 0.28,
+        "dead_stop_before": false
+      },
+      {
+        "t_peak": 13.35,
+        "peak": 3.484,
+        "windup": 0.2,
+        "stop": 0.467,
+        "gap_before": 0.7,
+        "dip_ratio": 0.03,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 13.817,
+        "peak": 3.164,
+        "windup": 0.467,
+        "stop": 0.133,
+        "gap_before": 0.467,
+        "dip_ratio": 0.34,
+        "dead_stop_before": false
+      },
+      {
+        "t_peak": 14.317,
+        "peak": 2.923,
+        "windup": 0.367,
+        "stop": 0.467,
+        "gap_before": 0.5,
+        "dip_ratio": 0.05,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 15.417,
+        "peak": 2.939,
+        "windup": 0.5,
+        "stop": 0.2,
+        "gap_before": 1.1,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 17.083,
+        "peak": 2.379,
+        "windup": 0.233,
+        "stop": 0.267,
+        "gap_before": 1.667,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 19.417,
+        "peak": 2.584,
+        "windup": 0.567,
+        "stop": 0.667,
+        "gap_before": 2.333,
+        "dip_ratio": 0.0,
+        "dead_stop_before": true
+      },
+      {
+        "t_peak": 20.083,
+        "peak": 3.228,
+        "windup": 0.667,
+        "stop": 0.333,
+        "gap_before": 0.667,
+        "dip_ratio": 0.27,
+        "dead_stop_before": false
+      }
+    ],
+    "segments": [
+      {
+        "role": "удар",
+        "start": 0.017,
+        "end": 0.05
+      },
+      {
+        "role": "покой",
+        "start": 0.083,
+        "end": 0.117
+      },
+      {
+        "role": "удар",
+        "start": 0.15,
+        "end": 0.183
+      },
+      {
+        "role": "покой",
+        "start": 0.217,
+        "end": 0.483
+      },
+      {
+        "role": "удар",
+        "start": 0.517,
+        "end": 2.05
+      },
+      {
+        "role": "покой",
+        "start": 2.083,
+        "end": 2.45
+      },
+      {
+        "role": "удар",
+        "start": 2.483,
+        "end": 2.617
+      },
+      {
+        "role": "покой",
+        "start": 2.65,
+        "end": 2.95
+      },
+      {
+        "role": "удар",
+        "start": 2.983,
+        "end": 2.983
+      },
+      {
+        "role": "покой",
+        "start": 3.017,
+        "end": 3.183
+      },
+      {
+        "role": "удар",
+        "start": 3.217,
+        "end": 3.75
+      },
+      {
+        "role": "покой",
+        "start": 3.783,
+        "end": 3.917
+      },
+      {
+        "role": "удар",
+        "start": 3.95,
+        "end": 3.95
+      },
+      {
+        "role": "покой",
+        "start": 3.983,
+        "end": 6.05
+      },
+      {
+        "role": "удар",
+        "start": 6.083,
+        "end": 6.117
+      },
+      {
+        "role": "покой",
+        "start": 6.15,
+        "end": 6.617
+      },
+      {
+        "role": "удар",
+        "start": 6.65,
+        "end": 6.717
+      },
+      {
+        "role": "покой",
+        "start": 6.75,
+        "end": 7.083
+      },
+      {
+        "role": "удар",
+        "start": 7.117,
+        "end": 7.117
+      },
+      {
+        "role": "покой",
+        "start": 7.15,
+        "end": 7.75
+      },
+      {
+        "role": "удар",
+        "start": 7.783,
+        "end": 7.95
+      },
+      {
+        "role": "покой",
+        "start": 7.983,
+        "end": 8.183
+      },
+      {
+        "role": "удар",
+        "start": 8.217,
+        "end": 8.35
+      },
+      {
+        "role": "покой",
+        "start": 8.383,
+        "end": 8.583
+      },
+      {
+        "role": "удар",
+        "start": 8.617,
+        "end": 8.917
+      },
+      {
+        "role": "покой",
+        "start": 8.95,
+        "end": 9.05
+      },
+      {
+        "role": "удар",
+        "start": 9.083,
+        "end": 9.217
+      },
+      {
+        "role": "покой",
+        "start": 9.25,
+        "end": 9.683
+      },
+      {
+        "role": "удар",
+        "start": 9.717,
+        "end": 9.75
+      },
+      {
+        "role": "покой",
+        "start": 9.783,
+        "end": 9.817
+      },
+      {
+        "role": "удар",
+        "start": 9.85,
+        "end": 10.45
+      },
+      {
+        "role": "покой",
+        "start": 10.483,
+        "end": 10.55
+      },
+      {
+        "role": "удар",
+        "start": 10.583,
+        "end": 10.75
+      },
+      {
+        "role": "покой",
+        "start": 10.783,
+        "end": 10.783
+      },
+      {
+        "role": "удар",
+        "start": 10.817,
+        "end": 10.883
+      },
+      {
+        "role": "покой",
+        "start": 10.917,
+        "end": 11.05
+      },
+      {
+        "role": "удар",
+        "start": 11.083,
+        "end": 11.217
+      },
+      {
+        "role": "покой",
+        "start": 11.25,
+        "end": 11.35
+      },
+      {
+        "role": "удар",
+        "start": 11.383,
+        "end": 11.383
+      },
+      {
+        "role": "покой",
+        "start": 11.417,
+        "end": 11.65
+      },
+      {
+        "role": "удар",
+        "start": 11.683,
+        "end": 11.883
+      },
+      {
+        "role": "покой",
+        "start": 11.917,
+        "end": 12.083
+      },
+      {
+        "role": "удар",
+        "start": 12.117,
+        "end": 12.317
+      },
+      {
+        "role": "покой",
+        "start": 12.35,
+        "end": 12.383
+      },
+      {
+        "role": "удар",
+        "start": 12.417,
+        "end": 12.683
+      },
+      {
+        "role": "покой",
+        "start": 12.717,
+        "end": 12.85
+      },
+      {
+        "role": "удар",
+        "start": 12.883,
+        "end": 13.083
+      },
+      {
+        "role": "покой",
+        "start": 13.117,
+        "end": 13.217
+      },
+      {
+        "role": "удар",
+        "start": 13.25,
+        "end": 13.483
+      },
+      {
+        "role": "покой",
+        "start": 13.517,
+        "end": 13.583
+      },
+      {
+        "role": "удар",
+        "start": 13.617,
+        "end": 13.883
+      },
+      {
+        "role": "покой",
+        "start": 13.917,
+        "end": 14.083
+      },
+      {
+        "role": "удар",
+        "start": 14.117,
+        "end": 14.417
+      },
+      {
+        "role": "покой",
+        "start": 14.45,
+        "end": 14.55
+      },
+      {
+        "role": "удар",
+        "start": 14.583,
+        "end": 14.617
+      },
+      {
+        "role": "покой",
+        "start": 14.65,
+        "end": 15.05
+      },
+      {
+        "role": "удар",
+        "start": 15.083,
+        "end": 15.217
+      },
+      {
+        "role": "покой",
+        "start": 15.25,
+        "end": 15.283
+      },
+      {
+        "role": "удар",
+        "start": 15.317,
+        "end": 15.45
+      },
+      {
+        "role": "покой",
+        "start": 15.483,
+        "end": 15.517
+      },
+      {
+        "role": "удар",
+        "start": 15.55,
+        "end": 15.55
+      },
+      {
+        "role": "покой",
+        "start": 15.583,
+        "end": 16.983
+      },
+      {
+        "role": "удар",
+        "start": 17.017,
+        "end": 17.117
+      },
+      {
+        "role": "покой",
+        "start": 17.15,
+        "end": 19.217
+      },
+      {
+        "role": "удар",
+        "start": 19.25,
+        "end": 19.45
+      },
+      {
+        "role": "покой",
+        "start": 19.483,
+        "end": 19.517
+      },
+      {
+        "role": "удар",
+        "start": 19.55,
+        "end": 19.617
+      },
+      {
+        "role": "покой",
+        "start": 19.65,
+        "end": 19.85
+      },
+      {
+        "role": "удар",
+        "start": 19.883,
+        "end": 20.417
+      }
+    ],
+    "pictures": {
+      "обзор": "video_2026-08-05_16-16-38-overview.png",
+      "удар 1": "video_2026-08-05_16-16-38-strike-01.png",
+      "удар 2": "video_2026-08-05_16-16-38-strike-02.png",
+      "удар 3": "video_2026-08-05_16-16-38-strike-03.png",
+      "удар 4": "video_2026-08-05_16-16-38-strike-04.png",
+      "удар 5": "video_2026-08-05_16-16-38-strike-05.png",
+      "удар 6": "video_2026-08-05_16-16-38-strike-06.png",
+      "удар 7": "video_2026-08-05_16-16-38-strike-07.png",
+      "удар 8": "video_2026-08-05_16-16-38-strike-08.png",
+      "удар 9": "video_2026-08-05_16-16-38-strike-09.png",
+      "удар 10": "video_2026-08-05_16-16-38-strike-10.png",
+      "удар 11": "video_2026-08-05_16-16-38-strike-11.png",
+      "удар 12": "video_2026-08-05_16-16-38-strike-12.png",
+      "удар 13": "video_2026-08-05_16-16-38-strike-13.png",
+      "удар 14": "video_2026-08-05_16-16-38-strike-14.png",
+      "удар 15": "video_2026-08-05_16-16-38-strike-15.png",
+      "удар 16": "video_2026-08-05_16-16-38-strike-16.png",
+      "удар 17": "video_2026-08-05_16-16-38-strike-17.png",
+      "удар 18": "video_2026-08-05_16-16-38-strike-18.png",
+      "удар 19": "video_2026-08-05_16-16-38-strike-19.png",
+      "удар 20": "video_2026-08-05_16-16-38-strike-20.png",
+      "удар 21": "video_2026-08-05_16-16-38-strike-21.png",
+      "удар 22": "video_2026-08-05_16-16-38-strike-22.png",
+      "удар 23": "video_2026-08-05_16-16-38-strike-23.png",
+      "удар 24": "video_2026-08-05_16-16-38-strike-24.png",
+      "удар 25": "video_2026-08-05_16-16-38-strike-25.png",
+      "удар 26": "video_2026-08-05_16-16-38-strike-26.png",
+      "удар 27": "video_2026-08-05_16-16-38-strike-27.png"
+    }
+  }
+]
