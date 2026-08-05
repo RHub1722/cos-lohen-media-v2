@@ -84,6 +84,31 @@ def hip_lead(hip_speed: np.ndarray, wrist_speed: np.ndarray,
     return float((int(np.argmax(wrist_speed)) - int(np.argmax(hip_speed))) / fps)
 
 
+def hip_lead_over_strikes(track: "PoseTrack", strikes) -> float | None:
+    """Медиана опережения бёдер по ударам — внутри удара, а не по всему клипу.
+
+    Глобальный argmax даёт бессмыслицу: максимум скорости бёдер и максимум
+    скорости кистей могут лежать в разных секундах, и «опережение» выходит
+    в тринадцать секунд. Первая версия так и отчиталась. Смысл метрика имеет
+    только внутри одного действия, от начала замаха до пика.
+    """
+    if not strikes or np.size(track.times) < 3:
+        return None
+    steps = np.diff(track.times)
+    step = float(np.median(steps)) if steps.size else 0.0
+    if step <= 0.0:
+        return None
+    leads: list[float] = []
+    for hit in strikes:
+        window = ((track.times >= hit.t_peak - hit.windup)
+                  & (track.times <= hit.t_peak + 0.10))
+        if int(window.sum()) < 3:
+            continue
+        leads.append(hip_lead(track.hip_speed[window],
+                              track.wrist_speed[window], 1.0 / step))
+    return float(np.median(leads)) if leads else None
+
+
 def _angle(ax, ay, bx, by) -> np.ndarray:
     return np.degrees(np.arctan2(by - ay, bx - ax))
 

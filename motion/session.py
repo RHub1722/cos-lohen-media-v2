@@ -9,6 +9,10 @@ import numpy as np
 from motion import envelope, frames as mframes, pose, segment, video
 
 
+def _round_or_none(value: float | None, digits: int = 3) -> float | None:
+    return None if value is None else round(value, digits)
+
+
 def measure(path: str | Path, out_frames: Path | None = None,
             pose_on: bool = True) -> dict:
     """Замерить видео целиком. Картинки пишутся, если задан out_frames."""
@@ -31,9 +35,20 @@ def measure(path: str | Path, out_frames: Path | None = None,
         why = (f"суставы нашлись на {track.coverage:.0%} кадров, порог "
                f"{pose.MIN_COVERAGE:.0%} — выводы о теле подавлены")
 
-    env = envelope.build(gray, clip.fps, body_frac=body)
+    # Обрезка ПЕРЕД замером, а не после. Пороги считаются по максимуму того,
+    # что подано, и возня с камерой, оставленная внутри, задаёт их сама: на v1
+    # она в пять-восемь раз сильнее настоящих смахов, потому что руки у
+    # объектива, а смахи в глубине кадра. Порог уезжал на 2.99 при смахах
+    # 0.7–1.44, и ни один смах не находился.
     trim = segment.camera_trim(video.band_envelope(clip), clip.fps,
                                clip.duration)
+    first = max(int(round(trim.start * clip.fps)), 0)
+    last = min(int(round(trim.end * clip.fps)) + 1, len(gray))
+    if last - first < 3:
+        first, last = 0, len(gray)
+    env = envelope.build(gray[first:last], clip.fps,
+                         body_frac=None if body is None else body[first:last],
+                         t0=first / clip.fps)
     parts = segment.segments(env, trim)
     hits = segment.strikes(env, trim)
 
@@ -62,7 +77,12 @@ def measure(path: str | Path, out_frames: Path | None = None,
         "scale_source": env.scale_source,
         "size_fix": env.size_fix,
         "floor": round(env.floor, 4),
+        "action_level": round(env.action_level, 4),
         "strike_level": round(env.strike_level, 4),
+        "dip_ratio_median": _round_or_none(
+            float(np.median([h.dip_ratio for h in hits
+                             if h.dip_ratio is not None]))
+            if any(h.dip_ratio is not None for h in hits) else None, 2),
         "strikes": len(hits),
         "transitions": max(len(hits) - 1, 0),
         "dead_stops": len(dead),
@@ -76,10 +96,9 @@ def measure(path: str | Path, out_frames: Path | None = None,
             "used": bool(body is not None),
             "why": why,
             "coverage": round(track.coverage, 3) if track else None,
-            "hip_lead": round(pose.hip_lead(track.hip_speed,
-                                            track.wrist_speed,
-                                            clip.fps / pose.EVERY), 3)
-                        if (track and track.trustworthy) else None,
+            "hip_lead": _round_or_none(
+                pose.hip_lead_over_strikes(track, hits)
+                if (track and track.trustworthy) else None),
             "stance_median": round(float(np.median(track.stance)), 2)
                              if (track and track.trustworthy) else None,
             "grip_median": round(float(np.median(track.grip)), 2)
@@ -89,6 +108,7 @@ def measure(path: str | Path, out_frames: Path | None = None,
             {"t_peak": round(h.t_peak, 3), "peak": round(h.peak, 3),
              "windup": round(h.windup, 3), "stop": round(h.stop, 3),
              "gap_before": round(h.gap_before, 3) if h.gap_before else None,
+             "dip_ratio": _round_or_none(h.dip_ratio, 2),
              "dead_stop_before": h.dead_stop_before}
             for h in hits
         ],

@@ -15,13 +15,17 @@ from motion.envelope import Envelope
 
 HANDLING_MIN_S = 0.5      # владение короче этого — не режим, а дрожание
 MIN_GAP_S = 0.35          # два пика ближе этого — один удар
+DEAD_STOP_RATIO = 0.25    # впадина ниже четверти от соседних пиков — остановка
 TRIM_DB = 12.0            # всплеск полосы выше медианы на столько — камера
 TRIM_EDGE_S = 5.0         # искать только в первых и последних секундах
 
-# Мёртвая остановка — когда движение в паузе упало обратно в покой, то есть
-# ниже той же границы, по которой отделяется движение вообще. Множителя на дно
-# здесь нет намеренно: дно нормировано, и любой множитель на нём означал бы
-# разное в разных видео.
+# Мёртвая остановка меряется ОТНОСИТЕЛЬНО соседних пиков, а не по уровню покоя.
+# Причина: чистого покоя в этом материале нет, исполнитель двигается почти всё
+# время, и любой порог из «уровня покоя» ложился выше медианы огибающей. Отсюда
+# и брались «мёртвые остановки 17 из 17» в видео, где глаз видит непрерывную
+# работу. Отношение впадины к пикам определено без покоя вовсе: на настоящей v1
+# его медиана 0.64, то есть движение между всплесками держится на двух третях
+# от них, а ниже 0.25 уходит примерно каждая шестая пара.
 
 
 @dataclass(frozen=True)
@@ -39,6 +43,7 @@ class Strike:
     stop: float             # от пика до 10% — чем останавливают палку
     gap_before: float | None
     floor_before: float | None
+    dip_ratio: float | None       # впадина до этого пика / меньший из двух пиков
     dead_stop_before: bool | None
 
 
@@ -69,18 +74,37 @@ def camera_trim(band: np.ndarray, fps: int, duration: float,
 
     start, end = 0.0, duration
     parts = []
-    head = np.flatnonzero(loud[:edge])
-    if head.size:
-        start = min((int(head.max()) + 1) / fps, duration * 0.5)
+    head = _run_from_edge(loud[:edge], fps)
+    if head:
+        start = min(head / fps, duration * 0.5)
         parts.append(f"в начале срезано {start:.2f} с")
-    tail = np.flatnonzero(loud[max(len(loud) - edge, 0):])
-    if tail.size:
-        first = max(len(loud) - edge, 0) + int(tail.min())
-        end = max(first / fps, duration * 0.5)
+    tail = _run_from_edge(loud[max(len(loud) - edge, 0):][::-1], fps)
+    if tail:
+        end = max(duration - tail / fps, duration * 0.5)
         parts.append(f"в конце срезано {duration - end:.2f} с")
     reason = ("возня с камерой по звуку: " + ", ".join(parts)) if parts \
         else f"резать нечего: всплесков громче медианы на {db:g} dB у краёв нет"
     return Trim(start, end, reason)
+
+
+def _run_from_edge(loud: np.ndarray, fps: int, gap_s: float = 0.5) -> int:
+    """Докуда тянется возня с камерой от самого края, в отсчётах.
+
+    Не «последний громкий отсчёт в окне»: одиночный посторонний звук на 4.9 с
+    выбрасывал бы пять секунд, и на v1 первая версия так и сделала — срезала
+    ровно предел окна поиска. Тянем от края и обрываемся на первой тишине
+    длиннее gap_s. Если у самого края тихо, возни не было вовсе.
+    """
+    gap = max(1, int(round(gap_s * fps)))
+    idx = np.flatnonzero(loud)
+    if idx.size == 0 or int(idx[0]) > gap:
+        return 0
+    end = int(idx[0])
+    for j in idx[1:]:
+        if int(j) - end > gap:
+            break
+        end = int(j)
+    return end + 1
 
 
 def _inside(env: Envelope, trim: Trim) -> np.ndarray:
@@ -94,11 +118,10 @@ def segments(env: Envelope, trim: Trim) -> list[Segment]:
     if len(vals) == 0:
         return []
 
-    # Граница владения — handling_level, а НЕ дно: выше дна по построению
-    # лежит 80% отсчётов, и неподвижный клип разметился бы как работа с
-    # оружием. Три сигмы над покоем отделяют движение от шума.
+    # Граница владения — action_level, а НЕ дно: выше дна по построению лежит
+    # 80% отсчётов, и неподвижный клип разметился бы как работа с оружием.
     roles = np.where(vals > env.strike_level, "удар",
-                     np.where(vals > env.handling_level, "владение", "покой"))
+                     np.where(vals > env.action_level, "владение", "покой"))
     out: list[Segment] = []
     i = 0
     while i < len(roles):
@@ -145,24 +168,36 @@ def strikes(env: Envelope, trim: Trim) -> list[Strike]:
     out: list[Strike] = []
     for k, i in enumerate(peaks):
         level = env.level_for(float(vals[i]))
+        # Обход ограничен соседними пиками. Без этого при непрерывной работе
+        # он проходит сквозь них: у всплеска, отстоящего от предыдущего на
+        # 0.53 с, «замах» выходил 3.27 с — обход добирался до уровня 10% через
+        # три чужих всплеска.
+        lower = peaks[k - 1] if k else 0
+        upper = peaks[k + 1] if k + 1 < len(peaks) else len(vals) - 1
         left = i
-        while left > 0 and vals[left] > level:
+        while left > lower and vals[left] > level:
             left -= 1
         right = i
-        while right < len(vals) - 1 and vals[right] > level:
+        while right < upper and vals[right] > level:
             right += 1
-        gap = floor_before = None
+        gap = floor_before = ratio = None
         dead = None
         if k:
             prev = peaks[k - 1]
             gap = float(times[i] - times[prev])
             floor_before = float(vals[prev:i].min())
-            dead = bool(floor_before <= env.handling_level)
+            # Впадина считается от ДНА, а не от нуля: дно это уровень, ниже
+            # которого огибающая не опускается и в самом спокойном месте.
+            depth = max(floor_before - env.floor, 0.0)
+            reach = max(min(vals[prev], vals[i]) - env.floor, 1e-12)
+            ratio = float(depth / reach)
+            dead = bool(ratio < DEAD_STOP_RATIO)
         out.append(Strike(
             t_peak=float(times[i]), peak=float(vals[i]),
             windup=float(times[i] - times[left]),
             stop=float(times[right] - times[i]),
-            gap_before=gap, floor_before=floor_before, dead_stop_before=dead))
+            gap_before=gap, floor_before=floor_before,
+            dip_ratio=ratio, dead_stop_before=dead))
     return out
 
 

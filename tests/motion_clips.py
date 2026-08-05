@@ -114,6 +114,34 @@ def bright_step(path: Path, fps: int, total: int, at: int,
     return encode(path, frames, fps)
 
 
+def spike_then_sweeps(path: Path, fps: int) -> Path:
+    """Огромный всплеск в начале, потом два умеренных смаха.
+
+    Это v1 в миниатюре: возня с камерой у объектива в разы сильнее настоящих
+    смахов в глубине кадра. Если пороги считать по всему клипу, всплеск задаёт
+    их сам и смахи не находятся.
+    """
+    total = fps * 5
+    frames = scene(total)
+    pos = np.full(total, 30.0)
+    # Возня: большой блок у объектива ездит по кадру. Именно площадь, а не
+    # размах: полоса, перепрыгивающая кадр, меняет всего две своих ширины
+    # пикселей — энергия движения упирается в размер объекта, и такой всплеск
+    # выходит не сильнее смаха.
+    for i in range(1, 9):
+        x0 = 20 + 40 * i
+        frames[i, 10:170, max(x0 - 100, 0):min(x0 + 100, W)] = 0.15
+    # Смахи: втрое меньше по размаху и вдвое медленнее.
+    slow_1 = triangle(total, int(fps * 2.0), int(fps * 2.6), 60.0, 150.0)
+    slow_2 = triangle(total, int(fps * 3.6), int(fps * 4.2), 150.0, 240.0)
+    pos[8:int(fps * 2.0)] = 60.0
+    pos[int(fps * 2.0):int(fps * 3.6)] = slow_1[int(fps * 2.0):int(fps * 3.6)]
+    pos[int(fps * 3.6):] = slow_2[int(fps * 3.6):]
+    for i in range(total):
+        bar(frames, i, float(pos[i]))
+    return encode(path, frames, fps)
+
+
 def two_sweeps(path: Path, fps: int, dead: bool) -> Path:
     """Два смаха с переходом между ними.
 

@@ -119,6 +119,37 @@ def test_4_the_same_motion_at_two_contrasts_normalises_together(tmp_path):
     assert 0.9 <= ratio <= 1.1, f"после нормировки расходятся в {ratio:.2f} раза"
 
 
+def test_camera_handling_left_in_the_window_inflates_the_threshold(tmp_path):
+    """Возня с камерой, оставленная в замере, задирает порог.
+
+    На v1 она в пять-восемь раз сильнее настоящих смахов: руки у объектива
+    против движения в глубине кадра. С опорой на МАКСИМУМ порог уезжал на 2.99
+    при смахах 0.7–1.44, и ни один смах не находился. Опора на 95-ю процентиль
+    основную беду снимает, но порядок всё равно обязателен: пороги считаются по
+    тому, что подано, и лишняя возня их завышает.
+    """
+    fps = 30
+    path = motion_clips.spike_then_sweeps(tmp_path / "s.mp4", fps=fps)
+    clip = video.probe(path)
+    gray = video.gray_frames(clip, width=160)
+    after = int(fps * 1.0)          # всплеск укладывается в первую секунду
+
+    whole = envelope.build(gray, clip.fps)
+    trimmed = envelope.build(gray[after:], clip.fps, t0=after / clip.fps)
+
+    def hits(env):
+        return int(((env.values > env.strike_level)
+                    & (env.times > 1.5)).sum())
+
+    assert whole.strike_level > trimmed.strike_level, (
+        f"возня не завысила порог: целиком {whole.strike_level:.3f}, "
+        f"обрезанное {trimmed.strike_level:.3f}")
+    assert hits(trimmed) > hits(whole), (
+        f"после обрезки смахов найдено не больше: {hits(trimmed)} против "
+        f"{hits(whole)}")
+    assert trimmed.times[0] == pytest.approx(after / clip.fps + 0.5 / clip.fps)
+
+
 def test_scale_source_is_always_named(tmp_path):
     """Отчёт обязан сказать, какая нормировка применена, иначе числа между
     видео сравнивать нельзя."""

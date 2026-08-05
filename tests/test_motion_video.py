@@ -46,7 +46,7 @@ def test_strike_strip_has_four_columns(tmp_path):
     clip = video.probe(motion_clips.sweep(tmp_path / "s.mp4", fps=30,
                                           total=120, a=30, b=60))
     hit = Strike(t_peak=1.5, peak=3.0, windup=0.4, stop=0.3, gap_before=None,
-                 floor_before=None, dead_stop_before=None)
+                 floor_before=None, dip_ratio=None, dead_stop_before=None)
     out = mframes.strike_strip(clip, hit, tmp_path / "strip.png")
     assert out.exists()
     with Image.open(out) as img:

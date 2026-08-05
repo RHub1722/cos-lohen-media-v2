@@ -12,6 +12,13 @@ from pathlib import Path
 from motion import compare as mcompare
 from motion import requirements
 
+
+def segment_dead_ratio() -> float:
+    """Порог, по которому впадина считается остановкой. Берётся из segment,
+    чтобы отчёт и замер не разошлись молча."""
+    from motion.segment import DEAD_STOP_RATIO
+    return DEAD_STOP_RATIO
+
 SPEC = ("../../../docs/superpowers/specs/"
         "2026-08-05-motion-analyzer-design.md")
 
@@ -40,27 +47,42 @@ def _session_block(data: dict) -> list[str]:
         ]
     else:
         out += [
-            f"Ударов {data['strikes']}, переходов {data['transitions']}, из них "
-            f"**мёртвых остановок {data['dead_stops']}**.",
+            f"Всплесков ускорения {data['strikes']}, переходов "
+            f"{data['transitions']}, из них **мёртвых остановок "
+            f"{data['dead_stops']}**.",
             f"Медиана замаха {data['windup_median']:.3f} с, медиана торможения "
             f"{data['stop_median']:.3f} с.",
             f"Самое длинное непрерывное действие {data['longest_action']:.2f} с, "
             f"самая длинная неподвижность {data['longest_stillness']:.2f} с.",
+        ]
+        if data.get("dip_ratio_median") is not None:
+            out.append(
+                f"**Впадина между всплесками держится на "
+                f"{data['dip_ratio_median']:.2f} от них** — это и есть мера "
+                f"связки: ниже {segment_dead_ratio():.2f} считается остановкой.")
+        out += [
             "",
-            "| № | пик, с | замах | торможение | пауза до | мёртвая остановка |",
-            "|---|---|---|---|---|---|",
+            "| № | пик, с | замах | торможение | пауза до | впадина/пик | "
+            "остановка |",
+            "|---|---|---|---|---|---|---|",
         ]
         for i, hit in enumerate(data["hits"], 1):
             gap = f"{hit['gap_before']:.2f}" if hit["gap_before"] else "—"
+            dip = ("—" if hit.get("dip_ratio") is None
+                   else f"{hit['dip_ratio']:.2f}")
             dead = {True: "да", False: "нет", None: "—"}[hit["dead_stop_before"]]
             out.append(f"| {i} | {hit['t_peak']:.2f} | {hit['windup']:.3f} | "
-                       f"{hit['stop']:.3f} | {gap} | {dead} |")
+                       f"{hit['stop']:.3f} | {gap} | {dip} | {dead} |")
         out.append("")
 
     if data["pose"]["used"]:
+        lead = data["pose"]["hip_lead"]
+        out.append(
+            f"- Бёдра опережают кисти на **{lead:+.3f} с** "
+            "(минус — ведут руки, сила не из корпуса)" if lead is not None
+            else "- Опережение бёдер не посчитано: оно мерится внутри удара, "
+                 "а ударов здесь нет")
         out += [
-            f"- Бёдра опережают кисти на **{data['pose']['hip_lead']:+.3f} с** "
-            "(минус — ведут руки, сила не из корпуса)",
             f"- Стойка {data['pose']['stance_median']:.2f} плеча, хват "
             f"{data['pose']['grip_median']:.2f} плеча",
             "",
