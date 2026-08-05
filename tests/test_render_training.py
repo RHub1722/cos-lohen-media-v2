@@ -7,7 +7,8 @@
 
 import pytest
 
-from src.render_training import MARKER, build_payload, render
+from src.render_training import (MARKER, SITE_DIR, SITE_VIDEO, build_payload,
+                                render)
 
 
 @pytest.fixture(scope="module")
@@ -45,6 +46,21 @@ def test_loop_windows_cover_their_own_beats(payload):
         low, high = s["loop"]
         for beat in s["beats"]:
             assert low <= beat["heard"] <= high, f"{s['id']}/{beat['role']}"
+
+
+def test_the_published_copy_is_whole():
+    """`site/` — единственное место, где производный файл лежит в репозитории, и
+    лежит намеренно: иначе страницу не открыть с гита на планшете. Значит следить
+    за его целостностью надо тестом, а не памятью."""
+    index = SITE_DIR / "index.html"
+    video = SITE_DIR / SITE_VIDEO
+    assert index.exists(), "нет site/index.html: python src/render_training.py --site"
+    assert video.exists(), f"нет site/{SITE_VIDEO}: страница откроет диалог выбора файла"
+    assert f'"video": "{SITE_VIDEO}"' in index.read_text(encoding="utf-8")
+    megabytes = video.stat().st_size / 1024 / 1024
+    assert megabytes < 12, (
+        f"{megabytes:.1f} МБ — многовато и для репозитория, и для мобильной связи; "
+        "поднимите crf в render_training.py")
 
 
 def test_render_leaves_no_marker_and_closes_no_script():

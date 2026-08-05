@@ -1,19 +1,27 @@
 """Генератор тренажёра номера: один самодостаточный HTML рядом с видео.
 
-    python src/render_training.py [--video final_v2.mp4] [--out output/training.html]
+    python src/render_training.py            # output/training.html, мастер-видео
+    python src/render_training.py --site     # site/index.html, сжатое видео
 
 Данные вшиваются в страницу при генерации: из `file://` браузер не даст
 подгрузить внешний JSON, а страница обязана открываться двойным щелчком, без
 сервера и без интернета.
 
 Видео подключается относительным путём и лежит рядом. Так папку из двух файлов
-можно скопировать на телефон целиком, и ничего не сломается.
+можно скопировать на планшет целиком, и ничего не сломается.
+
+`--site` собирает версионируемую копию в `site/`: ту же страницу и сжатое до
+960×540 видео на четыре с половиной мегабайта вместо тридцати. Это единственное
+место, где производный файл попадает в репозиторий, и попадает намеренно — иначе
+страницу нельзя открыть с гита на планшете. Мастер `output/final_v2.mp4` при
+этом не трогается: он остаётся файлом сдачи.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -34,6 +42,15 @@ from src.video_plan import build_plan  # noqa: E402
 ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE = ROOT / "src/training_template.html"
 MARKER = "/*__DATA__*/"
+
+# Версионируемая копия для планшета: открывается прямо с гита, поэтому вес имеет
+# значение. 960×540 хватает, чтобы видеть, где вспышка и что на экране, а по
+# мобильной связи это четыре с половиной мегабайта вместо тридцати одного.
+SITE_DIR = ROOT / "site"
+SITE_VIDEO = "lohen-60s.mp4"
+SITE_SCALE = "960:540"
+SITE_CRF = "24"
+MASTER_VIDEO = ROOT / "output/final_v2.mp4"
 
 # Ключ с описанием кадра по-русски: он адресован человеку, и рядом с ним в
 # shots.json лежат такие же русские «почему так». Схему кадра он не трогает —
@@ -125,12 +142,56 @@ def render(payload: dict) -> str:
     return html.replace(MARKER, data)
 
 
+def pack_video(force: bool = False) -> Path:
+    """Сжатая копия видео рядом с версионируемой страницей.
+
+    Перекодируется, только если её нет или она старше мастера: иначе каждая
+    сборка страницы гоняла бы минуту видео впустую. Зато при новой сборке звука
+    копия сама перестанет быть свежей, и следующий `--site` её обновит — молча
+    разойтись с номером она не может.
+    """
+    target = SITE_DIR / SITE_VIDEO
+    if not MASTER_VIDEO.exists():
+        raise SystemExit(
+            f"нет {MASTER_VIDEO.relative_to(ROOT)} — сначала python src/render_video.py"
+        )
+    fresh = (target.exists()
+             and target.stat().st_mtime >= MASTER_VIDEO.stat().st_mtime)
+    if fresh and not force:
+        return target
+
+    SITE_DIR.mkdir(parents=True, exist_ok=True)
+    result = subprocess.run([
+        "ffmpeg", "-y", "-v", "error", "-i", str(MASTER_VIDEO),
+        "-vf", f"scale={SITE_SCALE}",
+        "-c:v", "libx264", "-crf", SITE_CRF, "-preset", "veryslow",
+        "-pix_fmt", "yuv420p", "-profile:v", "high",
+        # Без faststart браузер на планшете ждёт весь файл, прежде чем начать.
+        "-movflags", "+faststart",
+        "-c:a", "aac", "-b:a", "128k", str(target),
+    ], capture_output=True, text=True)
+    if result.returncode != 0 or not target.exists():
+        raise SystemExit(f"FFmpeg не собрал {target.name}:\n{result.stderr[-600:]}")
+    return target
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--video", default="final_v2.mp4",
                     help="имя файла номера рядом со страницей")
     ap.add_argument("--out", default=str(ROOT / "output/training.html"))
+    ap.add_argument("--site", action="store_true",
+                    help="собрать версионируемую копию в site/ со сжатым видео")
+    ap.add_argument("--force-video", action="store_true",
+                    help="перекодировать видео для site/ даже если оно свежее")
     args = ap.parse_args()
+
+    if args.site:
+        args.out = str(SITE_DIR / "index.html")
+        args.video = SITE_VIDEO
+        packed = pack_video(force=args.force_video)
+        print(f"Видео для сайта: {packed.relative_to(ROOT)} "
+              f"({packed.stat().st_size / 1024 / 1024:.1f} МБ, {SITE_SCALE}, crf {SITE_CRF})")
 
     payload = build_payload(args.video)
     out = Path(args.out)
