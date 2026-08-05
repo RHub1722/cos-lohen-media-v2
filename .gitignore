@@ -43,6 +43,11 @@ assets/screenshots/**/*.jpg
 assets/screenshots/**/*.jpeg
 assets/screenshots/**/*.webp
 
+# Модель позы MediaPipe: 9 МБ чужого бинарника, который скачивается одной
+# командой из официального хранилища Google. В репозиторий ему не место по той
+# же причине, по которой там нет купленного видео. Как получить — motion/README.md.
+motion/models/
+
 # Служебное
 .DS_Store
 Thumbs.db
