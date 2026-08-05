@@ -54,11 +54,22 @@ def probe(path: str | Path) -> Clip:
     proc = subprocess.run(
         ["ffprobe", "-v", "error", "-print_format", "json",
          "-show_streams", "-show_format", str(path)],
-        capture_output=True, text=True)
+        # encoding задаётся явно: без него Python берёт локальную кодировку, и
+        # на русском имени файла cp1252 роняет декодирование вывода. JSON
+        # приходил пустым, а ошибка врала — «в файле нет видеодорожки». Один
+        # файл заказчика на 265 МБ так и отвалился.
+        capture_output=True, encoding="utf-8", errors="replace")
     if proc.returncode != 0:
         raise VideoError(f"{path.name}: ffprobe вернул {proc.returncode}.\n"
-                         f"{proc.stderr.strip()}")
-    data = json.loads(proc.stdout or "{}")
+                         f"{(proc.stderr or '').strip()}")
+    try:
+        data = json.loads(proc.stdout or "{}")
+    except json.JSONDecodeError as exc:
+        raise VideoError(
+            f"{path.name}: ffprobe отдал не JSON ({exc}). Начало вывода:\n"
+            f"{(proc.stdout or '')[:200]}") from exc
+    if not data.get("streams"):
+        raise VideoError(f"{path.name}: ffprobe не вернул ни одного потока")
     stream = next((s for s in data.get("streams", [])
                    if s.get("codec_type") == "video"), None)
     if stream is None:

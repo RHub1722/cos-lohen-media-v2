@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import numpy as np
@@ -9,13 +10,32 @@ import numpy as np
 from motion import envelope, frames as mframes, pose, segment, video
 
 
+_SAFE = re.compile(r"[^A-Za-z0-9._-]+")
+
+
 def _round_or_none(value: float | None, digits: int = 3) -> float | None:
     return None if value is None else round(value, digits)
 
 
+def _safe_stem(name: str) -> str:
+    """Имя, годное для файла на любой системе.
+
+    Русские буквы и пробелы в именах кадров не нужны: один из файлов заказчика
+    называется «VID_20260805_202726я думаю как это сделать...», и такое имя
+    ссылкой в markdown уже не вставишь без экранирования.
+    """
+    cut = _SAFE.sub("-", name).strip("-")
+    return cut[:60] or "clip"
+
+
 def measure(path: str | Path, out_frames: Path | None = None,
-            pose_on: bool = True) -> dict:
-    """Замерить видео целиком. Картинки пишутся, если задан out_frames."""
+            pose_on: bool = True, label: str | None = None) -> dict:
+    """Замерить видео целиком. Картинки пишутся, если задан out_frames.
+
+    label — короткое имя для заголовка и для имён кадров. Нужен, когда видео
+    лежат в подпапках: два файла с одинаковым именем в разных папках затирали
+    бы кадры друг друга.
+    """
     clip = video.probe(path)
     gray = video.gray_frames(clip)
 
@@ -56,7 +76,7 @@ def measure(path: str | Path, out_frames: Path | None = None,
     pictures: dict[str, str] = {}
     if out_frames is not None:
         # Имена файлов латиницей, подписи русские — как во всём проекте.
-        stem = clip.path.stem
+        stem = _safe_stem(label or clip.path.stem)
         pictures["обзор"] = mframes.overview_sheet(
             clip, out_frames / f"{stem}-overview.png").name
         for i, hit in enumerate(hits, 1):
@@ -69,7 +89,7 @@ def measure(path: str | Path, out_frames: Path | None = None,
                 clip, part, out_frames / f"{stem}-handling-{i:02d}.png").name
 
     return {
-        "file": clip.path.name,
+        "file": label or clip.path.name,
         "duration": round(clip.duration, 3),
         "fps": clip.fps,
         "trim": {"start": round(trim.start, 3), "end": round(trim.end, 3),

@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import sys
 from datetime import date
 from pathlib import Path
@@ -26,6 +27,46 @@ if str(ROOT) not in sys.path:
 from motion import pose, report, session, video  # noqa: E402
 
 TRAIN = ROOT / "train"
+SUFFIXES = (".mp4", ".mov", ".avi", ".mkv", ".webm")
+
+
+def collect(root: Path) -> list[Path]:
+    """Все видео в папке и подпапках, без дублей по содержимому.
+
+    Папка отчётов пропускается: там лежат наши же кадры, а не материал.
+
+    Дедупликация нужна по факту: один и тот же файл лежал сразу в двух папках
+    заказчика (2action-meha и final), побайтово одинаковый. Считать его дважды
+    значит дважды посчитать один заход в итогах.
+    """
+    seen: dict[str, Path] = {}
+    out: list[Path] = []
+    for path in sorted(root.rglob("*")):
+        if not path.is_file() or path.suffix.lower() not in SUFFIXES:
+            continue
+        if "reports" in path.relative_to(root).parts:
+            continue
+        # Хеш только по размеру и первому мегабайту: полный от 265 МБ читать
+        # незачем, а совпадение размера и начала у разных дублей не встречается.
+        with open(path, "rb") as fh:
+            head = hashlib.md5(fh.read(1 << 20)).hexdigest()
+        key = f"{path.stat().st_size}-{head}"
+        if key in seen:
+            print(f"  дубль, пропущен: {path.relative_to(root)} "
+                  f"= {seen[key].relative_to(root)}")
+            continue
+        seen[key] = path
+        out.append(path)
+    return out
+
+
+def label_for(path: Path, root: Path) -> str:
+    """Короткое имя для заголовка: путь от train/ без расширения."""
+    try:
+        rel = path.relative_to(root)
+    except ValueError:
+        return path.stem
+    return str(rel.with_suffix("")).replace("\\", "/")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -40,10 +81,9 @@ def main(argv: list[str] | None = None) -> int:
                         help="пересчитать, даже если отчёт уже есть")
     args = parser.parse_args(argv)
 
-    videos = sorted(args.only) if args.only else sorted(
-        p for p in TRAIN.glob("*.mp4") if p.is_file())
+    videos = sorted(args.only) if args.only else collect(TRAIN)
     if not videos:
-        print(f"в {TRAIN} нет ни одного mp4", file=sys.stderr)
+        print(f"в {TRAIN} нет ни одного видео", file=sys.stderr)
         return 1
 
     out_dir = args.out or (TRAIN / "reports" / date.today().isoformat())
@@ -59,11 +99,12 @@ def main(argv: list[str] | None = None) -> int:
 
     sessions = []
     for path in videos:
-        print(f"замер {path.name} ...", flush=True)
+        print(f"замер {label_for(path, TRAIN)} ...", flush=True)
         try:
             sessions.append(session.measure(
                 path, out_frames=out_dir / "frames",
-                pose_on=not args.no_pose))
+                pose_on=not args.no_pose,
+                label=label_for(path, TRAIN)))
         except video.VideoError as exc:
             print(f"  пропущено: {exc}", file=sys.stderr)
     if not sessions:

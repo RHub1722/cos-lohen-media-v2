@@ -32,6 +32,22 @@ def test_short_clip_is_refused(tmp_path):
         video.probe(path)
 
 
+def test_a_russian_filename_is_read(tmp_path):
+    """Имя файла с кириллицей и пробелами читается.
+
+    Без явной кодировки Python декодировал вывод ffprobe локальной cp1252,
+    падал на русских буквах, получал пустой JSON и сообщал «в файле нет
+    видеодорожки». Один файл заказчика на 265 МБ так и не разобрался.
+    """
+    path = motion_clips.still(
+        tmp_path / "VID_я думаю как это сделать и ппреминений нет.mp4",
+        fps=30, total=90)
+    clip = video.probe(path)
+    assert clip.fps == 30
+    assert clip.duration == pytest.approx(3.0, abs=0.2)
+    assert len(video.gray_frames(clip, width=160)) >= 88
+
+
 def test_missing_file_names_itself(tmp_path):
     with pytest.raises(video.VideoError, match="нет.mp4"):
         video.probe(tmp_path / "нет.mp4")
