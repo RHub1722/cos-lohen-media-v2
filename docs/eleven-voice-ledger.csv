@@ -148,3 +148,4 @@ timestamp,event,voice,model,chars,credits_estimate,stability,similarity,speed,se
 2026-08-06T21:53:12Z,lohen_impressed,tb1<-lo_v2,eleven_multilingual_sts_v2,0,42,,,,2.508,2.70,да,-0.6,lohen_impressed__tb1_a1.mp3,из v2/lohen_impressed_v2_take4.wav; вход -1 dBFS по пику (+0.5 dB); очная ставка: выравнивание+фон
 2026-08-06T21:53:16Z,lohen_impressed,tb2<-lo_v2,eleven_multilingual_sts_v2,0,42,0.5,0.35,,2.508,2.70,да,-1.0,lohen_impressed__tb2_a1.mp3,из v2/lohen_impressed_v2_take4.wav; очная ставка: сходство 0.35
 2026-08-06T21:53:23Z,lohen_impressed,tb3<-lo_v2,eleven_multilingual_sts_v2,0,42,0.5,0.35,,2.508,2.70,да,-0.7,lohen_impressed__tb3_a1.mp3,из v2/lohen_impressed_v2_take4.wav; вход -1 dBFS по пику (+0.5 dB); очная ставка: всё вместе
+2026-08-06T22:15:40Z,lohen_really,lo_v41,eleven_v3,9,5,0.5,0.75,1.1,1.040,1.20,да,-1.5,lohen_really__lo_v41_a2.mp3,перегенерация: старый файл перебирал удар на 42.80 на 0.16 с

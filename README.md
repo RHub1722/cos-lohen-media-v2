@@ -13,6 +13,8 @@
 - **Проектное решение** — [docs/superpowers/specs/2026-08-01-lohen-interrogation-scene-design.md](docs/superpowers/specs/2026-08-01-lohen-interrogation-scene-design.md)
 - **План реализации** — [docs/superpowers/plans/2026-08-01-lohen-v2-implementation.md](docs/superpowers/plans/2026-08-01-lohen-v2-implementation.md)
 - **Точки состояния** — [docs/status/INDEX.md](docs/status/INDEX.md)
+- **Отложенное, но разведанное** — [docs/proposals.md](docs/proposals.md) — что уже проверено по интонации и ударению, что осталось, и чего не хватает для старта
+- **Технический долг** — [docs/tech-debt.md](docs/tech-debt.md) — найденное и не исправленное
 
 Предыдущий проект лежит в `C:\Cosplay\audio-project` и не изменяется. Оттуда
 перенесены семь проверенных SFX и вся методика; сценарий — полностью новый.
