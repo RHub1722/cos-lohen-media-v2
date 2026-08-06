@@ -1,0 +1,120 @@
+{
+  "note": "Русские реплики номера. Читает src/voice_lines.py, оттуда — оба клиента озвучки и лист записи. Событие в поле event — то же имя, что в scenario/timeline.json: второго списка реплик в проекте нет, как нет второго списка кадров.",
+  "note_direction": "direction — ремарка прозой для Seed Audio: у него поле text это описание сцены с репликой внутри, а не текст на прочтение. Их пример: 'A phone vibrates first, then a calm male voice says: Welcome to Seed Audio.' Английский выбран потому, что на английском написан пример схемы.",
+  "note_tags": "tags — разметка для ElevenLabs v3, тот же смысл другим языком. Держать не больше двух: на репликах короче 250 знаков v3 иногда произносит разметку вслух, и чем её больше, тем выше шанс. Проверяется длиной результата, а не на веру.",
+  "note_play": "play — та же подача словами для живого исполнителя, по-русски. Три поля на одно намерение: direction для Seed Audio, tags для ElevenLabs, play для человека. Это не дублирование факта, а перевод указания под разных потребителей — модель и актёр читают по-разному. Расходиться им нельзя: правишь одно, проверяй остальные.",
+  "note_speed": "speed — темп только там, где общий не годится. Крик охранника от замедления перестаёт быть криком, а у lohen_really до удара по Лоэну 1.20 с, и растягивать её некуда. Остальные берут темп из ключа командной строки.",
+  "note_length": "Бюджет секунд здесь не выписан: считается из timeline.json. Два списка одного и того же расходятся молча.",
+  "note_laughs": "Трёх смехов Лоэна тут нет: смех не переводится, английские файлы остаются как есть.",
+  "note_others": "prisoner_refuse и guard_shout — не Лоэн, это заключённый и охранник. Голосом Лоэна они звучать не должны, но в списке оставлены: решение по ним отдельное.",
+  "lines": [
+    {
+      "event": "lohen_impressed",
+      "line": "Ещё не спишь? Похвально.",
+      "tags": "[amused] [condescending]",
+      "direction": "A cold, arrogant male voice, mildly amused that his prisoner is still conscious, drawls the words with quiet contempt",
+      "note": "Первая реплика номера после смеха. Задаёт тон всему допросу.",
+      "play": "Свысока, чуть удивлённо. Он не хвалит — он отмечает, что игрушка ещё работает. Улыбку должно быть слышно."
+    },
+    {
+      "event": "lohen_security",
+      "line": "Ещё раз. Где стоит охрана?",
+      "tags": "[bored] [drawling]",
+      "direction": "The same cold voice, bored and condescending, repeating a question he has already asked once, patience running thin",
+      "note": "Опорная реплика для проб: по ней сняты все замеры сравнения с трейлером.",
+      "play": "Скучающе. Спрашивает второй раз, и терпение кончается. Не злись — устань от него."
+    },
+    {
+      "event": "prisoner_refuse",
+      "line": "Я не могу— они меня убьют—",
+      "tags": "[terrified] [whispering]",
+      "direction": "A different man, terrified, voice breaking, whispering fast through clenched teeth",
+      "note": "Не Лоэн. Голос заключённого нигде не записан, нужен свой.",
+      "play": "Другой человек. В ужасе, голос ломается, говорит быстро сквозь зубы. Тире — обрыв на середине слова, не пауза."
+    },
+    {
+      "event": "lohen_tongue",
+      "line": "Что, язык проглотил?",
+      "tags": "[mocking] [sing-song]",
+      "direction": "The cold arrogant voice again, mocking, almost sing-song, enjoying the silence it gets in reply",
+      "note": "",
+      "play": "Издёвка, почти напевом. Тишина в ответ его радует, а не бесит."
+    },
+    {
+      "event": "lohen_game",
+      "line": "Тогда сыграем в игру.",
+      "tags": "[delighted] [theatrical]",
+      "direction": "The same voice, suddenly light and delighted, a smile audible in it, as if proposing a party trick",
+      "note": "Перелом настроения: до этого скука, здесь азарт.",
+      "play": "Резко светлеет. Азарт, как будто предлагает фокус на вечеринке. Улыбка обязательна."
+    },
+    {
+      "event": "lohen_chambers",
+      "line": "Шесть гнёзд. Одна пуля.",
+      "tags": "[savoring]",
+      "direction": "The voice slows down, savoring each word, laying out the rules of the game like a card trick",
+      "speed": 1.05,
+      "note": "Под этой репликой идут четыре холостых щелчка барабана. Тег [slowly] вместе с темпом 0.9 дал 3.84 с при лимите 2.90 — шесть знаков в секунду, вдвое медленнее нормы. Растягивать эту реплику некуда: на 19.20 начинается отсчёт.",
+      "play": "Смакует. Точку после «гнёзд» держи. Раскладывает правила, как карты на стол."
+    },
+    {
+      "event": "lohen_count",
+      "line": "Три... два...",
+      "tags": "[quietly] [savoring]",
+      "direction": "A quiet, unhurried countdown, almost tender, with a long pause between the numbers",
+      "note": "Многоточия — паузы. Считать он не спешит, в этом и есть угроза.",
+      "play": "Тихо, не спеша, почти нежно. Между числами долгая пауза. Угроза именно в том, что он не торопится."
+    },
+    {
+      "event": "guard_shout",
+      "line": "Вот он!",
+      "tags": "[shouting]",
+      "direction": "A guard shouting an alarm across a room, urgent and harsh, voice cracking with strain",
+      "speed": 1.1,
+      "note": "Не Лоэн. Бюджет 1.60 с — самый тесный в номере: на 24.30 идёт смех Лоэна. Английское «There! Take him!» сокращено до двух слов за два замера: полная фраза дала 2.16 с, урезанная «Вот он! Взять!» — 1.76 с, и обе не влезли. «Взять» несут звуки рядом: boots_rush и лязг оружия. Крик из двух слов правдоподобнее четырёх.",
+      "play": "Крик через комнату. Тревога, голос срывается. Коротко и резко — на это всего 1.6 секунды."
+    },
+    {
+      "event": "lohen_finally",
+      "line": "Наконец-то.",
+      "tags": "[low and hungry] [satisfied]",
+      "direction": "The cold voice, low and hungry, relieved that the waiting is over",
+      "note": "Первая реплика боя. Сразу за ней он берёт копьё.",
+      "play": "Низко и голодно. Ожидание кончилось, и он этому рад."
+    },
+    {
+      "event": "lohen_feel",
+      "line": "Даже не почувствовал.",
+      "tags": "[scoffs] [dismissive]",
+      "direction": "The same voice, dismissive and unimpressed, shrugging off a blow he has just taken",
+      "note": "Канонная реплика на полученный урон. Возможно, оставить английской.",
+      "play": "Пренебрежительно, чуть в нос. Его только что ударили, и это ничего не изменило."
+    },
+    {
+      "event": "lohen_thatall",
+      "line": "Это всё, что у вас есть?",
+      "tags": "[sneering] [theatrical]",
+      "direction": "Contemptuous challenge thrown at several opponents at once, loud but unhurried",
+      "note": "",
+      "play": "Презрение в лицо нескольким сразу. Громко, но без спешки — спешка выдала бы, что задело."
+    },
+    {
+      "event": "lohen_really",
+      "line": "Серьёзно?",
+      "tags": "",
+      "direction": "Flat disbelief, half a laugh in it, after a hit that did nothing",
+      "speed": 1.1,
+      "limit": 1.2,
+      "note": "До удара по Лоэну на 42.80 всего 1.20 с, а не 2.00 до следующей реплики — жёсткий предел в поле limit. Единственная реплика номера без разметки, и это замер, а не небрежность: «...Серьёзно?» с тегом [amused disbelief] дала 1.92 с, «Серьёзно?» с ним же 2.00 с, с тегом [dry] 1.68 с, а без тега вовсе — 0.64 с. На реплике из девяти знаков разметка v3 добавляет около секунды звука: вслух её не читает, но что-то производит, вдох или смешок. Многоточие тоже убрано — 0.08 с разницы, но здесь дорого всё.",
+      "play": "Плоское недоверие, полусмешок внутри. Многоточие — вдох перед словом."
+    },
+    {
+      "event": "lohen_final",
+      "line": "Они просили шедевр. Что ж... считайте, он готов.",
+      "tags": "[grandiose] [savoring]",
+      "direction": "The cold voice, calm and fully satisfied, closing the matter; the last words of the piece, unhurried",
+      "note": "Финал номера, запас 5.56 с. Единственное место, где можно играть широко: «Что ж...» вставлено именно на этот запас.",
+      "play": "Спокойно и полностью удовлетворённо. Последние слова номера, торопиться некуда. «Что ж...» — держи паузу, там пять секунд запаса."
+    }
+  ]
+}
