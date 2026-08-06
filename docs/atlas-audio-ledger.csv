@@ -1,0 +1,4 @@
+timestamp,event,chars,cost_estimate_usd,total_tokens,status,prediction_id,reference,file,notes
+2026-08-05T21:32:37Z,lohen_security,145,0.0022,0,ok,5fa98bb7f155436ea7594b99e835fd37,,lohen_security_a1.wav,"3.280s peak -1.3dB; проба 1: без образца, проверка ремарки"
+2026-08-05T21:33:25Z,lohen_security,145,0.0022,0,ok,7fcd26efe49246b0aa64b7a08a3cd56b,trailer_a.wav,lohen_security_a2.wav,2.900s peak -3.8dB; проба 2: образец 2-7 с трейлера
+2026-08-05T21:34:04Z,lohen_security,145,0.0022,0,ok,306b6e0f30104b1db896114c6701b1e8,trailer_b.wav,lohen_security_a3.wav,3.520s peak -4.5dB; проба 3: образец 9.8-12.2 с трейлера

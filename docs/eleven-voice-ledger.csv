@@ -1,0 +1,150 @@
+timestamp,event,voice,model,chars,credits_estimate,stability,similarity,speed,seconds,budget,fits,peak_db,file,notes
+2026-08-05T22:22:26Z,lohen_impressed,myvoicefordublo,eleven_v3,49,26,0.5,0.75,0.9,2.240,2.70,да,-0.8,lohen_impressed__myvoicefordublo_a1.mp3,"театральная подача, максимум ЧСВ"
+2026-08-05T22:22:29Z,lohen_security,myvoicefordublo,eleven_v3,45,24,0.5,0.75,0.9,2.400,3.60,да,-1.7,lohen_security__myvoicefordublo_a1.mp3,"театральная подача, максимум ЧСВ"
+2026-08-05T22:22:34Z,prisoner_refuse,myvoicefordublo,eleven_v3,51,28,0.5,0.75,0.9,2.560,2.60,да,-1.7,prisoner_refuse__myvoicefordublo_a1.mp3,"театральная подача, максимум ЧСВ"
+2026-08-05T22:22:37Z,lohen_tongue,myvoicefordublo,eleven_v3,42,23,0.5,0.75,0.9,1.760,2.30,да,-1.4,lohen_tongue__myvoicefordublo_a1.mp3,"театральная подача, максимум ЧСВ"
+2026-08-05T22:22:41Z,lohen_game,myvoicefordublo,eleven_v3,46,25,0.5,0.75,0.9,1.520,2.20,да,-0.6,lohen_game__myvoicefordublo_a1.mp3,"театральная подача, максимум ЧСВ"
+2026-08-05T22:22:45Z,lohen_chambers,myvoicefordublo,eleven_v3,53,29,0.5,0.75,0.9,3.840,2.90,нет,-0.7,lohen_chambers__myvoicefordublo_a1.mp3,"театральная подача, максимум ЧСВ"
+2026-08-05T22:22:48Z,lohen_count,myvoicefordublo,eleven_v3,34,18,0.5,0.75,0.9,2.080,3.50,да,-2.6,lohen_count__myvoicefordublo_a1.mp3,"театральная подача, максимум ЧСВ"
+2026-08-05T22:22:51Z,guard_shout,myvoicefordublo,eleven_v3,38,21,0.5,0.75,1.0,2.160,1.60,нет,-0.9,guard_shout__myvoicefordublo_a1.mp3,"театральная подача, максимум ЧСВ"
+2026-08-05T22:22:54Z,lohen_finally,myvoicefordublo,eleven_v3,40,22,0.5,0.75,0.9,1.680,5.10,да,-1.8,lohen_finally__myvoicefordublo_a1.mp3,"театральная подача, максимум ЧСВ"
+2026-08-05T22:22:57Z,lohen_feel,myvoicefordublo,eleven_v3,43,23,0.5,0.75,0.9,1.920,5.20,да,-1.2,lohen_feel__myvoicefordublo_a1.mp3,"театральная подача, максимум ЧСВ"
+2026-08-05T22:23:00Z,lohen_thatall,myvoicefordublo,eleven_v3,48,26,0.5,0.75,0.9,1.680,5.20,да,-0.7,lohen_thatall__myvoicefordublo_a1.mp3,"театральная подача, максимум ЧСВ"
+2026-08-05T22:23:04Z,lohen_really,myvoicefordublo,eleven_v3,31,17,0.5,0.75,1.0,1.680,2.00,да,-2.4,lohen_really__myvoicefordublo_a1.mp3,"театральная подача, максимум ЧСВ"
+2026-08-05T22:23:08Z,lohen_final,myvoicefordublo,eleven_v3,71,38,0.5,0.75,0.9,4.880,9.40,да,-1.1,lohen_final__myvoicefordublo_a1.mp3,"театральная подача, максимум ЧСВ"
+2026-08-05T22:24:11Z,lohen_chambers,myvoicefordublo,eleven_v3,34,18,0.5,0.75,1.05,2.480,2.90,да,-0.6,lohen_chambers__myvoicefordublo_a2.mp3,правка: не влезали
+2026-08-05T22:24:14Z,guard_shout,myvoicefordublo,eleven_v3,25,14,0.5,0.75,1.15,1.760,1.60,нет,-1.4,guard_shout__myvoicefordublo_a2.mp3,правка: не влезали
+2026-08-05T22:25:13Z,guard_shout,myvoicefordublo,eleven_v3,18,10,0.5,0.75,1.1,1.440,1.60,да,-1.4,guard_shout__myvoicefordublo_a3.mp3,правка 2: текст урезан до двух слов
+2026-08-06T06:59:55Z,lohen_impressed,lo_v41,eleven_v3,49,26,0.5,0.75,0.9,2.080,2.70,да,-1.2,lohen_impressed__lo_v41_a1.mp3,тот же прогон голосом lo_v41
+2026-08-06T06:59:59Z,lohen_security,lo_v41,eleven_v3,45,24,0.5,0.75,0.9,2.880,3.60,да,-2.7,lohen_security__lo_v41_a1.mp3,тот же прогон голосом lo_v41
+2026-08-06T07:00:03Z,prisoner_refuse,lo_v41,eleven_v3,51,28,0.5,0.75,0.9,2.640,2.60,нет,-3.9,prisoner_refuse__lo_v41_a1.mp3,тот же прогон голосом lo_v41
+2026-08-06T07:00:06Z,lohen_tongue,lo_v41,eleven_v3,42,23,0.5,0.75,0.9,1.840,2.30,да,-1.5,lohen_tongue__lo_v41_a1.mp3,тот же прогон голосом lo_v41
+2026-08-06T07:00:11Z,lohen_game,lo_v41,eleven_v3,46,25,0.5,0.75,0.9,1.760,2.20,да,-1.0,lohen_game__lo_v41_a1.mp3,тот же прогон голосом lo_v41
+2026-08-06T07:00:14Z,lohen_chambers,lo_v41,eleven_v3,34,18,0.5,0.75,1.05,2.800,2.90,да,-0.6,lohen_chambers__lo_v41_a1.mp3,тот же прогон голосом lo_v41
+2026-08-06T07:00:18Z,lohen_count,lo_v41,eleven_v3,34,18,0.5,0.75,0.9,2.000,3.50,да,-5.1,lohen_count__lo_v41_a1.mp3,тот же прогон голосом lo_v41
+2026-08-06T07:00:21Z,guard_shout,lo_v41,eleven_v3,18,10,0.5,0.75,1.1,1.360,1.60,да,-1.3,guard_shout__lo_v41_a1.mp3,тот же прогон голосом lo_v41
+2026-08-06T07:00:24Z,lohen_finally,lo_v41,eleven_v3,40,22,0.5,0.75,0.9,1.440,5.10,да,-2.9,lohen_finally__lo_v41_a1.mp3,тот же прогон голосом lo_v41
+2026-08-06T07:00:28Z,lohen_feel,lo_v41,eleven_v3,43,23,0.5,0.75,0.9,2.080,5.20,да,-2.1,lohen_feel__lo_v41_a1.mp3,тот же прогон голосом lo_v41
+2026-08-06T07:00:33Z,lohen_thatall,lo_v41,eleven_v3,48,26,0.5,0.75,0.9,1.840,5.20,да,-1.2,lohen_thatall__lo_v41_a1.mp3,тот же прогон голосом lo_v41
+2026-08-06T07:00:36Z,lohen_really,lo_v41,eleven_v3,31,17,0.5,0.75,1.0,1.360,2.00,да,-2.1,lohen_really__lo_v41_a1.mp3,тот же прогон голосом lo_v41
+2026-08-06T07:00:42Z,lohen_final,lo_v41,eleven_v3,71,38,0.5,0.75,0.9,5.440,9.40,да,-1.2,lohen_final__lo_v41_a1.mp3,тот же прогон голосом lo_v41
+2026-08-06T07:01:04Z,prisoner_refuse,lo_v41,eleven_v3,51,28,0.5,0.75,0.95,2.560,2.60,да,-3.7,prisoner_refuse__lo_v41_a2.mp3,перебрал 0.04 с на темпе 0.9
+2026-08-06T13:01:24Z,lohen_impressed,mysts<-lo_v2,eleven_multilingual_sts_v2,0,81,,,,4.876,2.70,нет,-2.4,lohen_impressed__mysts_a1.mp3,"из lohen_impressed_all3_take4.wav; выбор из чата: impressed последний, security 4 из 5, prisoner последний"
+2026-08-06T13:01:29Z,lohen_security,mysts<-lo_v2,eleven_multilingual_sts_v2,0,55,,,,3.344,3.60,да,-1.5,lohen_security__mysts_a1.mp3,"из lohen_security_take4.wav; выбор из чата: impressed последний, security 4 из 5, prisoner последний"
+2026-08-06T13:01:34Z,prisoner_refuse,mysts<-lo_v2,eleven_multilingual_sts_v2,0,56,,,,3.390,2.60,нет,-0.9,prisoner_refuse__mysts_a1.mp3,"из prisoner_refuse_all_take4.wav; выбор из чата: impressed последний, security 4 из 5, prisoner последний"
+2026-08-06T13:01:56Z,lohen_tongue,lo_v2,eleven_v3,42,23,0.5,0.75,0.9,1.760,2.30,да,-2.2,lohen_tongue__lo_v2_a1.mp3,"остальные 10 синтезом, тем же тембром что STS"
+2026-08-06T13:01:59Z,lohen_game,lo_v2,eleven_v3,46,25,0.5,0.75,0.9,1.360,2.20,да,-0.6,lohen_game__lo_v2_a1.mp3,"остальные 10 синтезом, тем же тембром что STS"
+2026-08-06T13:02:02Z,lohen_chambers,lo_v2,eleven_v3,34,18,0.5,0.75,1.05,2.800,2.90,да,-0.5,lohen_chambers__lo_v2_a1.mp3,"остальные 10 синтезом, тем же тембром что STS"
+2026-08-06T13:02:05Z,lohen_count,lo_v2,eleven_v3,34,18,0.5,0.75,0.9,3.360,3.50,да,-2.4,lohen_count__lo_v2_a1.mp3,"остальные 10 синтезом, тем же тембром что STS"
+2026-08-06T13:02:08Z,guard_shout,lo_v2,eleven_v3,18,10,0.5,0.75,1.1,0.960,1.60,да,-1.4,guard_shout__lo_v2_a1.mp3,"остальные 10 синтезом, тем же тембром что STS"
+2026-08-06T13:02:11Z,lohen_finally,lo_v2,eleven_v3,40,22,0.5,0.75,0.9,1.760,5.10,да,-0.8,lohen_finally__lo_v2_a1.mp3,"остальные 10 синтезом, тем же тембром что STS"
+2026-08-06T13:02:15Z,lohen_feel,lo_v2,eleven_v3,43,23,0.5,0.75,0.9,2.160,5.20,да,-0.9,lohen_feel__lo_v2_a1.mp3,"остальные 10 синтезом, тем же тембром что STS"
+2026-08-06T13:02:18Z,lohen_thatall,lo_v2,eleven_v3,48,26,0.5,0.75,0.9,1.600,5.20,да,-1.0,lohen_thatall__lo_v2_a1.mp3,"остальные 10 синтезом, тем же тембром что STS"
+2026-08-06T13:02:21Z,lohen_really,lo_v2,eleven_v3,31,17,0.5,0.75,1.0,1.920,2.00,да,-2.8,lohen_really__lo_v2_a1.mp3,"остальные 10 синтезом, тем же тембром что STS"
+2026-08-06T13:02:26Z,lohen_final,lo_v2,eleven_v3,71,38,0.5,0.75,0.9,4.320,9.40,да,-1.7,lohen_final__lo_v2_a1.mp3,"остальные 10 синтезом, тем же тембром что STS"
+2026-08-06T13:04:21Z,lohen_impressed,lo_v2,eleven_v3,49,26,0.5,0.75,0.9,2.560,2.70,да,-0.9,lohen_impressed__lo_v2_a1.mp3,контроль: те же три реплики синтезом
+2026-08-06T13:04:24Z,lohen_security,lo_v2,eleven_v3,45,24,0.5,0.75,0.9,2.320,3.60,да,-0.8,lohen_security__lo_v2_a1.mp3,контроль: те же три реплики синтезом
+2026-08-06T13:04:28Z,prisoner_refuse,lo_v2,eleven_v3,51,28,0.5,0.75,0.9,2.400,2.60,да,-2.0,prisoner_refuse__lo_v2_a1.mp3,контроль: те же три реплики синтезом
+2026-08-06T13:41:37Z,lohen_really,lo_v2,eleven_v3,28,15,0.5,0.75,1.1,2.000,1.20,нет,-0.8,lohen_really__lo_v2_a2.mp3,правка: не влезала в жёсткий предел 1.20 до удара
+2026-08-06T13:43:58Z,lohen_really,lo_v2,eleven_v3,9,5,0.5,0.75,1.1,0.640,1.20,да,-2.7,lohen_really__lo_v2_a3.mp3,"правка 2: тег снят, он и раздувал длину"
+2026-08-06T14:10:38Z,lohen_impressed,mysts<-lo_v2,eleven_multilingual_sts_v2,0,43,,,,2.601,2.70,да,-0.7,lohen_impressed__mysts_a2.mp3,"из v2\lohen_impressed_v2_take5.wav; v2 take5, выбор пользователя, вход с перегрузом 90 отсчётов"
+2026-08-06T14:10:42Z,lohen_impressed,mystsalt<-lo_v2,eleven_multilingual_sts_v2,0,42,,,,2.508,2.70,да,-0.6,lohen_impressed__mystsalt_a1.mp3,"из v2\lohen_impressed_v2_take4.wav; v2 take4, чистый вход, для сравнения на слух"
+2026-08-06T17:04:09Z,lohen_impressed,mysts<-lo_v2,eleven_multilingual_sts_v2,0,42,,,,2.508,2.70,да,-0.8,lohen_impressed__mysts_a3.mp3,из v2\lohen_impressed_v2_take4.wav; полный прогон: восемь реплик живой игрой
+2026-08-06T17:04:15Z,lohen_security,mysts<-lo_v2,eleven_multilingual_sts_v2,0,55,,,,3.344,3.60,да,-1.6,lohen_security__mysts_a2.mp3,из lohen_security_take4.wav; полный прогон: восемь реплик живой игрой
+2026-08-06T17:04:20Z,prisoner_refuse,mysts<-lo_v2,eleven_multilingual_sts_v2,0,37,,,,2.229,2.60,да,-0.9,prisoner_refuse__mysts_a2.mp3,из v2\prisoner_refuse_v2_best25_take11.wav; полный прогон: восемь реплик живой игрой
+2026-08-06T17:04:26Z,lohen_tongue,mysts<-lo_v2,eleven_multilingual_sts_v2,0,36,,,,2.183,2.30,да,-1.4,lohen_tongue__mysts_a1.mp3,из lohen_tongue_take9.wav; полный прогон: восемь реплик живой игрой
+2026-08-06T17:04:31Z,lohen_game,mysts<-lo_v2,eleven_multilingual_sts_v2,0,30,,,,1.811,2.20,да,-0.8,lohen_game__mysts_a1.mp3,из lohen_game_take13.wav; полный прогон: восемь реплик живой игрой
+2026-08-06T17:04:36Z,lohen_chambers,mysts<-lo_v2,eleven_multilingual_sts_v2,0,36,,,,2.183,2.90,да,-1.0,lohen_chambers__mysts_a1.mp3,из lohen_chambers_take4.wav; полный прогон: восемь реплик живой игрой
+2026-08-06T17:04:41Z,lohen_count,mysts<-lo_v2,eleven_multilingual_sts_v2,0,31,,,,1.858,3.50,да,-1.1,lohen_count__mysts_a1.mp3,из lohen_count_take8.wav; полный прогон: восемь реплик живой игрой
+2026-08-06T17:04:47Z,guard_shout,mysts<-lo_v2,eleven_multilingual_sts_v2,0,16,,,,0.975,1.60,да,-1.0,guard_shout__mysts_a1.mp3,из guard_shout_take11.wav; полный прогон: восемь реплик живой игрой
+2026-08-06T17:22:06Z,lohen_finally,mysts<-lo_v2,eleven_multilingual_sts_v2,0,23,,,,1.393,5.10,да,-1.6,lohen_finally__mysts_a1.mp3,"из lohen_finally_take3.wav; lohen_finally take3, первое место, секунда 9"
+2026-08-06T17:26:50Z,lohen_impressed,mysts41<-lo_v41,eleven_multilingual_sts_v2,0,42,,,,2.508,2.70,да,-0.9,lohen_impressed__mysts41_a1.mp3,из v2\lohen_impressed_v2_take4.wav; твоя игра в тембре lo_v41
+2026-08-06T17:26:54Z,lohen_security,mysts41<-lo_v41,eleven_multilingual_sts_v2,0,55,,,,3.344,3.60,да,-1.6,lohen_security__mysts41_a1.mp3,из lohen_security_take4.wav; твоя игра в тембре lo_v41
+2026-08-06T17:26:59Z,prisoner_refuse,mysts41<-lo_v41,eleven_multilingual_sts_v2,0,37,,,,2.229,2.60,да,-1.1,prisoner_refuse__mysts41_a1.mp3,из v2\prisoner_refuse_v2_best25_take11.wav; твоя игра в тембре lo_v41
+2026-08-06T17:27:04Z,lohen_tongue,mysts41<-lo_v41,eleven_multilingual_sts_v2,0,36,,,,2.183,2.30,да,-1.6,lohen_tongue__mysts41_a1.mp3,из lohen_tongue_take9.wav; твоя игра в тембре lo_v41
+2026-08-06T17:27:08Z,lohen_game,mysts41<-lo_v41,eleven_multilingual_sts_v2,0,30,,,,1.811,2.20,да,-0.6,lohen_game__mysts41_a1.mp3,из lohen_game_take13.wav; твоя игра в тембре lo_v41
+2026-08-06T17:27:13Z,lohen_chambers,mysts41<-lo_v41,eleven_multilingual_sts_v2,0,36,,,,2.183,2.90,да,-1.6,lohen_chambers__mysts41_a1.mp3,из lohen_chambers_take4.wav; твоя игра в тембре lo_v41
+2026-08-06T17:27:17Z,lohen_count,mysts41<-lo_v41,eleven_multilingual_sts_v2,0,31,,,,1.858,3.50,да,-1.7,lohen_count__mysts41_a1.mp3,из lohen_count_take8.wav; твоя игра в тембре lo_v41
+2026-08-06T17:27:21Z,guard_shout,mysts41<-lo_v41,eleven_multilingual_sts_v2,0,16,,,,0.975,1.60,да,-1.7,guard_shout__mysts41_a1.mp3,из guard_shout_take11.wav; твоя игра в тембре lo_v41
+2026-08-06T17:27:26Z,lohen_finally,mysts41<-lo_v41,eleven_multilingual_sts_v2,0,23,,,,1.393,5.10,да,-2.1,lohen_finally__mysts41_a1.mp3,из lohen_finally_take3.wav; твоя игра в тембре lo_v41
+2026-08-06T17:27:44Z,lohen_impressed,mysts43<-lo_v43,eleven_multilingual_sts_v2,0,42,,,,2.508,2.70,да,-0.6,lohen_impressed__mysts43_a1.mp3,из v2\lohen_impressed_v2_take4.wav; твоя игра в тембре lo_v43
+2026-08-06T17:27:49Z,lohen_security,mysts43<-lo_v43,eleven_multilingual_sts_v2,0,55,,,,3.344,3.60,да,-1.0,lohen_security__mysts43_a1.mp3,из lohen_security_take4.wav; твоя игра в тембре lo_v43
+2026-08-06T17:27:53Z,prisoner_refuse,mysts43<-lo_v43,eleven_multilingual_sts_v2,0,37,,,,2.229,2.60,да,-1.2,prisoner_refuse__mysts43_a1.mp3,из v2\prisoner_refuse_v2_best25_take11.wav; твоя игра в тембре lo_v43
+2026-08-06T17:27:58Z,lohen_tongue,mysts43<-lo_v43,eleven_multilingual_sts_v2,0,36,,,,2.183,2.30,да,-1.1,lohen_tongue__mysts43_a1.mp3,из lohen_tongue_take9.wav; твоя игра в тембре lo_v43
+2026-08-06T17:28:02Z,lohen_game,mysts43<-lo_v43,eleven_multilingual_sts_v2,0,30,,,,1.811,2.20,да,-0.7,lohen_game__mysts43_a1.mp3,из lohen_game_take13.wav; твоя игра в тембре lo_v43
+2026-08-06T17:28:07Z,lohen_chambers,mysts43<-lo_v43,eleven_multilingual_sts_v2,0,36,,,,2.183,2.90,да,-0.9,lohen_chambers__mysts43_a1.mp3,из lohen_chambers_take4.wav; твоя игра в тембре lo_v43
+2026-08-06T17:28:12Z,lohen_count,mysts43<-lo_v43,eleven_multilingual_sts_v2,0,31,,,,1.858,3.50,да,-0.9,lohen_count__mysts43_a1.mp3,из lohen_count_take8.wav; твоя игра в тембре lo_v43
+2026-08-06T17:28:16Z,guard_shout,mysts43<-lo_v43,eleven_multilingual_sts_v2,0,16,,,,0.975,1.60,да,-1.2,guard_shout__mysts43_a1.mp3,из guard_shout_take11.wav; твоя игра в тембре lo_v43
+2026-08-06T17:28:20Z,lohen_finally,mysts43<-lo_v43,eleven_multilingual_sts_v2,0,23,,,,1.393,5.10,да,-0.5,lohen_finally__mysts43_a1.mp3,из lohen_finally_take3.wav; твоя игра в тембре lo_v43
+2026-08-06T17:28:24Z,lohen_feel,lo_v43,eleven_v3,43,23,0.5,0.75,0.9,2.000,5.20,да,-0.7,lohen_feel__lo_v43_a1.mp3,остальные синтезом lo_v43
+2026-08-06T17:28:27Z,lohen_thatall,lo_v43,eleven_v3,48,26,0.5,0.75,0.9,1.520,5.20,да,-0.7,lohen_thatall__lo_v43_a1.mp3,остальные синтезом lo_v43
+2026-08-06T17:28:30Z,lohen_really,lo_v43,eleven_v3,9,5,0.5,0.75,1.1,0.960,1.20,да,-0.6,lohen_really__lo_v43_a1.mp3,остальные синтезом lo_v43
+2026-08-06T17:28:34Z,lohen_final,lo_v43,eleven_v3,71,38,0.5,0.75,0.9,3.680,9.40,да,-0.9,lohen_final__lo_v43_a1.mp3,остальные синтезом lo_v43
+2026-08-06T17:38:29Z,lohen_security,zYcjlYFO,eleven_v3,45,24,0.5,0.75,0.9,3.600,3.60,да,-1.8,lohen_security__zYcjlYFO_a1.mp3,проба доступности Edward из публичной библиотеки
+2026-08-06T17:39:23Z,lohen_impressed,mystsed<-edward,eleven_multilingual_sts_v2,0,42,,,,2.508,2.70,да,-2.6,lohen_impressed__mystsed_a1.mp3,из v2\lohen_impressed_v2_take4.wav; твоя игра в тембре Edward из библиотеки
+2026-08-06T17:39:27Z,lohen_security,mystsed<-edward,eleven_multilingual_sts_v2,0,55,,,,3.344,3.60,да,-5.0,lohen_security__mystsed_a1.mp3,из lohen_security_take4.wav; твоя игра в тембре Edward из библиотеки
+2026-08-06T17:39:31Z,prisoner_refuse,mystsed<-edward,eleven_multilingual_sts_v2,0,37,,,,2.229,2.60,да,-1.6,prisoner_refuse__mystsed_a1.mp3,из v2\prisoner_refuse_v2_best25_take11.wav; твоя игра в тембре Edward из библиотеки
+2026-08-06T17:39:36Z,lohen_tongue,mystsed<-edward,eleven_multilingual_sts_v2,0,36,,,,2.183,2.30,да,-3.7,lohen_tongue__mystsed_a1.mp3,из lohen_tongue_take9.wav; твоя игра в тембре Edward из библиотеки
+2026-08-06T17:39:40Z,lohen_game,mystsed<-edward,eleven_multilingual_sts_v2,0,30,,,,1.811,2.20,да,-2.5,lohen_game__mystsed_a1.mp3,из lohen_game_take13.wav; твоя игра в тембре Edward из библиотеки
+2026-08-06T17:39:45Z,lohen_chambers,mystsed<-edward,eleven_multilingual_sts_v2,0,36,,,,2.183,2.90,да,-7.4,lohen_chambers__mystsed_a1.mp3,из lohen_chambers_take4.wav; твоя игра в тембре Edward из библиотеки
+2026-08-06T17:39:50Z,lohen_count,mystsed<-edward,eleven_multilingual_sts_v2,0,31,,,,1.858,3.50,да,-6.0,lohen_count__mystsed_a1.mp3,из lohen_count_take8.wav; твоя игра в тембре Edward из библиотеки
+2026-08-06T17:39:55Z,guard_shout,mystsed<-edward,eleven_multilingual_sts_v2,0,16,,,,0.975,1.60,да,-3.2,guard_shout__mystsed_a1.mp3,из guard_shout_take11.wav; твоя игра в тембре Edward из библиотеки
+2026-08-06T17:39:59Z,lohen_finally,mystsed<-edward,eleven_multilingual_sts_v2,0,23,,,,1.393,5.10,да,-4.7,lohen_finally__mystsed_a1.mp3,из lohen_finally_take3.wav; твоя игра в тембре Edward из библиотеки
+2026-08-06T17:40:03Z,lohen_feel,edward,eleven_v3,43,23,0.5,0.75,0.9,2.880,5.20,да,-0.7,lohen_feel__edward_a1.mp3,остальные синтезом Edward
+2026-08-06T17:40:06Z,lohen_thatall,edward,eleven_v3,48,26,0.5,0.75,0.9,2.080,5.20,да,-1.2,lohen_thatall__edward_a1.mp3,остальные синтезом Edward
+2026-08-06T17:40:09Z,lohen_really,edward,eleven_v3,9,5,0.5,0.75,1.1,1.040,1.20,да,-0.9,lohen_really__edward_a1.mp3,остальные синтезом Edward
+2026-08-06T17:40:13Z,lohen_final,edward,eleven_v3,71,38,0.5,0.75,0.9,5.680,9.40,да,-0.8,lohen_final__edward_a1.mp3,остальные синтезом Edward
+2026-08-06T17:40:47Z,lohen_impressed,edward,eleven_v3,49,26,0.5,0.75,0.9,2.960,2.70,нет,-0.6,lohen_impressed__edward_a1.mp3,полный синтез Edward
+2026-08-06T17:40:50Z,prisoner_refuse,edward,eleven_v3,51,28,0.5,0.75,0.9,3.360,2.60,нет,-1.7,prisoner_refuse__edward_a1.mp3,полный синтез Edward
+2026-08-06T17:40:54Z,lohen_tongue,edward,eleven_v3,42,23,0.5,0.75,0.9,2.880,2.30,нет,-0.8,lohen_tongue__edward_a1.mp3,полный синтез Edward
+2026-08-06T17:40:57Z,lohen_game,edward,eleven_v3,46,25,0.5,0.75,0.9,2.240,2.20,нет,-1.0,lohen_game__edward_a1.mp3,полный синтез Edward
+2026-08-06T17:41:00Z,lohen_chambers,edward,eleven_v3,34,18,0.5,0.75,1.05,3.200,2.90,нет,-0.7,lohen_chambers__edward_a1.mp3,полный синтез Edward
+2026-08-06T17:41:03Z,lohen_count,edward,eleven_v3,34,18,0.5,0.75,0.9,2.400,3.50,да,-1.5,lohen_count__edward_a1.mp3,полный синтез Edward
+2026-08-06T17:41:06Z,guard_shout,edward,eleven_v3,18,10,0.5,0.75,1.1,1.440,1.60,да,-1.4,guard_shout__edward_a1.mp3,полный синтез Edward
+2026-08-06T17:41:09Z,lohen_finally,edward,eleven_v3,40,22,0.5,0.75,0.9,1.680,5.10,да,-0.8,lohen_finally__edward_a1.mp3,полный синтез Edward
+2026-08-06T18:14:29Z,lohen_feel,mysts<-lo_v2,eleven_multilingual_sts_v2,0,26,,,,1.579,5.20,да,-1.5,lohen_feel__mysts_a1.mp3,"из lohen_feel_take4.wav; lohen_feel take4, первое место, секунда 14"
+2026-08-06T18:14:33Z,lohen_feel,mysts41<-lo_v41,eleven_multilingual_sts_v2,0,26,,,,1.579,5.20,да,-1.5,lohen_feel__mysts41_a1.mp3,"из lohen_feel_take4.wav; lohen_feel take4, первое место, секунда 14"
+2026-08-06T18:14:38Z,lohen_feel,mysts43<-lo_v43,eleven_multilingual_sts_v2,0,26,,,,1.579,5.20,да,-1.0,lohen_feel__mysts43_a1.mp3,"из lohen_feel_take4.wav; lohen_feel take4, первое место, секунда 14"
+2026-08-06T18:14:43Z,lohen_feel,mystsed<-edward,eleven_multilingual_sts_v2,0,26,,,,1.579,5.20,да,-2.4,lohen_feel__mystsed_a1.mp3,"из lohen_feel_take4.wav; lohen_feel take4, первое место, секунда 14"
+2026-08-06T18:38:29Z,lohen_thatall,mysts<-lo_v2,eleven_multilingual_sts_v2,0,46,,,,2.786,5.20,да,-2.3,lohen_thatall__mysts_a1.mp3,из lohen_thatall_take9.wav; финальные три реплики живой игрой
+2026-08-06T18:38:33Z,lohen_really,mysts<-lo_v2,eleven_multilingual_sts_v2,0,18,,,,1.068,1.20,да,-3.1,lohen_really__mysts_a1.mp3,из lohen_really_take5.wav; финальные три реплики живой игрой
+2026-08-06T18:38:38Z,lohen_final,mysts<-lo_v2,eleven_multilingual_sts_v2,0,80,,,,4.830,9.40,да,-1.1,lohen_final__mysts_a1.mp3,из lohen_final_take2.wav; финальные три реплики живой игрой
+2026-08-06T18:38:42Z,lohen_thatall,mysts41<-lo_v41,eleven_multilingual_sts_v2,0,46,,,,2.786,5.20,да,-2.4,lohen_thatall__mysts41_a1.mp3,из lohen_thatall_take9.wav; финальные три реплики живой игрой
+2026-08-06T18:38:47Z,lohen_really,mysts41<-lo_v41,eleven_multilingual_sts_v2,0,18,,,,1.068,1.20,да,-2.3,lohen_really__mysts41_a1.mp3,из lohen_really_take5.wav; финальные три реплики живой игрой
+2026-08-06T18:38:51Z,lohen_final,mysts41<-lo_v41,eleven_multilingual_sts_v2,0,80,,,,4.830,9.40,да,-0.8,lohen_final__mysts41_a1.mp3,из lohen_final_take2.wav; финальные три реплики живой игрой
+2026-08-06T18:38:56Z,lohen_thatall,mysts43<-lo_v43,eleven_multilingual_sts_v2,0,46,,,,2.786,5.20,да,-1.3,lohen_thatall__mysts43_a1.mp3,из lohen_thatall_take9.wav; финальные три реплики живой игрой
+2026-08-06T18:39:01Z,lohen_really,mysts43<-lo_v43,eleven_multilingual_sts_v2,0,18,,,,1.068,1.20,да,-1.4,lohen_really__mysts43_a1.mp3,из lohen_really_take5.wav; финальные три реплики живой игрой
+2026-08-06T18:39:06Z,lohen_final,mysts43<-lo_v43,eleven_multilingual_sts_v2,0,80,,,,4.830,9.40,да,-0.8,lohen_final__mysts43_a1.mp3,из lohen_final_take2.wav; финальные три реплики живой игрой
+2026-08-06T18:39:11Z,lohen_thatall,mystsed<-edward,eleven_multilingual_sts_v2,0,46,,,,2.786,5.20,да,-7.4,lohen_thatall__mystsed_a1.mp3,из lohen_thatall_take9.wav; финальные три реплики живой игрой
+2026-08-06T18:39:15Z,lohen_really,mystsed<-edward,eleven_multilingual_sts_v2,0,18,,,,1.068,1.20,да,-4.6,lohen_really__mystsed_a1.mp3,из lohen_really_take5.wav; финальные три реплики живой игрой
+2026-08-06T18:39:20Z,lohen_final,mystsed<-edward,eleven_multilingual_sts_v2,0,80,,,,4.830,9.40,да,-2.9,lohen_final__mystsed_a1.mp3,из lohen_final_take2.wav; финальные три реплики живой игрой
+2026-08-06T20:58:30Z,lohen_chambers,swA1<-lo_v2,eleven_multilingual_sts_v2,0,36,,,,2.183,2.90,да,-2.0,lohen_chambers__swA1_a1.mp3,из lohen_chambers_take4.wav; вход -1 dBFS по пику (+5.0 dB); тихая: только выравнивание
+2026-08-06T20:58:36Z,lohen_chambers,swA2<-lo_v2,eleven_multilingual_sts_v2,0,36,0.5,0.35,,2.183,2.90,да,-1.5,lohen_chambers__swA2_a1.mp3,из lohen_chambers_take4.wav; вход -1 dBFS по пику (+5.0 dB); тихая: выравнивание + слабое сходство
+2026-08-06T20:58:42Z,lohen_chambers,swA3<-lo_v2,eleven_multilingual_sts_v2,0,36,0.5,1.0,,2.183,2.90,да,-0.7,lohen_chambers__swA3_a1.mp3,из lohen_chambers_take4.wav; вход -1 dBFS по пику (+5.0 dB); тихая: выравнивание + предельное сходство
+2026-08-06T20:58:49Z,lohen_chambers,swA4<-lo_v2,eleven_multilingual_sts_v2,0,36,,,,2.136,2.90,да,-0.9,lohen_chambers__swA4_a1.mp3,из lohen_chambers_take4.wav; вход -1 dBFS по пику (+5.0 dB); тихая: выравнивание + снятие фона
+2026-08-06T20:58:54Z,lohen_chambers,swA5<-lo_v2,eleven_multilingual_sts_v2,0,36,0.5,1.0,,2.183,2.90,да,-1.6,lohen_chambers__swA5_a1.mp3,из lohen_chambers_take4.wav; тихая: ручка без выравнивания — контроль
+2026-08-06T20:59:00Z,lohen_impressed,swB1<-lo_v2,eleven_multilingual_sts_v2,0,42,,,,2.508,2.70,да,-0.9,lohen_impressed__swB1_a1.mp3,из v2/lohen_impressed_v2_take4.wav; вход -1 dBFS по пику (+0.5 dB); громкая: только выравнивание
+2026-08-06T20:59:05Z,lohen_impressed,swB2<-lo_v2,eleven_multilingual_sts_v2,0,42,0.5,0.35,,2.508,2.70,да,-0.8,lohen_impressed__swB2_a1.mp3,из v2/lohen_impressed_v2_take4.wav; громкая: слабое сходство
+2026-08-06T20:59:10Z,lohen_impressed,swB3<-lo_v2,eleven_multilingual_sts_v2,0,42,0.5,1.0,,2.508,2.70,да,-1.0,lohen_impressed__swB3_a1.mp3,из v2/lohen_impressed_v2_take4.wav; громкая: предельное сходство
+2026-08-06T20:59:15Z,lohen_impressed,swB4<-lo_v2,eleven_multilingual_sts_v2,0,42,,,,2.508,2.70,да,-0.8,lohen_impressed__swB4_a1.mp3,из v2/lohen_impressed_v2_take4.wav; громкая: снятие фона
+2026-08-06T21:02:15Z,lohen_chambers,swA1b<-lo_v2,eleven_multilingual_sts_v2,0,36,,,,2.183,2.90,да,-1.3,lohen_chambers__swA1b_a1.mp3,из lohen_chambers_take4.wav; вход -1 dBFS по пику (+5.0 dB); повтор swA1 без изменений — замер разброса модели
+2026-08-06T21:02:21Z,lohen_chambers,swA1c<-lo_v2,eleven_multilingual_sts_v2,0,36,,,,2.183,2.90,да,-1.5,lohen_chambers__swA1c_a1.mp3,из lohen_chambers_take4.wav; вход -1 dBFS по пику (+5.0 dB); повтор swA1 без изменений — замер разброса модели
+2026-08-06T21:49:23Z,lohen_impressed,mysts2<-lo_v2,eleven_multilingual_sts_v2,0,42,,,,2.508,2.70,да,-0.8,lohen_impressed__mysts2_a1.mp3,из v2/lohen_impressed_v2_take4.wav; вход -1 dBFS по пику (+0.5 dB); рецепт из слепого сравнения: пик -1 dBFS + снятие фона
+2026-08-06T21:49:31Z,lohen_security,mysts2<-lo_v2,eleven_multilingual_sts_v2,0,55,,,,3.344,3.60,да,-1.5,lohen_security__mysts2_a1.mp3,из lohen_security_take4.wav; вход -1 dBFS по пику (+6.9 dB); рецепт из слепого сравнения: пик -1 dBFS + снятие фона
+2026-08-06T21:49:38Z,prisoner_refuse,mysts2<-lo_v2,eleven_multilingual_sts_v2,0,37,,,,2.229,2.60,да,-1.0,prisoner_refuse__mysts2_a1.mp3,из v2/prisoner_refuse_v2_best25_take11.wav; вход -1 dBFS по пику (-0.3 dB); рецепт из слепого сравнения: пик -1 dBFS + снятие фона
+2026-08-06T21:49:46Z,lohen_tongue,mysts2<-lo_v2,eleven_multilingual_sts_v2,0,36,,,,2.183,2.30,да,-2.1,lohen_tongue__mysts2_a1.mp3,из lohen_tongue_take9.wav; вход -1 dBFS по пику (+3.0 dB); рецепт из слепого сравнения: пик -1 dBFS + снятие фона
+2026-08-06T21:49:54Z,lohen_game,mysts2<-lo_v2,eleven_multilingual_sts_v2,0,30,,,,1.811,2.20,да,-1.4,lohen_game__mysts2_a1.mp3,из lohen_game_take13.wav; вход -1 dBFS по пику (+1.0 dB); рецепт из слепого сравнения: пик -1 dBFS + снятие фона
+2026-08-06T21:50:01Z,lohen_chambers,mysts2<-lo_v2,eleven_multilingual_sts_v2,0,36,,,,2.136,2.90,да,-0.8,lohen_chambers__mysts2_a1.mp3,из lohen_chambers_take4.wav; вход -1 dBFS по пику (+5.0 dB); рецепт из слепого сравнения: пик -1 dBFS + снятие фона
+2026-08-06T21:50:09Z,lohen_count,mysts2<-lo_v2,eleven_multilingual_sts_v2,0,31,,,,1.858,3.50,да,-2.5,lohen_count__mysts2_a1.mp3,из lohen_count_take8.wav; вход -1 dBFS по пику (+8.9 dB); рецепт из слепого сравнения: пик -1 dBFS + снятие фона
+2026-08-06T21:50:15Z,guard_shout,mysts2<-lo_v2,eleven_multilingual_sts_v2,0,16,,,,0.975,1.60,да,-1.1,guard_shout__mysts2_a1.mp3,из guard_shout_take11.wav; вход -1 dBFS по пику (+1.8 dB); рецепт из слепого сравнения: пик -1 dBFS + снятие фона
+2026-08-06T21:50:22Z,lohen_finally,mysts2<-lo_v2,eleven_multilingual_sts_v2,0,23,,,,1.347,5.10,да,-1.1,lohen_finally__mysts2_a1.mp3,из lohen_finally_take3.wav; вход -1 dBFS по пику (+8.7 dB); рецепт из слепого сравнения: пик -1 dBFS + снятие фона
+2026-08-06T21:50:29Z,lohen_feel,mysts2<-lo_v2,eleven_multilingual_sts_v2,0,26,,,,1.579,5.20,да,-1.6,lohen_feel__mysts2_a1.mp3,из lohen_feel_take4.wav; вход -1 dBFS по пику (+4.2 dB); рецепт из слепого сравнения: пик -1 dBFS + снятие фона
+2026-08-06T21:50:37Z,lohen_thatall,mysts2<-lo_v2,eleven_multilingual_sts_v2,0,46,,,,2.786,5.20,да,-2.4,lohen_thatall__mysts2_a1.mp3,из lohen_thatall_take9.wav; вход -1 dBFS по пику (+5.3 dB); рецепт из слепого сравнения: пик -1 dBFS + снятие фона
+2026-08-06T21:50:43Z,lohen_really,mysts2<-lo_v2,eleven_multilingual_sts_v2,0,18,,,,1.068,1.20,да,-2.0,lohen_really__mysts2_a1.mp3,из lohen_really_take5.wav; вход -1 dBFS по пику (+6.8 dB); рецепт из слепого сравнения: пик -1 dBFS + снятие фона
+2026-08-06T21:50:50Z,lohen_final,mysts2<-lo_v2,eleven_multilingual_sts_v2,0,80,,,,4.783,9.40,да,-1.0,lohen_final__mysts2_a1.mp3,из lohen_final_take2.wav; вход -1 dBFS по пику (+4.9 dB); рецепт из слепого сравнения: пик -1 dBFS + снятие фона
+2026-08-06T21:52:54Z,lohen_chambers,tb1<-lo_v2,eleven_multilingual_sts_v2,0,36,,,,2.136,2.90,да,-1.7,lohen_chambers__tb1_a1.mp3,из lohen_chambers_take4.wav; вход -1 dBFS по пику (+5.0 dB); очная ставка: выравнивание+фон
+2026-08-06T21:52:58Z,lohen_chambers,tb2<-lo_v2,eleven_multilingual_sts_v2,0,36,0.5,0.35,,2.183,2.90,да,-0.9,lohen_chambers__tb2_a1.mp3,из lohen_chambers_take4.wav; очная ставка: сходство 0.35
+2026-08-06T21:53:05Z,lohen_chambers,tb3<-lo_v2,eleven_multilingual_sts_v2,0,36,0.5,0.35,,2.136,2.90,да,-2.6,lohen_chambers__tb3_a1.mp3,из lohen_chambers_take4.wav; вход -1 dBFS по пику (+5.0 dB); очная ставка: всё вместе
+2026-08-06T21:53:12Z,lohen_impressed,tb1<-lo_v2,eleven_multilingual_sts_v2,0,42,,,,2.508,2.70,да,-0.6,lohen_impressed__tb1_a1.mp3,из v2/lohen_impressed_v2_take4.wav; вход -1 dBFS по пику (+0.5 dB); очная ставка: выравнивание+фон
+2026-08-06T21:53:16Z,lohen_impressed,tb2<-lo_v2,eleven_multilingual_sts_v2,0,42,0.5,0.35,,2.508,2.70,да,-1.0,lohen_impressed__tb2_a1.mp3,из v2/lohen_impressed_v2_take4.wav; очная ставка: сходство 0.35
+2026-08-06T21:53:23Z,lohen_impressed,tb3<-lo_v2,eleven_multilingual_sts_v2,0,42,0.5,0.35,,2.508,2.70,да,-0.7,lohen_impressed__tb3_a1.mp3,из v2/lohen_impressed_v2_take4.wav; вход -1 dBFS по пику (+0.5 dB); очная ставка: всё вместе
