@@ -90,7 +90,7 @@ class Canvas:
     тысячи, поэтому в кадре остаётся только то, что реально меняется.
     """
 
-    def __init__(self, width: int, height: int) -> None:
+    def __init__(self, width: int, height: int, safe: bool = True) -> None:
         self.w, self.h = width, height
         rng = np.random.default_rng(GRAIN_SEED)
 
@@ -101,7 +101,12 @@ class Canvas:
             np.sqrt((self.X * ar) ** 2 + self.Y**2) / float(np.hypot(ar, 1.0))
         ).astype(np.float32)
 
-        self.safe = safety_row(width)[None, :]
+        # Предохранитель выключается только явным флагом и только для копии,
+        # которую никто не ставит за спину исполнителю: ролик в интернет,
+        # раскадровка, разбор движения. Для сцены он остаётся всегда — за это
+        # отвечает значение по умолчанию, а не внимательность запускающего.
+        self.safe = (safety_row(width) if safe
+                     else np.ones(width, dtype=np.float32))[None, :]
 
         # Статичный дизер. Тёмные синие градиенты на восьми битах полосят, а на
         # большом экране полосы видно из любой точки зала. Шум один и тот же во
@@ -619,7 +624,7 @@ def write_stills(canvas: Canvas, plan: VideoPlan, fps: int, out_dir: Path,
 
 
 def render(args, plan: VideoPlan, source=None) -> Path:
-    canvas = Canvas(args.width, args.height)
+    canvas = Canvas(args.width, args.height, safe=not args.no_safe_strip)
     total = plan.total if args.limit is None else min(args.limit, plan.total)
     frames = int(round(total * args.fps))
     out = Path(args.out)
@@ -695,6 +700,11 @@ def main() -> int:
     ap.add_argument("--preset", default="slow")
     ap.add_argument("--limit", type=float, default=None, help="отрендерить только N секунд")
     ap.add_argument("--stills", action="store_true", help="только кадры-образцы")
+    ap.add_argument("--no-safe-strip", action="store_true",
+                    help="снять предохранитель: центральная полоса перестаёт "
+                         "гаситься. ТОЛЬКО для копии, которую не ставят за "
+                         "спину исполнителю — в интернет, в раскадровку. Для "
+                         "сцены полоса и есть защита костюма от засветки")
     ap.add_argument("--no-audio", action="store_true")
     ap.add_argument("--shots", default=str(ROOT / "scenario" / "shots.json"))
     ap.add_argument("--assets", default=str(ROOT / "assets" / "video"))
@@ -738,7 +748,7 @@ def main() -> int:
                                args.fps, seek=args.stills)
 
     if args.stills:
-        canvas = Canvas(args.width, args.height)
+        canvas = Canvas(args.width, args.height, safe=not args.no_safe_strip)
         out_dir = ROOT / "output" / "stills"
         count = write_stills(canvas, plan, args.fps, out_dir, source)
         print(f"Готово: {count} кадров в {out_dir}, сводка в contact.png")
