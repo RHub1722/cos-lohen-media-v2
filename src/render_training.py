@@ -1,6 +1,6 @@
 """Генератор тренажёра номера: один самодостаточный HTML рядом с видео.
 
-    python src/render_training.py            # output/training.html, мастер-видео
+    python src/render_training.py            # output/training.html, ролик номера
     python src/render_training.py --site     # site/index.html, сжатое видео
 
 Данные вшиваются в страницу при генерации: из `file://` браузер не даст
@@ -13,8 +13,14 @@
 `--site` собирает версионируемую копию в `site/`: ту же страницу и сжатое до
 960×540 видео на четыре с половиной мегабайта вместо тридцати. Это единственное
 место, где производный файл попадает в репозиторий, и попадает намеренно — иначе
-страницу нельзя открыть с гита на планшете. Мастер `output/final_v2.mp4` при
-этом не трогается: он остаётся файлом сдачи.
+страницу нельзя открыть с гита на планшете. Ролик номера в `output/` при этом не
+трогается: он остаётся файлом сдачи.
+
+ЗВУК ВИДЕО СВЕРЯЕТСЯ С ФОНОГРАММОЙ НОМЕРА. Тренажёр учит попадать в звук, и
+играть он обязан тот звук, под который выступают. Один раз это уже разошлось
+молча: номер сменил фонограмму на ручную из монтажки, а страница месяц играла
+августовскую сборку с английским голосом. Теперь сверка идёт при сборке, см.
+src/soundcheck.py.
 """
 
 from __future__ import annotations
@@ -36,12 +42,23 @@ from src.models import Timeline  # noqa: E402
 from src.movements import load_movements, resolve_times  # noqa: E402
 from src.peaks import peak_offsets  # noqa: E402
 from src.render_rehearsal import build_scenes  # noqa: E402
+from src.soundcheck import SoundcheckError, check  # noqa: E402
 from src.strikes import load_strikes, resolve_strikes  # noqa: E402
 from src.video_plan import build_plan  # noqa: E402
+from src.voice_lines import load_lines  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE = ROOT / "src/training_template.html"
 MARKER = "/*__DATA__*/"
+
+# Ролик номера, по которому его разучивают, и фонограмма, которая в нём звучит.
+#
+# Взята отправленная организаторам копия — та, что и пойдёт на экран: без
+# тёмной полосы, с титрами и знаком. Разучивать надо под то, что будет на
+# площадке, а не под удобный вариант. Если файл у организаторов заменят на
+# сценическую копию с полосой, пересобрать с `--video final_ru_lo_v41_fx.mp4`.
+NUMBER_VIDEO = "final_ru_nostrip_titles_logo_fx.mp4"
+SOUNDTRACK = ROOT / "output/master_ru_fx.wav"
 
 # Версионируемая копия для планшета: открывается прямо с гита, поэтому вес имеет
 # значение. 960×540 хватает, чтобы видеть, где вспышка и что на экране, а по
@@ -50,7 +67,7 @@ SITE_DIR = ROOT / "site"
 SITE_VIDEO = "lohen-60s.mp4"
 SITE_SCALE = "960:540"
 SITE_CRF = "24"
-MASTER_VIDEO = ROOT / "output/final_v2.mp4"
+MASTER_VIDEO = ROOT / "output" / NUMBER_VIDEO
 
 # Запасной адрес видео для опубликованной копии. Нужен ровно одному случаю:
 # страницу открыли через прокси вроде raw.githack, который отдаёт mp4 с типом
@@ -81,6 +98,41 @@ def build_shots(raw_shots: dict, plan) -> list[dict]:
             for shot in placed]
 
 
+def build_lines(tl: Timeline, raw_events: list[dict]) -> list[dict]:
+    """Реплики так, как их слышно: по-русски.
+
+    Поле `text` в timeline.json — английский текст первой версии номера, и он
+    там остался не по недосмотру: по нему собраны титры. Но звучит номер с 6
+    августа по-русски, и тренажёр, показывающий английскую строку под русскую
+    реплику, врёт исполнителю в самом простом месте.
+
+    Второго списка реплик заводить нельзя — русский текст живёт там же, где
+    живут указания на запись, в scenario/voices_ru.json, и читается тем же
+    src/voice_lines.py.
+
+    Смех и вздохи своей реплики не имеют: у них в сценарии стоит ремарка вроде
+    «(смех, голоднее)», уже по-русски. Для них подстановка из сценария законна,
+    для остальных — нет, и это проверяется, а не подразумевается.
+    """
+    ru = {line.event: line.line for line in load_lines()}
+    by_id = {e["id"]: e for e in raw_events}
+    missing = [e.id for e in tl.by_stem("voices")
+               if e.id not in ru
+               and not str(by_id[e.id].get("text", "")).startswith("(")]
+    if missing:
+        raise SystemExit(
+            f"нет русского текста для реплик: {missing}. Они есть в "
+            "scenario/timeline.json, но их нет в scenario/voices_ru.json — "
+            "тренажёр показал бы английскую строку под русскую реплику"
+        )
+    return sorted(
+        ({"t": e.t, "id": e.id,
+          "text": ru.get(e.id) or str(by_id[e.id].get("text", e.id))}
+         for e in tl.by_stem("voices")),
+        key=lambda x: x["t"],
+    )
+
+
 def build_payload(video: str, video_fallback: str = "") -> dict:
     scenario = ROOT / "scenario/timeline.json"
     tl = Timeline.load(scenario)
@@ -100,12 +152,7 @@ def build_payload(video: str, video_fallback: str = "") -> dict:
     )
     plan = build_plan(raw["events"], tl.total_duration)
 
-    by_id = {e["id"]: e for e in raw["events"]}
-    lines = sorted(
-        ({"t": e.t, "id": e.id, "text": by_id[e.id].get("text", e.id)}
-         for e in tl.by_stem("voices")),
-        key=lambda x: x["t"],
-    )
+    lines = build_lines(tl, raw["events"])
 
     hits = sorted(
         ({"t": beat.heard, "label": f"{strike.title}: {beat.what[:40]}"}
@@ -188,9 +235,35 @@ def pack_video(force: bool = False) -> Path:
     return target
 
 
+def verify_soundtrack(video: Path) -> None:
+    """Видео рядом со страницей обязано играть фонограмму номера.
+
+    Не находится файл — не беда: страница умеет попросить выбрать его руками, и
+    сверять тогда нечего. Находится, но играет чужой звук — беда, и молчать о
+    ней нельзя: разучивать номер под звук, которого на площадке не будет,
+    дороже, чем не собрать страницу.
+    """
+    if not video.exists():
+        print(f"  видео рядом: {video.name} — НЕ НАЙДЕНО, страница попросит "
+              "выбрать файл; звук сверить не с чем")
+        return
+    if not SOUNDTRACK.exists():
+        raise SystemExit(
+            f"нет {SOUNDTRACK.relative_to(ROOT)} — не с чем сверять звук "
+            "страницы. Фонограмма номера собирается tools/adopt_audio.py"
+        )
+    try:
+        windows = check(video, SOUNDTRACK)
+    except SoundcheckError as exc:
+        raise SystemExit(str(exc)) from exc
+    print(f"  видео рядом: {video.name} — на месте")
+    print(f"  звук сверен с {SOUNDTRACK.name}: худшее окно "
+          f"{min(c for _, c in windows):.3f} из {len(windows)}")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--video", default="final_v2.mp4",
+    ap.add_argument("--video", default=NUMBER_VIDEO,
                     help="имя файла номера рядом со страницей")
     ap.add_argument("--out", default=str(ROOT / "output/training.html"))
     ap.add_argument("--site", action="store_true",
@@ -212,6 +285,10 @@ def main() -> int:
     payload = build_payload(args.video, args.video_fallback)
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
+
+    # Сверка до записи: страница, которая играет чужой звук, не должна лечь на
+    # диск даже на минуту — её успеют скопировать на планшет.
+    verify_soundtrack(out.parent / payload["video"])
     out.write_text(render(payload), encoding="utf-8")
 
     beats = sum(len(s["beats"]) for s in payload["strikes"])
@@ -221,9 +298,6 @@ def main() -> int:
           f"контактов: {len(payload['hits'])}")
     print(f"  кадров экрана: {len(payload['shots'])}, "
           f"реплик: {len(payload['lines'])}")
-    video = out.parent / payload["video"]
-    print(f"  видео рядом: {payload['video']} — "
-          + ("на месте" if video.exists() else "НЕ НАЙДЕНО, страница попросит выбрать файл"))
     return 0
 
 

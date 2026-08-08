@@ -238,7 +238,10 @@ def main() -> int:
     ap.add_argument("--strikes", default=str(ROOT / "scenario" / "strikes.json"))
     ap.add_argument("--movements", default=str(ROOT / "scenario" / "movements.json"))
     ap.add_argument("--assets", default=str(ROOT / "assets"))
-    ap.add_argument("--master", default=str(ROOT / "output" / "master_v2.wav"))
+    # Фонограмма номера, а не наш мастер: с 8 августа звучит ручное сведение из
+    # монтажки. Под репетиционную дорожку кладётся то, подо что выступают, —
+    # иначе подсказки лягут поверх звука, которого на площадке не будет.
+    ap.add_argument("--master", default=str(ROOT / "output" / "master_ru_fx.wav"))
     ap.add_argument("--out", default=str(ROOT / "output"))
     ap.add_argument("--start-at", type=float, default=SYNC_ON + REACTION,
                     help="время номера, в которое нажат play на телефоне")

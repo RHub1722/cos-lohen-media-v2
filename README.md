@@ -9,7 +9,7 @@
 - **Платные сервисы** — [docs/video-services-paid.md](docs/video-services-paid.md) — генерация фона за $1–20, готовые запросы
 - **Оплата из Молдовы и MCP** — [docs/video-services-moldova-mcp.md](docs/video-services-moldova-mcp.md) — 20 сервисов: где рельсы открыты, где стоит блок по документам, у кого есть MCP
 - **Цены, отзывы, права** — [docs/video-services-reviews.md](docs/video-services-reviews.md) — сколько видео за минимальную подписку, оценки Trustpilot, лицензии. **Читать до оплаты**
-- **Как разучивать номер** — [docs/status/2026-08-05-training-site.md](docs/status/2026-08-05-training-site.md) — тренажёр `output/training.html`: разбор боя по долям, слышимые времена, петли, референсы
+- **Как разучивать номер** — [docs/status/2026-08-05-training-site.md](docs/status/2026-08-05-training-site.md) — тренажёр `output/training.html`: разбор боя по долям, слышимые времена, петли, референсы. Что в нём изменилось после смены фонограммы — [2026-08-09-trainer-fx](docs/status/2026-08-09-trainer-fx.md)
 - **Проектное решение** — [docs/superpowers/specs/2026-08-01-lohen-interrogation-scene-design.md](docs/superpowers/specs/2026-08-01-lohen-interrogation-scene-design.md)
 - **План реализации** — [docs/superpowers/plans/2026-08-01-lohen-v2-implementation.md](docs/superpowers/plans/2026-08-01-lohen-v2-implementation.md)
 - **Точки состояния** — [docs/status/INDEX.md](docs/status/INDEX.md)
@@ -78,8 +78,14 @@ python src/render_rehearsal.py
 python src/render_training.py
 ```
 
+Играет он `final_ru_nostrip_titles_logo_fx.mp4` — ровно тот файл, который ушёл
+организаторам. Звук страницы сверяется с фонограммой номера при каждой сборке
+([src/soundcheck.py](src/soundcheck.py)), и без совпадения страница не пишется:
+один раз тренажёр уже играл сборку с английским голосом, и заметить это можно
+было только ушами.
+
 Версионируемая копия тренажёра в `site/` — та же страница плюс видео, сжатое до
-960×540 (4.4 МБ вместо 31). Её можно открыть прямо с гита на планшете:
+960×540 (5.5 МБ вместо 43). Её можно открыть прямо с гита на планшете:
 
 ```bash
 python src/render_training.py --site
@@ -105,8 +111,8 @@ python src/render_cues.py --start-at 0.95
 
 `site/` — единственное место, где производный файл лежит в репозитории.
 Иначе страницу нельзя открыть с гита, а без видео рядом она просит выбрать файл
-руками. Мастер `output/final_v2.mp4` при этом не трогается: он остаётся файлом
-сдачи. Видео перекодируется только когда оно старше мастера, поэтому после новой
+руками. Ролик номера в `output/` при этом не трогается: он остаётся файлом
+сдачи. Видео перекодируется только когда оно старше ролика, поэтому после новой
 сборки звука достаточно повторить ту же команду.
 
 ## Русская озвучка

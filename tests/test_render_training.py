@@ -7,24 +7,53 @@
 
 import pytest
 
-from src.render_training import (MARKER, SITE_DIR, SITE_VIDEO, build_payload,
-                                render)
+from src.render_training import (MARKER, NUMBER_VIDEO, ROOT, SITE_DIR,
+                                 SITE_VIDEO, SOUNDTRACK, build_payload, render)
+from src.soundcheck import match_windows
 
 
 @pytest.fixture(scope="module")
 def payload():
-    return build_payload("final_v2.mp4")
+    return build_payload(NUMBER_VIDEO)
 
 
 def test_payload_carries_everything_the_page_reads(payload):
     assert payload["total"] == 60.0
-    assert payload["video"] == "final_v2.mp4"
+    assert payload["video"] == NUMBER_VIDEO
     assert [s["key"] for s in payload["scenes"]] == [
         "interrogation", "combat", "ice"]
     assert len(payload["movements"]) == 15
     assert len(payload["strikes"]) == 6
     assert len(payload["shots"]) == 10
     assert payload["lines"] and payload["hits"]
+
+
+def test_the_lines_are_the_ones_he_will_hear(payload):
+    """Номер звучит по-русски с 6 августа, а поле text в timeline.json осталось
+    английским — по нему собраны титры. Тренажёр, показывающий английскую
+    строку под русскую реплику, врёт в самом простом месте."""
+    texts = {line["id"]: line["text"] for line in payload["lines"]}
+    assert texts["lohen_final"].startswith("Они просили шедевр")
+    assert texts["lohen_thatall"] == "Это всё, что у вас есть?"
+    # Смех своей реплики не имеет: у него в сценарии русская ремарка.
+    assert texts["lohen_laugh_2"].startswith("(смех")
+    latin = [t for t in texts.values() if any("a" <= c.lower() <= "z" for c in t)]
+    assert not latin, f"английский текст доехал до страницы: {latin}"
+
+
+def test_the_page_plays_the_soundtrack_of_the_number():
+    """Тот самый дефект, ради которого написан src/soundcheck.py.
+
+    Тренажёр месяц играл августовскую сборку с английским голосом и нашими
+    процедурными FX, пока номер уже звучал ручной фонограммой из монтажки.
+    Разошлось молча — значит сторожить это должен тест, а не память.
+    """
+    video = ROOT / "output" / NUMBER_VIDEO
+    if not video.exists() or not SOUNDTRACK.exists():
+        pytest.skip(f"нет {video.name} или {SOUNDTRACK.name} — собрать нечем")
+    worst = min(corr for _, corr in match_windows(video, SOUNDTRACK))
+    assert worst > 0.90, (
+        f"худшее окно {worst:.3f}: видео тренажёра играет не фонограмму номера")
 
 
 def test_every_shot_says_what_is_on_screen(payload):
@@ -65,6 +94,12 @@ def test_the_published_copy_is_whole():
     assert megabytes < 12, (
         f"{megabytes:.1f} МБ — многовато и для репозитория, и для мобильной связи; "
         "поднимите crf в render_training.py")
+    # Сжатая копия — единственное видео, которое реально открывают с планшета.
+    # Пережатие не имеет права подменить фонограмму, и проверяется это здесь.
+    if SOUNDTRACK.exists():
+        worst = min(corr for _, corr in match_windows(video, SOUNDTRACK))
+        assert worst > 0.90, (
+            f"худшее окно {worst:.3f}: site/{SITE_VIDEO} играет не фонограмму номера")
 
 
 def test_render_leaves_no_marker_and_closes_no_script():
