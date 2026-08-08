@@ -20,16 +20,27 @@
 timeline.json), самый громкий акцент концовки. Знак приходит на него и стоит до
 конца, 4.8 с.
 
-ПОЯВЛЕНИЕ. Прозрачность плюс лёгкий наплыв масштаба: 0.25 с паузы после удара,
-затем 1.4 с проявления, масштаб 1.05 -> 1.00. Выбор исполнителя из трёх
-показанных вариантов.
+ПОЯВЛЕНИЕ — «прорисовка». Знак рисует себя своим же лучом:
+
+  0.00..0.62  луч чертит себя сверху вниз, на конце яркая головка;
+  0.50..1.45  от прочерченной оси в обе стороны раскрывается луна и надпись,
+              по фронту раскрытия бежит блик;
+  ..1.90      служебный луч гаснет, остаётся собственный луч знака.
+
+Ось раскрытия — не середина рамки, а столбец самого луча, найденный по нижнему
+хвосту знака. По верхним строкам искать нельзя: туда попадает верхний рог
+полумесяца и тянет замер влево на четверть ширины.
+
+Блик раскрытия умножается на размытую альфу знака. Без этого он превращается в
+две сплошные вертикальные полосы во всю высоту рамки — так и было в первой
+сборке, видно на раскадровке.
 
 Отвергнуты, но были собраны и просмотрены:
-  «прорисовка» — луч знака чертит себя сверху вниз, и от него в обе стороны
-    раскрывается луна и надпись. Красивее и сделано из самого знака, но это
-    полноценный эффект в конце номера, где по сценарию уже тишина и покой;
-  «вспышка» — знак приходит на удар пересветом и оседает. Читается как ещё
-    одна вспышка боя, а бой к этому моменту кончился.
+  «проявление» — прозрачность плюс наплыв масштаба 1.05 -> 1.00. Сначала
+    выбрано исполнителем и собрано в полные ролики, затем заменено на
+    прорисовку: тихо, но знак приходит ниоткуда и ничем не связан с картинкой;
+  «вспышка» — знак приходит на удар пересветом и оседает за 0.9 с. Читается
+    как ещё одна вспышка боя, а бой к этому моменту кончился.
 """
 from __future__ import annotations
 
@@ -40,6 +51,7 @@ from pathlib import Path
 
 import numpy as np
 from PIL import Image
+from scipy.ndimage import gaussian_filter
 
 ROOT = Path(__file__).resolve().parent.parent
 LOGO = ROOT / 'assets' / 'Images' / 'logo_raymoon.png'
@@ -50,9 +62,12 @@ START = 55.20          # ice_final_impact
 DUR = 4.80             # до конца ролика
 HEIGHT = 300           # высота знака в кадре
 MARGIN = 70            # отступ от верхнего и правого краёв
-HOLD = 0.25            # пауза после удара, прежде чем знак начнёт проявляться
-FADE = 1.40            # проявление
-ZOOM = 1.05            # с какого масштаба наплывает
+
+DRAW = 0.62            # луч чертит себя сверху вниз
+OPEN_FROM = 0.50       # раскрытие начинается, не дожидаясь конца прочерка
+OPEN_TO = 1.45
+CALM = 1.90            # служебный луч погас
+BEAM_RGB = np.array([205.0, 232.0, 255.0])   # цвет луча и блика
 
 
 def smoothstep(x: np.ndarray | float) -> np.ndarray | float:
@@ -76,16 +91,10 @@ def load_logo(height: int) -> tuple[np.ndarray, np.ndarray]:
     return p[:, :, :3], p[:, :, 3] / 255.0
 
 
-def sample(img: np.ndarray, yy: np.ndarray, xx: np.ndarray) -> np.ndarray:
-    """Билинейная выборка. Наплыв делается координатами, а не пересборкой PIL."""
-    h, w = img.shape[:2]
-    y = np.clip(np.broadcast_to(yy, (h, w)), 0, h - 1.001)
-    x = np.clip(np.broadcast_to(xx, (h, w)), 0, w - 1.001)
-    y0, x0 = y.astype(np.int32), x.astype(np.int32)
-    fy, fx = (y - y0)[:, :, None], (x - x0)[:, :, None]
-    top = img[y0, x0] * (1 - fx) + img[y0, x0 + 1] * fx
-    bot = img[y0 + 1, x0] * (1 - fx) + img[y0 + 1, x0 + 1] * fx
-    return top * (1 - fy) + bot * fy
+def beam_column(alpha: np.ndarray) -> float:
+    """Столбец луча — по нижнему хвосту, где кроме луча ничего нет."""
+    tail = alpha[int(alpha.shape[0] * 0.86):].sum(0)
+    return float(np.arange(len(tail)) @ tail / tail.sum())
 
 
 def frames(pre: np.ndarray, al: np.ndarray):
@@ -93,14 +102,32 @@ def frames(pre: np.ndarray, al: np.ndarray):
     h, w = al.shape
     yy = np.arange(h, dtype=np.float32)[:, None]
     xx = np.arange(w, dtype=np.float32)[None, :]
-    al3 = al[:, :, None]
+    axis = beam_column(al)
+    dist = np.abs(xx - axis)                       # до оси раскрытия
+    far = float(max(axis, w - axis))               # дальний край знака от оси
+    art = np.clip(gaussian_filter(al, 5.0) * 2.5, 0.0, 1.0)   # где есть рисунок
+    sig = max(1.6, w * 0.008)                      # толщина луча
+    rim_sig = max(4.0, w * 0.028)                  # ширина блика на фронте
+
     for i in range(int(round(DUR * FPS))):
-        k = smoothstep((i / FPS - HOLD) / FADE)
-        s = 1.0 + (ZOOM - 1.0) * (1.0 - k)
-        sy = (yy - h * 0.5) / s + h * 0.5
-        sx = (xx - w * 0.5) / s + w * 0.5
-        p = sample(pre, sy, sx) * k
-        a = sample(al3, sy, sx)[:, :, 0] * k
+        t = i / FPS
+
+        tip = smoothstep(t / DRAW) * (h + 6.0)
+        gain = 1.0 - smoothstep((t - DRAW) / (CALM - DRAW))
+        line = smoothstep((tip - yy) / 3.0) * np.exp(-0.5 * (dist / sig) ** 2)
+        head = (np.exp(-0.5 * ((yy - tip) / 5.0) ** 2)
+                * np.exp(-0.5 * (dist / (sig * 2.2)) ** 2)
+                * (1.0 - smoothstep((t - DRAW) / 0.18)))
+        beam = np.clip((line * 0.85 + head) * gain, 0.0, 1.0)
+
+        r = smoothstep((t - OPEN_FROM) / (OPEN_TO - OPEN_FROM))
+        radius = r * far * 1.08
+        opened = smoothstep((radius - dist) / 9.0)
+        rim = (np.exp(-0.5 * ((dist - radius) / rim_sig) ** 2) * art
+               * (r > 0.001) * (1.0 - smoothstep((r - 0.85) / 0.15)) * 0.75)
+
+        a = np.clip(al * opened + beam + rim, 0.0, 1.0)
+        p = pre * opened[:, :, None] + BEAM_RGB[None, None, :] * (beam + rim)[:, :, None]
         rgb = np.where(a[:, :, None] > 1e-4, p / np.maximum(a[:, :, None], 1e-4), 0.0)
         yield np.dstack([np.clip(rgb, 0, 255), a * 255.0]).astype(np.uint8)
 
