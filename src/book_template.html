@@ -110,6 +110,17 @@
   .plan { max-width: 320px; margin: 12px 0; }
   .plan svg { display: block; width: 100%; height: auto; }
 
+  /* Лист удара целиком: главная картинка раздела, поэтому во всю ширину. */
+  .sheet { margin: 14px 0; }
+  .sheet img {
+    display: block; width: 100%; height: auto;
+    border: 1px solid var(--line); border-radius: 12px; background: var(--panel);
+  }
+  .sheet figcaption {
+    color: var(--muted); font-size: 0.86rem; margin-top: 7px;
+    border-left: 3px solid var(--gold); padding-left: 10px;
+  }
+
   table { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin: 10px 0;
           display: block; overflow-x: auto; }
   th, td { border-top: 1px solid var(--line); padding: 7px 8px; text-align: left;

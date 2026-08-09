@@ -14,6 +14,8 @@
 from __future__ import annotations
 
 import json
+import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -45,6 +47,88 @@ BODY_MARK = "<!--__BODY__-->"
 # все туториалы в сети, и по ним ищут, когда наше слово не помогает.
 ROLE_EN = {"windup": "WIND-UP", "swing": "ACCELERATION", "contact": "IMPACT",
            "recover": "RECOIL", "hold": "HOLD"}
+
+# Готовые листы: по одному на удар, нарисованы генератором вручную и сложены в
+# assets/sheets. Оригиналы идут в гит целиком — генерация невоспроизводима, и
+# второй раз ровно такой же лист не получить ни за какие деньги.
+#
+# На страницу они кладутся сжатыми: оригинал 6 МБ при 2400 px, а webp 1800 px
+# при качестве 86 весит 200 КБ, и подписи в нём читаются без потерь. Тридцать
+# раз разница, и без неё книжку не открыть с планшета по мобильной связи.
+SHEETS_SRC = ROOT / "assets/sheets"
+SHEETS_DIR = SITE / "sheets"
+SHEET_WIDTH = "1800"
+SHEET_QUALITY = "86"
+
+# Имя листа — это печать: burst_2__33_05-36_58.png несёт времена первой и
+# последней доли, под которые лист нарисован. Подписи и таймкоды впечатаны В
+# КАРТИНКУ, пересборкой их не поправить. Значит единственный способ не дать
+# листу молча разойтись со сценарием — сверять печать при каждой сборке.
+SHEET_NAME = re.compile(r"^(?P<strike>\w+?)__(?P<start>\d+_\d+)-(?P<end>\d+_\d+)\.png$")
+SHEET_TOLERANCE = 0.005
+
+
+class SheetError(Exception):
+    """Лист генерации разошёлся со сценарием или назван не по правилам."""
+
+
+def _stamp(text: str) -> float:
+    return float(text.replace("_", "."))
+
+
+def load_sheets(strikes) -> dict:
+    """Листы по ударам, с проверкой печати. Нет листа — не беда, есть схемы."""
+    by_id = {s.id: s for s in strikes}
+    out: dict[str, Path] = {}
+    if not SHEETS_SRC.exists():
+        return out
+    for path in sorted(SHEETS_SRC.glob("*.png")):
+        m = SHEET_NAME.match(path.name)
+        if not m:
+            raise SheetError(
+                f"{path.name}: имя не по правилам. Ожидается "
+                "<удар>__<время первой доли>-<время последней>.png, например "
+                "burst_2__33_05-36_58.png — по этим числам лист сверяется со "
+                "сценарием")
+        strike = by_id.get(m["strike"])
+        if strike is None:
+            raise SheetError(f"{path.name}: удара {m['strike']!r} нет в бою")
+        want = (strike.beats[0].heard, strike.beats[-1].heard)
+        got = (_stamp(m["start"]), _stamp(m["end"]))
+        if (abs(want[0] - got[0]) > SHEET_TOLERANCE
+                or abs(want[1] - got[1]) > SHEET_TOLERANCE):
+            raise SheetError(
+                f"{path.name}: лист нарисован под {got[0]:.2f}–{got[1]:.2f}, а "
+                f"{m['strike']} теперь идёт {want[0]:.2f}–{want[1]:.2f}. Времена и "
+                "подписи впечатаны в картинку — её надо перерисовать, иначе она "
+                "будет учить не тому. Переименовать мало")
+        if m["strike"] in out:
+            raise SheetError(f"{m['strike']}: два листа на один удар")
+        out[m["strike"]] = path
+    return out
+
+
+def pack_sheets(sheets: dict, force: bool = False) -> dict:
+    """Сжатые копии для страницы. Пересжимает только устаревшие."""
+    if not sheets:
+        return {}
+    SHEETS_DIR.mkdir(parents=True, exist_ok=True)
+    packed = {}
+    for strike_id, src in sheets.items():
+        dst = SHEETS_DIR / (src.stem + ".webp")
+        fresh = dst.exists() and dst.stat().st_mtime >= src.stat().st_mtime
+        if not fresh or force:
+            result = subprocess.run([
+                "ffmpeg", "-y", "-v", "error", "-i", str(src),
+                "-vf", "scale=%s:-2:flags=lanczos" % SHEET_WIDTH,
+                "-c:v", "libwebp", "-quality", SHEET_QUALITY,
+                "-compression_level", "6", str(dst),
+            ], capture_output=True, text=True)
+            if result.returncode != 0 or not dst.exists():
+                raise SheetError("FFmpeg не сжал %s:\n%s"
+                                 % (src.name, result.stderr[-500:]))
+        packed[strike_id] = dst
+    return packed
 
 
 # --- блоки: единственное представление содержания -------------------------
@@ -85,6 +169,10 @@ def plan(name, svg, caption):
     return ("plan", name, svg, caption)
 
 
+def sheet(name, caption):
+    return ("sheet", name, caption)
+
+
 def videos(items):
     return ("videos", list(items))
 
@@ -110,9 +198,10 @@ def _rich(text: str) -> str:
 
 
 # --- сборка содержания ----------------------------------------------------
-def build(book: Book, strikes, tl: Timeline, moves) -> list:
+def build(book: Book, strikes, tl: Timeline, moves, sheets=None) -> list:
     blocks: list = []
     by_id = {s.id: s for s in strikes}
+    sheets = sheets or {}
 
     # 0 -------------------------------------------------------------------
     blocks.append(h2("Как пользоваться", "how"))
@@ -198,6 +287,16 @@ def build(book: Book, strikes, tl: Timeline, moves) -> list:
                 "%s %s" % (book.technique(u).name, book.technique(u).glyph)
                 for u in uses)))
         blocks.append(p(entry.get("how", "")))
+        if s.id in sheets:
+            blocks.append(sheet(sheets[s.id].stem,
+                                "Лист удара целиком. Времена и подписи впечатаны "
+                                "в картинку: если доля уедет в сценарии, сборка "
+                                "книжки об этом скажет и лист придётся перерисовать."))
+            blocks.append(h3("Точная поза по долям"))
+            blocks.append(note(
+                "Ниже схемы, посчитанные из чисел. Они некрасивые, но точные: "
+                "углы на листе выше нарисованы генератором, а здесь взяты из "
+                "сценария. Расходятся — верь схеме."))
         authored = entry.get("labels") or []
         meta = {i: {"title": ROLE_NAMES.get(b.role, b.role),
                     "en": ROLE_EN.get(b.role, ""),
@@ -335,6 +434,13 @@ def to_html(blocks) -> tuple[str, str]:
             out.append('<div class="plan">%s</div>' % block[2])
             if block[3]:
                 out.append('<p class="note">%s</p>' % _rich(block[3]))
+        elif kind == "sheet":
+            # loading="lazy": шесть листов по 200 КБ разом на планшете по
+            # мобильной связи — это заметная пауза на пустом месте.
+            out.append('<figure class="sheet"><img src="sheets/%s.webp" alt="%s" '
+                       'loading="lazy" decoding="async">'
+                       '<figcaption>%s</figcaption></figure>'
+                       % (_esc(block[1]), _esc(block[2][:80]), _rich(block[2])))
         elif kind == "videos":
             for v in block[1]:
                 out.append(
@@ -385,6 +491,9 @@ def to_md(blocks, figure_dir: str) -> str:
             out += ["![план площадки](%s/%s.svg)" % (figure_dir, block[1]), ""]
             if block[3]:
                 out += ["> %s" % block[3], ""]
+        elif kind == "sheet":
+            out += ["![лист удара](../site/sheets/%s.webp)" % block[1], "",
+                    "> %s" % block[2], ""]
         elif kind == "videos":
             for v in block[1]:
                 out.append("- [%s](%s) — смотреть: %s, скорость ×%.2g. %s"
@@ -423,7 +532,9 @@ def main() -> int:
     book = load(ROOT / "scenario/technique.json")
     check_against_strikes(book, strikes)
 
-    blocks = build(book, strikes, tl, moves)
+    sheets = load_sheets(strikes)
+    packed = pack_sheets(sheets)
+    blocks = build(book, strikes, tl, moves, packed)
     body, toc = to_html(blocks)
     template = TEMPLATE.read_text(encoding="utf-8")
     for mark in (TOC_MARK, BODY_MARK):
@@ -451,6 +562,13 @@ def main() -> int:
     print("  приёмов %d, навыков %d, пауз %d, действий %d"
           % (len(book.techniques), len(book.skills), len(book.pauses),
              len(strikes)))
+    if packed:
+        weight = sum(p.stat().st_size for p in packed.values()) / 1024
+        print("  листов генерации: %d из %d — %s (%.0f КБ на странице)"
+              % (len(packed), len(strikes), ", ".join(sorted(packed)), weight))
+    missing = [s.id for s in strikes if s.id not in packed]
+    if missing:
+        print("  без листа, только схемы: %s" % ", ".join(missing))
     return 0
 
 

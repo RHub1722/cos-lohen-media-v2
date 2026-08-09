@@ -16,7 +16,8 @@ from src.figures import build as skeleton
 from src.models import Timeline
 from src.movements import load_movements, resolve_times
 from src.peaks import peak_offsets
-from src.render_book import ROOT, build, to_html, to_md
+from src.render_book import (ROOT, SHEETS_SRC, SheetError, build, load_sheets,
+                             to_html, to_md)
 from src.strikes import load_strikes, resolve_strikes
 from src.technique import TechniqueError, check_against_strikes, load
 
@@ -198,6 +199,68 @@ def test_the_trainer_links_back_to_the_book():
         assert 'href="book.html"' in html, f"{page.name} не ведёт в книжку"
         assert (page.parent / "book.html").exists(), (
             f"рядом с {page.name} нет book.html — ссылка ведёт в никуда")
+
+
+def test_every_sheet_matches_the_times_it_was_drawn_for(fight):
+    """Печать в имени листа — единственная защита от молчаливого расхождения.
+
+    Подписи и таймкоды впечатаны В КАРТИНКУ: пересборкой их не поправить, а
+    времена в этом проекте уже один раз ехали, когда сменилась фонограмма.
+    """
+    sheets = load_sheets(fight[2])
+    by_id = {s.id: s for s in fight[2]}
+    for strike_id, path in sheets.items():
+        strike = by_id[strike_id]
+        start, end = path.stem.split("__")[1].split("-")
+        assert float(start.replace("_", ".")) == pytest.approx(
+            strike.beats[0].heard, abs=0.005), path.name
+        assert float(end.replace("_", ".")) == pytest.approx(
+            strike.beats[-1].heard, abs=0.005), path.name
+
+
+def test_a_sheet_drawn_for_the_wrong_times_is_loud(fight, tmp_path, monkeypatch):
+    """Тот самый случай: доля уехала, а картинка осталась старой. Сборка обязана
+    падать — иначе лист начнёт учить не тому, и заметить это будет негде."""
+    fake = tmp_path / "sheets"
+    fake.mkdir()
+    (fake / "burst_1__11_11-22_22.png").write_bytes(b"not really a png")
+    monkeypatch.setattr("src.render_book.SHEETS_SRC", fake)
+    with pytest.raises(SheetError, match="перерисовать"):
+        load_sheets(fight[2])
+
+
+def test_a_sheet_named_wrong_is_loud(fight, tmp_path, monkeypatch):
+    fake = tmp_path / "sheets"
+    fake.mkdir()
+    (fake / "burst_1.png").write_bytes(b"not really a png")
+    monkeypatch.setattr("src.render_book.SHEETS_SRC", fake)
+    with pytest.raises(SheetError, match="имя не по правилам"):
+        load_sheets(fight[2])
+
+
+def test_sheets_on_the_page_are_light_enough_for_mobile(fight):
+    """Оригиналы по 6 МБ идут в гит — генерация невоспроизводима. Но на страницу
+    кладутся сжатые: иначе книжку не открыть с планшета."""
+    packed = ROOT / "site/sheets"
+    if not packed.exists():
+        pytest.skip("листы не собраны: python src/render_book.py")
+    for path in packed.glob("*.webp"):
+        kb = path.stat().st_size / 1024
+        assert kb < 450, f"{path.name} — {kb:.0f} КБ, поднимите сжатие"
+    total = sum(p.stat().st_size for p in packed.glob("*.webp")) / 1024 / 1024
+    assert total < 4.0, f"{total:.1f} МБ листов на странице — многовато"
+
+
+def test_the_originals_stay_in_git_because_they_cannot_be_regenerated(fight):
+    """Генеративный лист второй раз ровно таким же не получить ни за какие
+    деньги. Поэтому оригинал версионируется, а не выбрасывается после сжатия."""
+    if not SHEETS_SRC.exists():
+        pytest.skip("оригиналов нет")
+    originals = list(SHEETS_SRC.glob("*.png"))
+    assert originals, "в assets/sheets нет ни одного оригинала"
+    for path in originals:
+        assert path.stat().st_size > 100 * 1024, (
+            f"{path.name} подозрительно мал — это точно оригинал, а не сжатая копия?")
 
 
 def test_a_pause_pointing_at_an_unknown_skill_is_loud(tmp_path):
