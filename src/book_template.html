@@ -98,17 +98,15 @@
 
   /* Полоса кадров. Перенос вместо прокрутки: на телефоне горизонтальная
      прокрутка внутри страницы теряется, а доли надо видеть все. */
+  /* Панель несёт подписи с выносками по краям, поэтому она заметно шире
+     прежней схемы: ниже 230 px текст выносок становится нечитаемым, и лучше
+     показать две панели в ряд, чем шесть нечитаемых. */
   .strip {
-    display: grid; gap: 8px; margin: 12px 0;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    display: grid; gap: 10px; margin: 14px 0;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
   }
-  .strip figure { margin: 0; background: var(--panel-2); border-radius: 10px;
-                  padding: 6px 4px 4px; border: 1px solid var(--line); }
+  .strip figure { margin: 0; }
   .strip svg { display: block; width: 100%; height: auto; }
-  .strip figcaption { text-align: center; font-size: 0.76rem; color: var(--muted);
-                      margin-top: 4px; }
-  .strip .t { color: var(--accent); font-variant-numeric: tabular-nums;
-              font-weight: 600; }
   .plan { max-width: 320px; margin: 12px 0; }
   .plan svg { display: block; width: 100%; height: auto; }
 
@@ -134,7 +132,9 @@
 
   @media (max-width: 560px) {
     .wrap { padding: 12px 9px 50px; }
-    .strip { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); }
+    /* На телефоне панель идёт во всю ширину: выноски по краям иначе не
+       прочитать, а ради них панель и переделана. */
+    .strip { grid-template-columns: minmax(0, 1fr); }
   }
 </style>
 

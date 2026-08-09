@@ -9,7 +9,10 @@ import re
 
 import pytest
 
-from src.figures import box, floor_plan, panel, standalone
+from src.figures import MAX_LABELS, content_box, figure, floor_plan, panel, standalone
+# Имя build занято сборщиком книжки, а нужен ещё и сборщик скелета: у обоих оно
+# самое естественное, поэтому один из двух приезжает под псевдонимом.
+from src.figures import build as skeleton
 from src.models import Timeline
 from src.movements import load_movements, resolve_times
 from src.peaks import peak_offsets
@@ -130,28 +133,50 @@ def test_one_frame_for_the_whole_strike_so_panels_compare(fight):
     """У всех долей удара общая рамка. Иначе у каждой свой масштаб, и полоса,
     которая нужна ровно для сравнения, сравнивать перестаёт."""
     poses = [b.pose for b in fight[2][0].beats]
-    whole = box(poses)
+    whole = content_box(poses)
+    assert any(content_box([p]) != whole for p in poses), (
+        "общая рамка совпала с каждой отдельной — сравнивать нечего")
     for pose in poses:
-        assert box([pose]) != whole or len(poses) == 1
-    frames = {panel(p, None, frame=whole)[:60] for p in poses}
-    assert all('viewBox="%.0f %.0f %.0f %.0f"' % whole in panel(p, None, frame=whole)
-               for p in poses)
-    assert frames
+        svg = panel(pose, None, frame=whole)
+        assert 'viewBox="0 0' in svg, "панель обязана быть одного размера"
+        assert 'transform="translate(' in svg, "фигура вписывается трансформом"
+
+
+def test_the_frame_is_built_on_the_body_not_on_the_spear(fight):
+    """Древку разрешено уходить за край. Рамка по концам древка ужимала фигуру
+    до ногтя там, где оно ходит от вертикали вверх до вертикали вниз."""
+    spear_down = [s for s in fight[2] if s.id == "spear_down"][0]
+    poses = [b.pose for b in spear_down.beats]
+    _, _, _, height = content_box(poses)
+    # Тело — это рост плюс поля. Если бы рамка считалась по древку, высота
+    # ушла бы за две с лишним высоты фигуры.
+    assert height < 1.8 * 132.0, f"рамка {height:.0f} — фигура станет нечитаемой"
 
 
 def test_the_figure_follows_the_numbers_not_a_drawing(fight):
     """Поднял древко в сценарии — поднялось и на картинке. Если это перестанет
     быть правдой, рисунки начнут учить не тому, что написано рядом."""
     pose = dict(fight[2][0].beats[0].pose)
-    low = panel({**pose, "spear": 60.0})
-    high = panel({**pose, "spear": -60.0})
-    assert low != high
+    assert figure({**pose, "spear": 60.0}) != figure({**pose, "spear": -60.0})
 
-    def top(svg):
-        return min(float(y) for _, y in
-                   (m.groups() for m in re.finditer(r"(-?\d+\.\d),(-?\d+\.\d)", svg)))
+    def tip_y(spear):
+        return skeleton({**pose, "spear": spear}).tip[1]
 
-    assert top(high) < top(low), "древко вверх должно поднимать содержимое кадра"
+    assert tip_y(-60.0) > tip_y(60.0), "древко вверх должно поднимать наконечник"
+
+    def hip_y(crouch):
+        return skeleton({**pose, "crouch": crouch}).hip[1]
+
+    assert hip_y(0.9) < hip_y(0.1), "присед должен опускать таз"
+
+
+def test_a_panel_never_carries_more_labels_than_it_can_hold(fight):
+    """Больше пяти подписей кадр не держит: наезжают друг на друга и на фигуру.
+    Смысловые вытесняют механические, а не складываются с ними."""
+    strike = [s for s in fight[2] if s.id == "burst_1"][0]
+    many = [("подпись %d" % i, "hand") for i in range(9)]
+    svg = panel(strike.beats[0].pose, strike.beats[1].pose, extra_labels=many)
+    assert svg.count("подпись") <= MAX_LABELS
 
 
 def test_the_book_page_is_whole():

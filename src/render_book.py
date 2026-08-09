@@ -40,6 +40,12 @@ MD_OUT = ROOT / "docs/spear-book.md"
 TOC_MARK = "<!--__TOC__-->"
 BODY_MARK = "<!--__BODY__-->"
 
+# Английские названия долей — как на образце, который принёс исполнитель:
+# «2. ЗАМАХ (WIND-UP)». Второе название не украшение: под этими словами лежат
+# все туториалы в сети, и по ним ищут, когда наше слово не помогает.
+ROLE_EN = {"windup": "WIND-UP", "swing": "ACCELERATION", "contact": "IMPACT",
+           "recover": "RECOIL", "hold": "HOLD"}
+
 
 # --- блоки: единственное представление содержания -------------------------
 def h2(text, anchor):
@@ -192,9 +198,16 @@ def build(book: Book, strikes, tl: Timeline, moves) -> list:
                 "%s %s" % (book.technique(u).name, book.technique(u).glyph)
                 for u in uses)))
         blocks.append(p(entry.get("how", "")))
+        authored = entry.get("labels") or []
+        meta = {i: {"title": ROLE_NAMES.get(b.role, b.role),
+                    "en": ROLE_EN.get(b.role, ""),
+                    "when": "%.2f" % b.heard,
+                    "labels": [tuple(x) for x in
+                               (authored[i] if i < len(authored) else [])]}
+                for i, b in enumerate(s.beats)}
+        svgs = figures.strip([{"pose": b.pose, "role": b.role} for b in s.beats],
+                             titles=meta)
         cells = []
-        svgs = figures.strip(list(s.beats and [
-            {"pose": b.pose, "role": b.role} for b in s.beats]))
         for beat, svg in zip(s.beats, svgs):
             name = "%s-%s-%.2f" % (s.id, beat.role, beat.heard)
             cells.append((name.replace(".", "_"), svg,
@@ -313,12 +326,11 @@ def to_html(blocks) -> tuple[str, str]:
                 for j, c in enumerate(row)) for row in block[2])
             out.append("<table><tr>%s</tr>%s</table>" % (head, body))
         elif kind == "strip":
-            cells = []
-            for _, svg, caption, when in block[1]:
-                stamp = ('<div class="t">%s</div>' % _esc(when)) if when else ""
-                cells.append("<figure>%s<figcaption>%s%s</figcaption></figure>"
-                             % (svg, stamp, _esc(caption)))
-            out.append('<div class="strip">%s</div>' % "".join(cells))
+            # Подпись и номер живут ВНУТРИ svg, как на образце. Дублировать их
+            # ещё и в figcaption значит однажды поправить одно и забыть второе.
+            out.append('<div class="strip">%s</div>'
+                       % "".join("<figure>%s</figure>" % svg
+                                 for _, svg, _, _ in block[1]))
         elif kind == "plan":
             out.append('<div class="plan">%s</div>' % block[2])
             if block[3]:
