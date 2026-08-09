@@ -120,7 +120,11 @@ def pack_sheets(sheets: dict, force: bool = False) -> dict:
         if not fresh or force:
             result = subprocess.run([
                 "ffmpeg", "-y", "-v", "error", "-i", str(src),
-                "-vf", "scale=%s:-2:flags=lanczos" % SHEET_WIDTH,
+                # min(ширина, оригинал): вверх не растягиваем. Листы от разных
+                # генераторов приходят разной величины — гемини давал 2400 px,
+                # ChatGPT даёт 1491. Растянуть второй до 1800 значит получить
+                # файл тяжелее и ровно ту же картинку.
+                "-vf", "scale='min(%s,iw)':-2:flags=lanczos" % SHEET_WIDTH,
                 "-c:v", "libwebp", "-quality", SHEET_QUALITY,
                 "-compression_level", "6", str(dst),
             ], capture_output=True, text=True)
