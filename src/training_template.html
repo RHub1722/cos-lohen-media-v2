@@ -55,10 +55,32 @@
   h1, h2, h3, h4 { line-height: 1.2; margin: 0; }
   .num { font-variant-numeric: tabular-nums; }
 
+  /* ── полоса сайта: переход на вторую страницу ────────────────────────── */
+  .site {
+    position: sticky; top: 0; z-index: 21;
+    display: flex; gap: 6px;
+    background: rgba(8, 8, 11, 0.97);
+    border-bottom: 1px solid var(--line);
+    padding: 6px 8px;
+  }
+  .site a {
+    flex: 0 0 auto; padding: 5px 13px; border-radius: 8px;
+    background: var(--panel); border: 1px solid var(--line);
+    color: var(--muted); text-decoration: none;
+    font-size: 0.84rem; font-weight: 600; white-space: nowrap;
+  }
+  .site a[aria-current="page"] {
+    color: var(--text); border-color: var(--accent);
+    background: rgba(var(--accent-rgb), 0.16);
+  }
+
   /* ── навигация: всегда на самом верху ────────────────────────────────── */
   .tabs {
     position: sticky;
-    top: 0;
+    /* Под полосой сайта, а не поверх неё: значение проставляет JS по её
+       настоящей высоте — на телефоне она переносится, и угаданное число
+       однажды закрыло бы первую вкладку. */
+    top: var(--siteh, 40px);
     display: flex;
     gap: 6px;
     background: rgba(8, 8, 11, 0.96);
@@ -460,6 +482,12 @@
   }
 </style>
 
+<!-- Полоса сайта: две страницы, одна навигация. Книжка лежит рядом и открывается
+     без сети — все рисунки в ней вшиты, внешних файлов у неё нет. -->
+<nav class="site">
+  <a href="index.html" aria-current="page">Тренажёр</a>
+  <a href="book.html">Книжка движений</a>
+</nav>
 <nav class="tabs" id="tabs" role="tablist"></nav>
 
 <div class="layout">
@@ -1336,6 +1364,15 @@ function fitBar() {
 if (window.ResizeObserver) new ResizeObserver(fitBar).observe(bar);
 window.addEventListener("resize", fitBar);
 fitBar();
+
+// Высота полосы сайта — под неё прилипают вкладки. Замеряется, а не угадывается.
+const siteBar = document.querySelector(".site");
+function fitSite() {
+  document.documentElement.style.setProperty("--siteh", siteBar.offsetHeight + "px");
+}
+if (window.ResizeObserver) new ResizeObserver(fitSite).observe(siteBar);
+window.addEventListener("resize", fitSite);
+fitSite();
 
 $("total").textContent = fmt(DATA.total);
 $("rulerEnd").textContent = fmt(DATA.total);
