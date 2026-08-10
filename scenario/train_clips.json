@@ -1,0 +1,105 @@
+{
+  "note": "Тренировочные клипы: по одному на удар, из панелей листов движений. Это НЕ часть номера — это референс движения для репетиций, и складывается он в assets/train_clips/, а не в assets/video/. Модель и контракт — docs/atlas-api.md.",
+
+  "как считается темп": "В промпте стоят {real} и {slow} — их подставляет src/train_clips.py из scenario/strikes.json: {real} это разница времён первой и последней доли клипа, {slow} это duration делённое на неё. Писать темп руками нельзя: сдвинется доля в сценарии, и промпт начнёт врать про замедление, а проверить это глазами на готовом видео невозможно.",
+
+  "почему панели, а не лист": "Лист целиком модель прочитает как сетку с текстом и честно её перерисует. Панели нарезает tools/cut_panels.py, по одной позе на файл.",
+
+  "запреты": "Отдельного поля запретов у модели нет — negative уезжает склеенным с prompt, см. docs/atlas-api.md. Здесь он лежит отдельно, потому что документирует замысел и проверяется тестами.",
+
+  "общий запрет": "text, letters, numbers, captions, angle marks, dashed lines, arrows, grid lines, panel borders, watermarks, speed lines, motion trails, glowing aura, particles, camera movement, camera shake, zoom, cuts, scene changes, other characters, room interior, furniture, props",
+
+  "clips": [
+    {
+      "id": "burst_1",
+      "strike": "burst_1",
+      "beats": [1, 2, 3, 4],
+      "title": "Вспышка 1: горизонтальный смах древком",
+      "duration": 5,
+      "resolution": "480p",
+      "panels": [
+        "burst_1__1_windup__28_50.png",
+        "burst_1__2_swing__28_88.png",
+        "burst_1__3_contact__29_14.png",
+        "burst_1__4_recover__29_60.png"
+      ],
+      "prompt": "Reference images 1-4 are four key poses of the same character, in order.\n\nA slim young male anime character: blond wavy shoulder-length hair, pale skin, dark navy military greatcoat with silver trim and a long split tail, black trousers, tall black boots, white gloves, holding a long silver spear about 1.8 m long.\n\nHe starts with the spear held low and behind his left hip, point slightly raised (image 1). His shoulders turn first and his arms follow; the shaft levels out horizontally (image 2) and sweeps flat from his left to his right at head height, striking with the MIDDLE OF THE SHAFT, not the point (image 3). His whole body stops dead at the moment of contact and holds. Then the point lifts and he settles forward (image 4). His forward hand does not fly through the air - the shaft slides through his grip, about 25 cm of it passing forward between image 2 and image 3.\n\nThe whole action takes {real} seconds in reality. Play it in slow motion, about {slow} slower, filling the clip.\n\nSingle continuous shot. Locked-off static camera on a tripod. Full body in frame the whole time, floor visible, headroom above the spear. Plain dark blue-black background. The reference images are keyframes from a technique sheet: copy ONLY the character and the poses."
+    },
+    {
+      "id": "burst_2",
+      "strike": "burst_2",
+      "beats": [1, 2, 3, 4],
+      "title": "Вспышка 2: разворот через спину и выпад",
+      "duration": 6,
+      "resolution": "480p",
+      "panels": [
+        "burst_2__1_windup__33_05.png",
+        "burst_2__2_swing__33_45.png",
+        "burst_2__3_contact__34_00.png",
+        "burst_2__4_recover__34_55.png"
+      ],
+      "prompt": "Reference images 1-4 are four key poses of the same character, in order.\n\nA slim young male anime character: blond wavy shoulder-length hair, pale skin, dark navy military uniform with gold fleur-de-lis embroidery, black boots, white gloves, holding a long silver spear about 1.8 m long.\n\nHe turns away through his back - head leads first, then shoulders, then feet (image 1) - and the spear trails low and behind him with its point close to the floor, chasing his body rather than leading it. As the turn finishes the shaft swings up and forward past him (image 2), and he drops into a deep long lunge toward the camera, rear leg stretched back to its limit, the shaft levelling to horizontal at chest height (image 3). Then he rises and settles into an easy walking stance with the point raised (image 4). His forward hand stays near waist height throughout; the shaft slides forward through his grip, about 45 cm of it in total.\n\nThe whole action takes {real} seconds in reality. Play it in slow motion, about {slow} slower, filling the clip.\n\nSingle continuous shot. Locked-off static camera on a tripod. Full body in frame the whole time, floor visible, headroom above the spear. Plain dark blue-black background. The reference images are keyframes from a technique sheet: copy ONLY the character and the poses."
+    },
+    {
+      "id": "burst_3",
+      "strike": "burst_3",
+      "beats": [1, 2, 3, 4, 5, 6],
+      "title": "Вспышка 3: полный оборот, два попадания",
+      "duration": 9,
+      "resolution": "480p",
+      "panels": [
+        "burst_3__1_hold__38_62.png",
+        "burst_3__2_windup__39_20.png",
+        "burst_3__3_swing__39_60.png",
+        "burst_3__4_contact__39_92.png",
+        "burst_3__5_contact2__40_95.png",
+        "burst_3__6_recover__41_60.png"
+      ],
+      "prompt": "Reference images 1-6 are six key poses of the same character, in order.\n\nA slim young male anime character: blond wavy shoulder-length hair, pale skin, dark navy military greatcoat with gold fleur-de-lis and a long split tail, black boots, white gloves, holding a long silver spear about 1.8 m long.\n\nHe stands still and looks UP at something tall above him, spear held upright beside him (image 1). The spear sweeps back in a wide low arc behind him as he begins to turn, his gaze staying on the target longer than his body does (image 2). He turns a full circle on the spot through his left shoulder; the shaft levels out and accelerates (image 3). The first strike lands HIGH, above his own head, and stops dead (image 4). Then he drops almost to the floor and the second strike lands LOW, near the ground, finishing in a deep lunge (image 5). Finally he rises slowly and settles upright (image 6).\n\nTwo separate impacts at two different heights - high first, then low. Each one stops dead on contact.\n\nThe whole action takes {real} seconds in reality. Play it in slow motion, about {slow} slower, filling the clip.\n\nSingle continuous shot. Locked-off static camera on a tripod. Full body in frame the whole time, floor visible, headroom above the spear. Plain dark blue-black background. The reference images are keyframes from a technique sheet: copy ONLY the character and the poses."
+    },
+    {
+      "id": "take_the_hit",
+      "strike": "take_the_hit",
+      "beats": [1, 2, 3, 4],
+      "title": "Приём удара: голова вбок, пауза, смех",
+      "duration": 5,
+      "resolution": "480p",
+      "panels": [
+        "take_the_hit__1_hold__42_40.png",
+        "take_the_hit__2_contact__42_83.png",
+        "take_the_hit__3_hold2__43_13.png",
+        "take_the_hit__4_recover__43_63.png"
+      ],
+      "prompt": "Reference images 1-4 are four key poses of the same character, in order.\n\nA slim young male anime character: blond wavy shoulder-length hair, pale skin, dark navy military greatcoat with a silver chain and insignia, black boots, white gloves, holding a long silver spear about 1.8 m long with its point resting on the floor.\n\nHe stands relaxed and bored, the spear's point on the floor in front of him (image 1). An unseen blow arrives from his left and snaps ONLY HIS HEAD to the right (image 2). Everything else stays absolutely still: his feet do not move, his hips do not move, his shoulders do not move, the spear does not move at all. He holds the turned head, eyes lowered, for half a second (image 3). Then his head comes back slowly - twice as slowly as it snapped - and he smiles faintly (image 4).\n\nThis clip is about stillness. The ONLY thing that moves in the entire video is his head. No stepping, no swaying, no breathing motion of the body, no wind, no cloth movement.\n\nThe whole action takes {real} seconds in reality. Play it in slow motion, about {slow} slower, filling the clip.\n\nSingle continuous shot. Locked-off static camera on a tripod. Full body in frame the whole time, floor visible. Plain dark blue-black background. The reference images are keyframes from a technique sheet: copy ONLY the character and the poses."
+    },
+    {
+      "id": "burst_4",
+      "strike": "burst_4",
+      "beats": [1, 2, 3],
+      "title": "Вспышка 4: встречный удар без замаха",
+      "duration": 4,
+      "resolution": "480p",
+      "panels": [
+        "burst_4__1_swing__44_60.png",
+        "burst_4__2_contact__44_98.png",
+        "burst_4__3_recover__45_50.png"
+      ],
+      "prompt": "Reference images 1-3 are three key poses of the same character, in order.\n\nA slim young male anime character: blond wavy shoulder-length hair, pale skin, dark navy military greatcoat with silver trim and a fleur-de-lis on the tail, black boots, white gloves, holding a long silver spear about 1.8 m long.\n\nThere is NO windup. He is already moving forward, the spear held level at his right side with the point forward (image 1). He takes one short step in toward a target coming at him and drives a straight, level strike forward at chest height - the shaft horizontal at the moment of contact, front knee deep, rear leg straight (image 2). Then he freezes upright in profile, perfectly still, the point dropped low behind him (image 3). His forward hand slides about 25 cm along the shaft as the strike goes out.\n\nThe whole action takes {real} seconds in reality. Play it in slow motion, about {slow} slower, filling the clip.\n\nSingle continuous shot. Locked-off static camera on a tripod. Full body in frame the whole time, floor visible. Plain dark blue-black background. The reference images are keyframes from a technique sheet: copy ONLY the character and the poses."
+    },
+    {
+      "id": "spear_down",
+      "strike": "spear_down",
+      "beats": [1, 2, 3, 4],
+      "title": "Копьё в пол: перекрут, замах, удар в метку",
+      "duration": 6,
+      "resolution": "480p",
+      "panels": [
+        "spear_down__1_windup__45_98.png",
+        "spear_down__2_hold__46_19.png",
+        "spear_down__3_contact__47_03.png",
+        "spear_down__4_hold2__47_63.png"
+      ],
+      "prompt": "Reference images 1-4 are four key poses of the same character, in order.\n\nA slim young male anime character: blond wavy shoulder-length hair, pale skin, dark navy military greatcoat with silver trim and a long split tail, black boots, white gloves, holding a long silver spear about 1.8 m long.\n\nHe spins the spear one full flat turn above his head, catches it, and raises it straight up vertically over his head with both hands high (images 1 and 2) - the tallest silhouette of the whole scene - and holds it there dead still for most of a second. Then the entire shaft swings forward and down in one arc, passing IN FRONT of his body and never behind it, and the point drives into a mark on the floor between his feet; his knees bend to absorb the impact (image 3). Finally both hands come off the shaft and he stands free beside the spear, which stands upright by itself with its point in the floor (image 4).\n\nThe whole action takes {real} seconds in reality. Play it in slow motion, about {slow} slower, filling the clip.\n\nSingle continuous shot. Locked-off static camera on a tripod. Full body in frame the whole time, floor visible, headroom above the raised spear. Plain dark blue-black background. The reference images are keyframes from a technique sheet: copy ONLY the character and the poses."
+    }
+  ]
+}
