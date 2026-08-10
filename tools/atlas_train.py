@@ -108,7 +108,9 @@ def generate(clip: Clip, stamp: str) -> None:
            "notes": "тренировочный клип, %s, доли %.2f-%.2f"
                     % (clip.strike, clip.first, clip.last)}
     try:
-        refs = [upload(p) for p in clip.panels]
+        # Порядок важен: промпт адресует картинки словом «image N», и номера в
+        # нём посчитаны из этого же порядка — внешность, потом позы.
+        refs = [upload(p) for p in clip.refs]
         job = submit(shot, refs, clip.resolution)
         row["prediction_id"] = job
         url, tokens = wait(job)
@@ -154,9 +156,11 @@ def show(clips: list[Clip]) -> None:
         print("  разрешение  %s   пропорции 16:9   звук выключен, знака нет"
               % clip.resolution)
         print("  ожидаемо    $%.2f" % estimate(shot, clip.resolution))
-        print("  панелей     %d" % len(clip.panels))
-        for i, p in enumerate(clip.panels, 1):
-            print("    image %d  %s" % (i, p.name))
+        print("  референсов  %d = внешность %d + позы %d"
+              % (len(clip.refs), len(clip.faces), len(clip.panels)))
+        for i, p in enumerate(clip.refs, 1):
+            role = "внешность" if i <= len(clip.faces) else "поза"
+            print("    image %d  %-34s %s" % (i, p.name, role))
         print("  --- промпт целиком, вместе с запретами ---")
         for line in full_prompt(shot).splitlines():
             print("  " + line if line else "")

@@ -19,6 +19,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CLIPS = ROOT / "scenario/train_clips.json"
 PANELS = ROOT / "assets/sheets/panels"
+# Референсы внешности — официальный арт, а не наши листы: на листах персонаж
+# уехал в русого в тёмно-синем сюртуке, и брать облик оттуда нельзя.
+FACES = ROOT / "assets/screenshots"
 
 # Длительности, которые принимает модель. Список из схемы, docs/atlas-api.md:
 # -1 значит «сколько выйдет», и нам он не нужен — длина клипа задаёт замедление.
@@ -27,7 +30,7 @@ DURATIONS = tuple(range(4, 16))
 # Больше девяти референсов поле reference_images не берёт.
 MAX_REFS = 9
 
-PLACEHOLDERS = ("{real}", "{slow}")
+PLACEHOLDERS = ("{who}", "{char}", "{poses}", "{real}", "{slow}")
 
 
 class ClipError(Exception):
@@ -43,12 +46,18 @@ class Clip:
     title: str
     duration: int
     resolution: str
-    panels: tuple[Path, ...]
+    faces: tuple[Path, ...]   # референсы внешности, уходят ПЕРВЫМИ
+    panels: tuple[Path, ...]  # позы, уходят после них
     prompt: str
     negative: str
     real: float          # сколько длится движение на самом деле, секунды
     first: float         # время первой доли клипа
     last: float          # время последней
+
+    @property
+    def refs(self) -> tuple[Path, ...]:
+        """Всё, что уходит в reference_images, в порядке отправки."""
+        return self.faces + self.panels
 
     @property
     def slow(self) -> float:
@@ -58,6 +67,15 @@ class Clip:
 def _fmt_slow(value: float) -> str:
     """Множитель замедления словами модели: «4x», а не «4.09090909x»."""
     return "%.1fx" % value if value < 10 else "%.0fx" % value
+
+
+def _span(first: int, last: int) -> str:
+    """Как назвать модели диапазон картинок: она адресует их словом image N."""
+    if first == last:
+        return "image %d" % first
+    if last == first + 1:
+        return "images %d and %d" % (first, last)
+    return "images %d-%d" % (first, last)
 
 
 def load(strikes, path: Path | str = CLIPS) -> list[Clip]:
@@ -72,6 +90,22 @@ def load(strikes, path: Path | str = CLIPS) -> list[Clip]:
     if not negative:
         raise ClipError("в файле нет общего запрета — модель не имеет "
                         "отдельного поля запретов, и без него в кадр уедет текст")
+
+    # Внешность описана ОДИН раз на весь файл. Шесть копий уже расходились —
+    # так у листов движений персонаж и превратился из Лоэна в русого.
+    character = raw.get("character") or {}
+    who = str(character.get("описание", "")).strip()
+    if not who:
+        raise ClipError("в файле нет описания персонажа. Без него модель возьмёт "
+                        "облик с панелей, а там он неверный")
+    faces = tuple(FACES / str(name) for name in character.get("refs", []))
+    if not faces:
+        raise ClipError("в файле нет референсов внешности. Одного описания "
+                        "словами мало: проверено на листах, персонаж уезжает")
+    lost = [p.name for p in faces if not p.exists()]
+    if lost:
+        raise ClipError("нет референсов внешности %s в %s"
+                        % (", ".join(lost), FACES.relative_to(ROOT)))
 
     by_id = {s.id: s for s in strikes}
     out: list[Clip] = []
@@ -98,9 +132,11 @@ def load(strikes, path: Path | str = CLIPS) -> list[Clip]:
         panels = tuple(PANELS / str(name) for name in item.get("panels", []))
         if not panels:
             raise ClipError("клип %s без панелей" % cid)
-        if len(panels) > MAX_REFS:
-            raise ClipError("клип %s: панелей %d, модель берёт не больше %d"
-                            % (cid, len(panels), MAX_REFS))
+        if len(faces) + len(panels) > MAX_REFS:
+            raise ClipError(
+                "клип %s: референсов %d (внешность %d + позы %d), модель берёт "
+                "не больше %d" % (cid, len(faces) + len(panels), len(faces),
+                                  len(panels), MAX_REFS))
 
         numbers = [int(n) for n in item.get("beats", [])]
         if not numbers:
@@ -141,7 +177,14 @@ def load(strikes, path: Path | str = CLIPS) -> list[Clip]:
                 raise ClipError(
                     "клип %s: в промпте нет %s. Темп обязан подставляться из "
                     "долей, иначе он разойдётся со сценарием молча" % (cid, mark))
+        # Номера картинок считаются из фактического порядка отправки: сначала
+        # внешность, потом позы. Руками их писать нельзя — добавится референс,
+        # и промпт начнёт показывать модели не на те картинки.
         prompt = (template
+                  .replace("{who}", who)
+                  .replace("{char}", _span(1, len(faces)))
+                  .replace("{poses}", _span(len(faces) + 1,
+                                            len(faces) + len(panels)))
                   .replace("{real}", "%.2f" % real)
                   .replace("{slow}", _fmt_slow(duration / real)))
         left = [c for c in "{}" if c in prompt]
@@ -153,7 +196,8 @@ def load(strikes, path: Path | str = CLIPS) -> list[Clip]:
                         title=str(item.get("title", cid)),
                         duration=duration,
                         resolution=str(item.get("resolution", "480p")),
-                        panels=panels, prompt=prompt, negative=negative,
+                        faces=faces, panels=panels,
+                        prompt=prompt, negative=negative,
                         real=real, first=first, last=last))
 
     if not out:
