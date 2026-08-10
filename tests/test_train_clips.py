@@ -11,7 +11,8 @@ from src.models import Timeline
 from src.movements import load_movements, resolve_times
 from src.peaks import peak_offsets
 from src.strikes import load_strikes, resolve_strikes
-from src.train_clips import CLIPS, DURATIONS, MAX_REFS, ClipError, load
+from src.train_clips import (CLIPS, DURATIONS, MAX_PANELS, MAX_REFS, ClipError,
+                             load)
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -40,6 +41,11 @@ def write(tmp_path: Path, data: dict) -> Path:
     path = tmp_path / "train_clips.json"
     path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
     return path
+
+
+def pick(raw: dict, cid: str) -> dict:
+    """Клип по id, а не по номеру в списке: список меняется."""
+    return next(c for c in raw["clips"] if c["id"] == cid)
 
 
 # --- то, что должно быть верно в самом файле -------------------------------
@@ -103,6 +109,76 @@ def test_the_description_of_the_character_is_one_and_the_same_everywhere(clips):
     length = 700
     blocks = {c.prompt[s:s + length] for c, s in zip(clips, starts)}
     assert len(blocks) == 1
+
+
+def test_no_clip_carries_more_panels_than_the_look_can_survive(clips):
+    """Шесть панелей против двух артов — и Лоэн уехал в русого на две секунды."""
+    for clip in clips:
+        assert len(clip.panels) <= MAX_PANELS, "%s: %d" % (clip.id, len(clip.panels))
+        assert len(clip.panels) <= 2 * len(clip.faces)
+
+
+def test_the_prompt_demands_the_look_holds_to_the_last_frame(clips):
+    for clip in clips:
+        assert "from the first frame to the last" in clip.prompt
+        assert "never changes colour" in clip.prompt
+
+
+def test_the_split_halves_of_burst_3_overlap_on_the_first_impact(clips):
+    """Иначе ни одна половина не показала бы, как в удар приходят."""
+    by_id = {c.id: c for c in clips}
+    a, b = by_id["burst_3a"], by_id["burst_3b"]
+    assert a.strike == b.strike == "burst_3"
+    assert a.last == b.first
+    shared = set(p.name for p in a.panels) & set(p.name for p in b.panels)
+    assert len(shared) == 1
+
+
+# --- кадр: камера уехала сама, и правила теперь лежат одним блоком ----------
+
+def test_the_rules_of_the_shot_are_one_and_the_same_everywhere(clips):
+    marker = "Single continuous shot from a locked-off camera"
+    blocks = {c.prompt[c.prompt.index(marker):] for c in clips}
+    assert len(blocks) == 1
+
+
+def test_the_shot_forbids_the_camera_from_moving_at_all(clips):
+    for clip in clips:
+        assert "never changes focal length" in clip.prompt
+        assert "WHOLE BODY" in clip.prompt
+        assert "never a close-up" in clip.prompt
+
+
+def test_the_ban_names_what_the_camera_did(clips):
+    for clip in clips:
+        for phrase in ("camera push-in", "dolly", "close-up", "cropped body",
+                       "sparks", "impact flash", "orange light"):
+            assert phrase in clip.negative
+
+
+def test_a_file_without_the_rules_of_the_shot_is_loud(strikes, raw, tmp_path):
+    raw["кадр"] = ""
+    with pytest.raises(ClipError, match="камера уезжает сама"):
+        load(strikes, write(tmp_path, raw))
+
+
+def test_too_many_panels_is_loud(strikes, raw, tmp_path):
+    clip = dict(raw["clips"][0])
+    clip["id"] = "перебор"
+    clip["beats"] = [1, 2, 3, 4]
+    clip["panels"] = clip["panels"] + clip["panels"][:1]
+    raw["clips"].append(clip)
+    with pytest.raises(ClipError, match="уезжает в русого"):
+        load(strikes, write(tmp_path, raw))
+
+
+# --- копьё встало не тем концом --------------------------------------------
+
+def test_the_finale_says_which_end_goes_into_the_floor(clips):
+    """Первый заход поставил копьё украшенным наконечником вверх."""
+    finale = next(c for c in clips if c.id == "spear_down")
+    assert "ornate blade is DOWN, in the floor" in finale.prompt
+    assert "Not the other way round" in finale.prompt
 
 
 def test_the_prompt_says_the_poses_carry_the_wrong_look(clips):
@@ -236,8 +312,8 @@ def test_beats_out_of_order_are_loud(strikes, raw, tmp_path):
 
 
 def test_a_beat_the_strike_does_not_have_is_loud(strikes, raw, tmp_path):
-    raw["clips"][4]["beats"] = [1, 2, 3, 9]
-    raw["clips"][4]["panels"].append(raw["clips"][4]["panels"][0])
+    clip = pick(raw, "burst_4")          # у этого удара всего три доли
+    clip["beats"] = [1, 2, 9]
     with pytest.raises(ClipError, match="всего"):
         load(strikes, write(tmp_path, raw))
 
@@ -255,22 +331,24 @@ def test_two_clips_with_one_id_are_loud(strikes, raw, tmp_path):
 
 
 def test_more_refs_than_the_model_takes_is_loud(strikes, raw, tmp_path):
-    # Доли оставляем верными: предел на референсы обязан сработать раньше
-    # любых проверок долей, иначе сообщение уведёт от настоящей причины.
-    clip = raw["clips"][2]
-    clip["panels"] = clip["panels"] + clip["panels"][:4]
+    """Панелей теперь не больше четырёх, так что предел девяти достигается
+    только референсами внешности — но достигается, и он должен ловиться."""
+    raw["character"]["refs"] = [
+        "lohen_splash_art.png", "spear_full.png", "lohen_spear_static.png",
+        "lohen_rage.png", "lohen_over_captive.png", "lohen_fullbody_green.png",
+    ]
     with pytest.raises(ClipError, match="не больше 9"):
         load(strikes, write(tmp_path, raw))
 
 
 def test_the_look_reference_budget_counts_both_kinds(strikes, raw, tmp_path):
-    """Восемь поз плюс два арта — это десять, и это уже перебор."""
-    raw["character"]["refs"] = ["lohen_splash_art.png", "spear_full.png",
-                               "lohen_spear_static.png", "lohen_rage.png"]
-    clip = raw["clips"][2]
-    with pytest.raises(ClipError, match="внешность 4"):
+    """Сообщение обязано назвать оба слагаемых, иначе непонятно, что убирать."""
+    raw["character"]["refs"] = [
+        "lohen_splash_art.png", "spear_full.png", "lohen_spear_static.png",
+        "lohen_rage.png", "lohen_over_captive.png", "lohen_fullbody_green.png",
+    ]
+    with pytest.raises(ClipError, match="внешность 6 \\+ позы 4"):
         load(strikes, write(tmp_path, raw))
-    assert len(clip["panels"]) == 6
 
 
 def test_a_file_without_a_character_description_is_loud(strikes, raw, tmp_path):

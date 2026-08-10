@@ -30,7 +30,13 @@ DURATIONS = tuple(range(4, 16))
 # Больше девяти референсов поле reference_images не берёт.
 MAX_REFS = 9
 
-PLACEHOLDERS = ("{who}", "{char}", "{poses}", "{real}", "{slow}")
+PLACEHOLDERS = ("{who}", "{shot}", "{char}", "{poses}", "{real}", "{slow}")
+
+# Панелей на клип. Замер первого захода: при шести панелях против двух
+# референсов внешности персонаж уехал в русого с листов на две секунды, при
+# трёх-четырёх выстоял. Неверная внешность на входе побеждает, когда её втрое
+# больше — см. docs/status/2026-08-10-train-clips.md.
+MAX_PANELS = 4
 
 
 class ClipError(Exception):
@@ -98,6 +104,10 @@ def load(strikes, path: Path | str = CLIPS) -> list[Clip]:
     if not who:
         raise ClipError("в файле нет описания персонажа. Без него модель возьмёт "
                         "облик с панелей, а там он неверный")
+    shot = str(raw.get("кадр", "")).strip()
+    if not shot:
+        raise ClipError("в файле нет правил кадра. Без них камера уезжает сама: "
+                        "у вспышки 4 она наехала и тело вышло из кадра")
     faces = tuple(FACES / str(name) for name in character.get("refs", []))
     if not faces:
         raise ClipError("в файле нет референсов внешности. Одного описания "
@@ -132,6 +142,11 @@ def load(strikes, path: Path | str = CLIPS) -> list[Clip]:
         panels = tuple(PANELS / str(name) for name in item.get("panels", []))
         if not panels:
             raise ClipError("клип %s без панелей" % cid)
+        if len(panels) > MAX_PANELS:
+            raise ClipError(
+                "клип %s: панелей %d, а больше %d держать нельзя — при шести "
+                "персонаж уезжает в русого с листов. Разбей клип на части, как "
+                "burst_3a и burst_3b" % (cid, len(panels), MAX_PANELS))
         if len(faces) + len(panels) > MAX_REFS:
             raise ClipError(
                 "клип %s: референсов %d (внешность %d + позы %d), модель берёт "
@@ -182,6 +197,7 @@ def load(strikes, path: Path | str = CLIPS) -> list[Clip]:
         # и промпт начнёт показывать модели не на те картинки.
         prompt = (template
                   .replace("{who}", who)
+                  .replace("{shot}", shot)
                   .replace("{char}", _span(1, len(faces)))
                   .replace("{poses}", _span(len(faces) + 1,
                                             len(faces) + len(panels)))
