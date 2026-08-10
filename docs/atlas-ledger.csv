@@ -31,3 +31,4 @@ timestamp,shot,model,resolution,duration,attempt,cost_estimate_usd,total_tokens,
 2026-08-10T16:15:33,train:burst_3b,bytedance/seedance-2.0-mini/reference-to-video,480p,7,1,0.2769,70726,ok,65dc79f65eb64e7386076909a5c528e9,burst_3b_a1.mp4,"тренировочный клип, burst_3, доли 39.92-41.60"
 2026-08-10T16:15:33,train:burst_4,bytedance/seedance-2.0-mini/reference-to-video,480p,4,2,0.1582,40594,ok,08e5d785a3714f8d933e6ed5f39f9a6f,burst_4_a2.mp4,"тренировочный клип, burst_4, доли 44.60-45.50"
 2026-08-10T16:15:33,train:spear_down,bytedance/seedance-2.0-mini/reference-to-video,480p,6,2,0.2373,60682,ok,5c4bed9b34e84050942084e045ea76fb,spear_down_a2.mp4,"тренировочный клип, spear_down, доли 45.98-47.63"
+2026-08-10T20:09:02,train:spear_down,bytedance/seedance-2.0-mini/reference-to-video,480p,6,3,0.2373,60682,ok,b455c4ccd715417e9461badc36d91428,spear_down_a3.mp4,"тренировочный клип, spear_down, доли 45.98-47.63"
