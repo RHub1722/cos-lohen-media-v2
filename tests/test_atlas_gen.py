@@ -152,11 +152,17 @@ def test_an_unmeasured_resolution_does_not_pretend_to_be_free():
     assert math.isnan(cost(5, "нет такого"))
 
 
-def test_the_four_pilot_generations_still_come_out_at_the_known_price():
-    """443608 токенов на $2.46 — единственная привязка к деньгам, что у нас есть.
-    Если цена токена уедет, эти четыре кадра перестанут сходиться."""
-    pilot = cost(15, "480p") * 2 + cost(7, "480p") * 2
-    assert pilot == pytest.approx(2.46, abs=0.05)
+def test_the_estimate_matches_what_the_service_actually_charged():
+    """Привязка к деньгам, снятая с ответа сервиса, а не выведенная из суммы.
+
+    Первая тренировочная генерация, 10 августа: 5 секунд 480p, в объекте
+    предсказания total_tokens 50638 и price "0.19850096". Отсюда и цена токена.
+
+    Прежняя привязка была слабее: четыре пилотных кадра на $2.46, из которых
+    выводилось $5.545 за миллион. Оценка получалась завышенной в 1.41 раза —
+    ровно та скидка -30%, что стоит в каталоге Atlas.
+    """
+    assert cost(5, "480p") == pytest.approx(0.19850096, rel=0.01)
 
 
 def run(monkeypatch, *argv):

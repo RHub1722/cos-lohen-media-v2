@@ -117,6 +117,43 @@ def test_the_ban_names_the_look_that_went_wrong(clips):
         assert "blond hair" in clip.negative
 
 
+# --- оружие: первая генерация выдала наконечник на обоих концах -------------
+
+def test_the_word_head_never_means_the_weapon(clips):
+    """Из-за этой двусмысленности копьё и вышло двуглавым.
+
+    В промпте стояло «large ornate head» про верхний конец и «head of the
+    polearm resting on the floor» про нижний. Модель выполнила буквально оба.
+    Теперь head — только про его голову.
+    """
+    for clip in clips:
+        for phrase in ("head of the polearm", "head of the weapon",
+                       "the head lifts", "the head raised", "the head forward",
+                       "the head drives", "its head", "heavy head"):
+            assert phrase not in clip.prompt, "%s: %r" % (clip.id, phrase)
+
+
+def test_the_prompt_says_the_weapon_is_asymmetric(clips):
+    for clip in clips:
+        assert "STRONGLY ASYMMETRIC" in clip.prompt
+        assert "blade at ONE END ONLY" in clip.prompt
+        assert "not double-headed" in clip.prompt
+
+
+def test_the_ban_names_the_double_ended_weapon(clips):
+    for clip in clips:
+        for phrase in ("double-ended weapon", "blade at both ends",
+                       "symmetrical polearm"):
+            assert phrase in clip.negative
+
+
+def test_the_dagger_in_the_reference_is_excluded(clips):
+    """spear_full.png показывает копьё И отдельный кинжал. Кинжал не наш."""
+    for clip in clips:
+        assert "dagger is a DIFFERENT weapon" in clip.prompt
+        assert "dagger" in clip.negative
+
+
 def test_the_length_is_one_the_model_accepts(clips):
     for clip in clips:
         assert clip.duration in DURATIONS

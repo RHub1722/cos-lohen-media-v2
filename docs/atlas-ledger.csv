@@ -20,3 +20,5 @@ timestamp,shot,model,resolution,duration,attempt,cost_estimate_usd,total_tokens,
 2026-08-04T11:17:50,burst3_impact_a,bytedance/seedance-2.0-mini/reference-to-video,720p,6.0,2,0.7236,130500,ok,26f36f81f4f3429c953e406de435a81e,base/06_burst3.mp4,
 2026-08-04T11:17:50,burst4_whoosh,bytedance/seedance-2.0-mini/reference-to-video,720p,4.0,2,0.4824,87300,ok,37a95ff4ec8640b9b7dbe9faebfa8e55,base/08_raise.mp4,
 2026-08-04T11:31:34,combat,bytedance/seedance-2.0-mini/reference-to-video,720p,7.0,4,0.8442,152100,ok,8d6163c2b2474413bf9f64b6dfa75230,base/03_breach.mp4,
+2026-08-10T14:48:14,train:take_the_hit,bytedance/seedance-2.0-mini/reference-to-video,480p,5,1,0.2797,50638,ok,cbab70ac4fe544b48f5346f7d2650804,take_the_hit_a1.mp4,"тренировочный клип, take_the_hit, доли 42.40-43.63"
+2026-08-10T15:10:40,train:take_the_hit,bytedance/seedance-2.0-mini/reference-to-video,480p,5,2,0.1978,50638,ok,46506e9bee4342f897dfa4571a4d1472,take_the_hit_a2.mp4,"тренировочный клип, take_the_hit, доли 42.40-43.63"
