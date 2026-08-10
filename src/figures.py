@@ -30,6 +30,9 @@
     hands   [x, y] — x поперёк тела, y в долях роста от пола
     grip    0..1, какая часть древка остаётся позади кистей
     head    наклон головы
+    hands_off  руки НЕ на древке: копьё стоит само, наконечником в полу.
+            Тогда `grip` и `hands[1]` не участвуют вовсе — от `hands` берётся
+            только x, то есть где копьё стоит поперёк тела. Кисти висят у бёдер.
 """
 
 from __future__ import annotations
@@ -155,6 +158,7 @@ class Skeleton:
     head_tilt: float
     crouch: float
     across: tuple            # единичный вектор поперёк корпуса
+    hands_off: bool = False  # копьё стоит само, кисти не на древке
 
 
 def build(pose: dict) -> Skeleton:
@@ -185,11 +189,28 @@ def build(pose: dict) -> Skeleton:
     knees = (two_bone((hip[0] - HIP_W / 2, hip[1]), feet[0], THIGH, SHIN, -1.0),
              two_bone((hip[0] + HIP_W / 2, hip[1]), feet[1], THIGH, SHIN, +1.0))
 
-    hand = (hx * HAND_X, float(hy))
     d = (math.cos(_rad(spear_a)), -math.sin(_rad(spear_a)))
-    butt = _add(hand, _mul(d, -grip * SPEAR_LEN))
-    tip = _add(hand, _mul(d, (1.0 - grip) * SPEAR_LEN))
-    hand_back = _add(hand, _mul(d, -min(0.17, grip * SPEAR_LEN * 0.85)))
+    if bool(pose.get("hands_off", False)):
+        # Копьё стоит само. Раньше выразить это было нечем, и последняя доля
+        # номера — «руки уходят с древка, копьё стоит само» — считалась как
+        # обычный хват: наконечник уезжал на 110 см НИЖЕ пола, а кисть
+        # вылетала от плеча на 79 см при пределе 55. Лист, нарисованный с такой
+        # позы, поставил копьё не тем концом, и генерация видео честно это
+        # повторила: панель бьёт любые слова в промпте.
+        tip = (hx * HAND_X, 0.0)
+        butt = _add(tip, _mul(d, -SPEAR_LEN))
+        # Кисть висит на уровне таза, а не ниже: от плеча до таза 0.32 роста
+        # при длине руки 0.34, и локоть остаётся чуть согнутым. На 0.14 ниже
+        # таза выходило 72 см от плеча при пределе 55 — рука выпрямлялась в
+        # струну, и проверка это ловила.
+        rest = max(0.10, hip[1] - 0.02)
+        hand = _add((0.0, rest), _mul(across, HIP_W * 1.05))
+        hand_back = _sub((0.0, rest), _mul(across, HIP_W * 1.05))
+    else:
+        hand = (hx * HAND_X, float(hy))
+        butt = _add(hand, _mul(d, -grip * SPEAR_LEN))
+        tip = _add(hand, _mul(d, (1.0 - grip) * SPEAR_LEN))
+        hand_back = _add(hand, _mul(d, -min(0.17, grip * SPEAR_LEN * 0.85)))
 
     sh_l = _sub(shoulder, _mul(across, SHOULDER_W / 2))
     sh_r = _add(shoulder, _mul(across, SHOULDER_W / 2))
@@ -199,7 +220,8 @@ def build(pose: dict) -> Skeleton:
     return Skeleton(hip=hip, shoulder=shoulder, chest=chest, head=head, feet=feet,
                     knees=knees, hands=(hand_back, hand), elbows=elbows,
                     butt=butt, tip=tip, lean=lean, head_tilt=head_tilt,
-                    crouch=crouch, across=across)
+                    crouch=crouch, across=across,
+                    hands_off=bool(pose.get("hands_off", False)))
 
 
 # --- рисование тела --------------------------------------------------------
@@ -327,10 +349,12 @@ def _spear(sk: Skeleton) -> str:
            '<polygon points="%s" fill="%s"/>' % (_fmt(blade), BLADE_C),
            '<line x1="%.1f" y1="%.1f" x2="%.1f" y2="%.1f" stroke="#ffffff" '
            'stroke-width="1.4" opacity="0.85"/>' % (*_p(*neck), *_p(*sk.tip))]
-    # Кисти поверх древка: хват — то, ради чего кадр и нужен.
-    for h in sk.hands:
-        out.append('<circle cx="%.1f" cy="%.1f" r="%.1f" fill="%s"/>'
-                   % (*_p(*h), 0.028 * SCALE, SKIN))
+    # Кисти поверх древка: хват — то, ради чего кадр и нужен. Кроме доли, где
+    # руки с древка уже сняты: там рисовать хват значило бы соврать.
+    if not sk.hands_off:
+        for h in sk.hands:
+            out.append('<circle cx="%.1f" cy="%.1f" r="%.1f" fill="%s"/>'
+                       % (*_p(*h), 0.028 * SCALE, SKIN))
     return "".join(out)
 
 

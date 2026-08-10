@@ -271,3 +271,68 @@ def test_a_pause_pointing_at_an_unknown_skill_is_loud(tmp_path):
     bad.write_text(json.dumps(raw, ensure_ascii=False), encoding="utf-8")
     with pytest.raises(TechniqueError):
         load(bad)
+
+
+# --- руки сняты с древка: доля, которую модель позы раньше не умела ---------
+
+def test_when_the_hands_leave_the_shaft_the_spear_stands_on_the_floor(fight):
+    """Последняя доля номера: «руки уходят с древка, копьё стоит само».
+
+    Раньше она считалась как обычный хват, и наконечник уезжал на 110 см НИЖЕ
+    пола. Лист, нарисованный с такой позы, поставил копьё не тем концом, и
+    генерация видео это повторила: панель на входе бьёт слова в промпте.
+    """
+    _, _, strikes = fight
+    final = next(s for s in strikes if s.id == "spear_down").beats[-1]
+    assert final.pose.get("hands_off") is True
+    sk = skeleton(final.pose)
+    assert sk.hands_off is True
+    assert abs(sk.tip[1]) < 0.02, "наконечник не в полу: %.3f роста" % sk.tip[1]
+    assert sk.butt[1] > 1.0, "пятка должна быть вверху: %.3f роста" % sk.butt[1]
+
+
+def test_the_hands_that_left_the_shaft_still_belong_to_the_arms(fight):
+    """Свободные кисти обязаны оставаться в пределах вылета руки.
+
+    Первая версия свободного положения повесила их на 0.14 роста ниже таза, и
+    от плеча выходило 72 см при пределе 55 — рука выпрямлялась в струну.
+    """
+    import math
+
+    from src.figures import FOREARM, SHOULDER_W, UPPER_ARM, _add, _mul, _sub
+
+    _, _, strikes = fight
+    final = next(s for s in strikes if s.id == "spear_down").beats[-1]
+    sk = skeleton(final.pose)
+    reach = UPPER_ARM + FOREARM
+    for name, off, hand in (("ведущая", +SHOULDER_W / 2, sk.hands[1]),
+                            ("задняя", -SHOULDER_W / 2, sk.hands[0])):
+        shoulder = _add(sk.shoulder, _mul(sk.across, off))
+        assert math.dist(shoulder, hand) < reach, "%s рука выпрямлена" % name
+
+
+def test_no_grip_is_drawn_where_there_is_no_grip(fight):
+    """Кружки кистей поверх древка — это и есть рисунок хвата. Там, где руки
+    сняты, их рисовать нельзя: кадр соврал бы о том, ради чего он нужен."""
+    # Считаем по самой рисовалке древка, а не по всей фигуре: кружки того же
+    # радиуса есть и в других её частях, и общий счётчик ловил бы их тоже.
+    # И не по всем кружкам древка: концы полилиний тоже кружки. Хват отличается
+    # цветом кожи и радиусом — по этой паре и считаем.
+    from src.figures import SCALE, SKIN, _spear
+
+    grip_mark = 'r="%.1f" fill="%s"' % (0.028 * SCALE, SKIN)
+    _, _, strikes = fight
+    spear = next(s for s in strikes if s.id == "spear_down")
+    held, free = spear.beats[-2], spear.beats[-1]
+    assert _spear(skeleton(held.pose)).count(grip_mark) == 2
+    assert _spear(skeleton(free.pose)).count(grip_mark) == 0
+
+
+def test_the_point_of_the_finale_lands_on_the_floor_not_under_it(fight):
+    """Удар в метку: у контакта был хват 0.20, и наконечник уходил на 61 см
+    ниже пола. Метка нарисована на площадке, а не в подвале."""
+    _, _, strikes = fight
+    contact = next(b for b in next(s for s in strikes if s.id == "spear_down").beats
+                   if b.role == "contact")
+    sk = skeleton(contact.pose)
+    assert -0.02 < sk.tip[1] < 0.05, "наконечник на %.3f роста" % sk.tip[1]
