@@ -425,6 +425,34 @@
   .move .mini { grid-column: 2; display: flex; gap: 10px; font-size: 0.74rem; color: var(--muted); }
   .move .mini i { font-style: normal; letter-spacing: 0.1em; }
 
+  /* ── вид «Клипы» ─────────────────────────────────────────────────────── */
+  .clips { display: grid; gap: 12px; }
+  .clip {
+    display: grid; gap: 8px;
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 10px; padding: 10px 12px;
+  }
+  .clip .hd { display: grid; gap: 2px; }
+  .clip .hd .mini { font-size: 0.76rem; color: var(--muted); }
+  /* Клип 864x496 без звуковой дорожки. Чёрный фон под ним — чтобы постер и
+     кадр не различались рамкой, пока плеер грузится. Шире 640 не растягиваем:
+     дальше растёт только размытие, исходник всё равно 864 px. */
+  .clip video {
+    display: block; width: 100%; max-width: 640px; height: auto;
+    margin: 0 auto; border-radius: 8px; background: #000;
+  }
+  .clip .beats { display: flex; flex-wrap: wrap; gap: 6px; }
+  .clip .beat {
+    background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 999px; color: inherit; font: inherit; font-size: 0.76rem;
+    padding: 2px 9px; cursor: pointer;
+  }
+  .clip .beat b { color: var(--accent); font-weight: 700; }
+  .clip .watch { margin: 0; font-size: 0.9rem; color: #cfcfd8; }
+  .clip .bad h4 { font-size: 0.86rem; color: var(--power-c); margin-bottom: 3px; }
+  .clip .bad ul { margin: 0; padding-left: 1.2em; font-size: 0.86rem; color: var(--muted); }
+  .clip .bad li { margin: 2px 0; }
+
   /* ── вид «Как тренироваться» ─────────────────────────────────────────── */
   .how { display: grid; gap: 12px; }
   .how h3 { font-size: 1.1rem; margin-bottom: 6px; }
@@ -559,6 +587,17 @@
     <div class="strikes" id="strikes"></div>
   </section>
 
+  <!-- Тренировочные клипы: по одному видео на удар, сгенерированы по панелям
+       листов движений. Оговорка стоит ПЕРВОЙ и до плееров намеренно: клип
+       показывает, как движение выглядит, но врёт про то, когда оно случается. -->
+  <section class="view" id="view-clips">
+    <div class="card" style="margin-bottom:12px">
+      <div class="label">Сначала прочти, потом смотри</div>
+      <p class="warn" style="margin:6px 0 0;font-size:0.92rem" id="clipsCaveat"></p>
+    </div>
+    <div class="clips" id="clipsList"></div>
+  </section>
+
   <!-- id не `moves`: имя вида уезжает в хеш адреса, и браузер сам прокрутил бы
        страницу к элементу с таким же id, поверх нашего showView. -->
   <section class="view" id="view-moves">
@@ -580,6 +619,10 @@
           <li><b>Бой</b> — разбор шести боевых действий по долям: замах, взмах,
           контакт, возврат. Здесь же рисунки позы, план площадки сверху,
           референс и петля на кусок.</li>
+          <li><b>Клипы</b> — семь видео, по одному на удар: как это выглядит в
+          замедлении от 3.6 до 4.5 раз. Сгенерированы по позам с листов, и у
+          каждого написано, чего на нём нет. Времени в них не верь: доли внутри
+          клипа стоят не там, где их считает сценарий.</li>
           <li><b>Движения</b> — весь номер списком, от первого шага до
           финальной позы. Клик по строке — перейти к ней в видео.</li>
         </ol>
@@ -780,6 +823,7 @@ const RATES = [0.25, 0.5, 0.75, 1];
 const VIEWS = [
   ["run", "Прогон"],
   ["fight", "Бой"],
+  ["clips", "Клипы"],
   ["moves", "Движения"],
   ["how", "Как тренироваться"],
 ];
@@ -1211,6 +1255,65 @@ DATA.strikes.forEach((s) => {
   if (lists.children.length) card.appendChild(lists);
 
   $("strikes").appendChild(card);
+});
+
+// ── вид «Клипы» ───────────────────────────────────────────────────────────
+$("clipsCaveat").textContent = DATA.clips_caveat || "";
+(DATA.clips || []).forEach((c) => {
+  const card = el("div", "clip");
+  const head = el("div", "hd");
+  head.appendChild(el("b", null, c.title));
+  head.appendChild(el("div", "mini",
+    `${c.real.toFixed(2)} с в жизни · показано за ${c.duration} с, замедление `
+    + `${c.slow}x · попытка ${c.attempt}`));
+  card.appendChild(head);
+
+  const v = el("video");
+  // Пропорции кадра приезжают из данных, снятые с самого файла: браузер знает
+  // высоту плеера до всякой загрузки, и карточки не прыгают, когда догружаются
+  // постеры. При preload="none" это случалось бы при каждом открытии раздела.
+  if (c.w && c.h) v.style.aspectRatio = `${c.w} / ${c.h}`;
+  v.src = c.file;
+  v.poster = c.poster;
+  v.controls = true;
+  v.loop = true;
+  v.playsInline = true;
+  // preload="none" обязателен: иначе телефон при открытии раздела полезет за
+  // метаданными семи файлов сразу. Видно при этом постер, он и грузится.
+  v.preload = "none";
+  // Запасной адрес — тот же случай, что у ролика номера: прокси отдают mp4 с
+  // типом octet-stream, и Safari такой файл не играет. Пробуем один раз.
+  let tried = false;
+  v.addEventListener("error", () => {
+    if (tried || !DATA.clips_fallback || !v.src) return;
+    tried = true;
+    v.src = DATA.clips_fallback + c.file.split("/").pop();
+  });
+  card.appendChild(v);
+
+  // Доли клипа — кнопками: клик уводит плеер номера на эту долю. Клип и звук
+  // рядом, и сверять их можно не выходя из раздела.
+  const beats = el("div", "beats");
+  c.beats.forEach((b) => {
+    const chip = el("button", "beat");
+    chip.type = "button";
+    chip.title = b.what;
+    chip.innerHTML = `<b>${ROLE_NAMES[b.role] || b.role}</b> ${b.heard.toFixed(2)}`;
+    chip.addEventListener("click", () => seek(b.heard, false));
+    beats.appendChild(chip);
+  });
+  card.appendChild(beats);
+
+  card.appendChild(el("p", "watch", c.watch));
+
+  const bad = el("div", "bad");
+  bad.appendChild(el("h4", null, "Чего на клипе нет"));
+  const ul = el("ul");
+  (c.missing || []).forEach((x) => ul.appendChild(el("li", null, x)));
+  bad.appendChild(ul);
+  card.appendChild(bad);
+
+  $("clipsList").appendChild(card);
 });
 
 // ── вид «Движения» ────────────────────────────────────────────────────────

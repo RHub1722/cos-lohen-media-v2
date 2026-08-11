@@ -9,7 +9,7 @@
 - **Платные сервисы** — [docs/video-services-paid.md](docs/video-services-paid.md) — генерация фона за $1–20, готовые запросы
 - **Оплата из Молдовы и MCP** — [docs/video-services-moldova-mcp.md](docs/video-services-moldova-mcp.md) — 20 сервисов: где рельсы открыты, где стоит блок по документам, у кого есть MCP
 - **Цены, отзывы, права** — [docs/video-services-reviews.md](docs/video-services-reviews.md) — сколько видео за минимальную подписку, оценки Trustpilot, лицензии. **Читать до оплаты**
-- **Как разучивать номер** — [docs/status/2026-08-05-training-site.md](docs/status/2026-08-05-training-site.md) — тренажёр `output/training.html`: разбор боя по долям, слышимые времена, петли, референсы. Что в нём изменилось после смены фонограммы — [2026-08-09-trainer-fx](docs/status/2026-08-09-trainer-fx.md)
+- **Как разучивать номер** — [docs/status/2026-08-05-training-site.md](docs/status/2026-08-05-training-site.md) — тренажёр `output/training.html`: разбор боя по долям, слышимые времена, петли, референсы. Что в нём изменилось после смены фонограммы — [2026-08-09-trainer-fx](docs/status/2026-08-09-trainer-fx.md); откуда в нём взялись видео движений и чего они не показывают — [2026-08-11-trainer-clips](docs/status/2026-08-11-trainer-clips.md)
 - **Проектное решение** — [docs/superpowers/specs/2026-08-01-lohen-interrogation-scene-design.md](docs/superpowers/specs/2026-08-01-lohen-interrogation-scene-design.md)
 - **План реализации** — [docs/superpowers/plans/2026-08-01-lohen-v2-implementation.md](docs/superpowers/plans/2026-08-01-lohen-v2-implementation.md)
 - **Точки состояния** — [docs/status/INDEX.md](docs/status/INDEX.md)
@@ -97,8 +97,12 @@ python src/render_book.py
 рисуется ни один. Проектное решение —
 [docs/superpowers/specs/2026-08-09-spear-book-design.md](docs/superpowers/specs/2026-08-09-spear-book-design.md).
 
-Версионируемая копия тренажёра в `site/` — та же страница плюс видео, сжатое до
-960×540 (5.5 МБ вместо 43). Её можно открыть прямо с гита на планшете:
+Версионируемая копия тренажёра в `site/` — та же страница, видео номера, сжатое
+до 960×540 (5.5 МБ вместо 43), и семь тренировочных клипов в `site/clips/`
+(9.7 МБ с постерами) — по одному на удар, вид «Клипы». Какая попытка каждого
+признана годной, записано в `scenario/train_clips.json` и сверяется с журналом
+оплат: рядом в `assets/train_clips/` лежат отклонённые. Всё это открывается
+прямо с гита на планшете:
 
 ```bash
 python src/render_training.py --site
@@ -251,7 +255,7 @@ scenario/timeline.json ─┬─> src/render_audio.py ─> output/master_v2.wav
 | `src/strikes.py` | разбор боя по долям, привязка к событиям звука |
 | `src/peaks.py` | где внутри ассета лежит пик: событие слышно пиком, а не началом файла |
 | `src/render_rehearsal.py` | самодостаточная репетиционная страница |
-| `src/render_training.py` | тренажёр: плеер, разбор боя, четыре вида |
+| `src/render_training.py` | тренажёр: плеер, разбор боя, тренировочные клипы, пять видов |
 | `src/cues.py` | голосовые подсказки: слово на роль доли, разбор наложений |
 | `src/render_cues.py` | две дорожки подсказок и печатный лист ориентиров |
 | `src/voice_lines.py` | русские реплики, бюджеты секунд, лист записи голосом |

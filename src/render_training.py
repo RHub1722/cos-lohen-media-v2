@@ -44,6 +44,8 @@ from src.peaks import peak_offsets  # noqa: E402
 from src.render_rehearsal import build_scenes  # noqa: E402
 from src.soundcheck import SoundcheckError, check  # noqa: E402
 from src.strikes import load_strikes, resolve_strikes  # noqa: E402
+from src.train_clips import caveat as clips_caveat  # noqa: E402
+from src.train_clips import load as load_clips  # noqa: E402
 from src.video_plan import build_plan  # noqa: E402
 from src.voice_lines import load_lines  # noqa: E402
 
@@ -79,6 +81,28 @@ MASTER_VIDEO = ROOT / "output" / NUMBER_VIDEO
 SITE_VIDEO_FALLBACK = (
     "https://cdn.jsdelivr.net/gh/RHub1722/cos-lohen-media-v2@master/site/"
     + SITE_VIDEO
+)
+
+# Тренировочные клипы: по одному на удар, сгенерированы по панелям листов
+# движений, см. scenario/train_clips.json и docs/status/2026-08-10-train-clips.md.
+#
+# Сырьё лежит в assets/train_clips/ и в гит не идёт: там же лежат отклонённые
+# попытки, и каждая забирается обратно без повторной оплаты по prediction_id из
+# журнала. На страницу кладётся ОТБОР — по одному файлу на клип, тот, который
+# признан годным. Какой именно, сказано в сценарии клипов, а не выведено из
+# имени: рядом лежат spear_down_a1 с копьём вверх ногами и burst_4_a1 с наездом
+# камеры, и отличаются они одной цифрой.
+#
+# Перекодировать нечего: с сервера они приходят H.264 / yuv420p / 864x496 и
+# играют в любом браузере. Ремультиплексируем только ради +faststart, чтобы на
+# мобильной связи плеер начинал играть, не дожидаясь всего файла.
+CLIPS_SRC = ROOT / "assets/train_clips"
+CLIPS_SUB = "clips"
+CLIP_POSTER_WIDTH = "432"
+CLIP_POSTER_QUALITY = "80"
+CLIPS_FALLBACK = (
+    "https://cdn.jsdelivr.net/gh/RHub1722/cos-lohen-media-v2@master/site/"
+    + CLIPS_SUB + "/"
 )
 
 # Ключ с описанием кадра по-русски: он адресован человеку, и рядом с ним в
@@ -131,6 +155,65 @@ def build_lines(tl: Timeline, raw_events: list[dict]) -> list[dict]:
          for e in tl.by_stem("voices")),
         key=lambda x: x["t"],
     )
+
+
+def shown_file(cid: str, accepted: str) -> Path:
+    """Файл клипа, с которого можно снять мерку: принятая попытка или её
+    опубликованная копия.
+
+    В свежем клоне assets/train_clips/ пустая — папка не версионируется, — а
+    копия в site/ лежит в гите. Поток в них один и тот же: при публикации клип
+    только перекладывается, без перекодирования.
+    """
+    src = CLIPS_SRC / accepted
+    if src.exists():
+        return src
+    published = SITE_DIR / CLIPS_SUB / ("%s.mp4" % cid)
+    if published.exists():
+        return published
+    raise SystemExit(
+        "нет ни %s, ни опубликованной копии %s. Забрать без повторной оплаты "
+        "можно по prediction_id из docs/atlas-ledger.csv:\n"
+        "    python tools/atlas_train.py --refetch <prediction_id> --as %s"
+        % (src.relative_to(ROOT), published.relative_to(ROOT), cid))
+
+
+def build_clips(strikes) -> list[dict]:
+    """Тренировочные клипы для страницы, вместе с тем, чего они не показывают.
+
+    Панели входа и официальный арт в гит не идут, а страница собирается и из
+    свежего клона, — поэтому `require_refs=False`: сюда картинки входа не нужны
+    вовсе, нужен только отбор попыток и темп из долей.
+    """
+    clips = load_clips(strikes, require_refs=False)
+    by_id = {s.id: s for s in strikes}
+    out = []
+    for clip in clips:
+        beats = [by_id[clip.strike].beats[n - 1] for n in clip.beats]
+        # Размер кадра снимается с файла, а не написан руками: перегенерируем
+        # клип в другом разрешении — и вёрстка соврала бы. По нему браузер знает
+        # высоту плеера до всякой загрузки, иначе при preload="none" семь
+        # карточек прыгают, когда догружаются постеры.
+        width, height = frame_size(shown_file(clip.id, clip.accepted))
+        out.append({
+            "id": clip.id,
+            "strike": clip.strike,
+            "title": clip.title,
+            "file": "%s/%s.mp4" % (CLIPS_SUB, clip.id),
+            "poster": "%s/%s.webp" % (CLIPS_SUB, clip.id),
+            "accepted": clip.accepted,
+            "attempt": clip.attempt,
+            "w": width,
+            "h": height,
+            "duration": clip.duration,
+            "real": clip.real,
+            "slow": round(clip.slow, 1),
+            "watch": clip.watch,
+            "missing": list(clip.missing),
+            "beats": [{"role": b.role, "heard": b.heard, "what": b.what}
+                      for b in beats],
+        })
+    return out
 
 
 def build_payload(video: str, video_fallback: str = "") -> dict:
@@ -190,6 +273,9 @@ def build_payload(video: str, video_fallback: str = "") -> dict:
             for s in strikes
         ],
         "hits": hits,
+        "clips": build_clips(strikes),
+        "clips_caveat": clips_caveat(),
+        "clips_fallback": CLIPS_FALLBACK,
     }
 
 
@@ -233,6 +319,75 @@ def pack_video(force: bool = False) -> Path:
     if result.returncode != 0 or not target.exists():
         raise SystemExit(f"FFmpeg не собрал {target.name}:\n{result.stderr[-600:]}")
     return target
+
+
+def frame_size(video: Path) -> tuple[int, int]:
+    """Размер кадра файла, который реально ляжет на страницу."""
+    run = subprocess.run([
+        "ffprobe", "-v", "error", "-select_streams", "v:0",
+        "-show_entries", "stream=width,height", "-of", "csv=p=0:s=x", str(video),
+    ], capture_output=True, text=True)
+    parts = run.stdout.strip().split("x")
+    if run.returncode != 0 or len(parts) != 2:
+        raise SystemExit("FFprobe не прочитал размер кадра %s:\n%s"
+                         % (video.name, run.stderr[-300:]))
+    return int(parts[0]), int(parts[1])
+
+
+def pack_clips(clips: list[dict], target: Path, force: bool = False) -> int:
+    """Отобранные клипы и постеры рядом со страницей. Возвращает вес отбора.
+
+    Копия, а не ссылка на assets/train_clips/: там рядом лежат отклонённые
+    попытки, и папка не версионируется. На страницу уезжает ровно то, что
+    признано годным, под именем без номера попытки — номер уже записан в
+    сценарии клипов и показан на карточке.
+
+    Источника может не быть вовсе: в свежем клоне assets/train_clips/ пустая, а
+    опубликованная копия лежит в гите. Это не ошибка — ошибка, когда нет ни
+    того, ни другого, и тогда сказано, чем это лечится.
+    """
+    target.mkdir(parents=True, exist_ok=True)
+    total = 0
+    for clip in clips:
+        src = CLIPS_SRC / clip["accepted"]
+        dst = target / Path(clip["file"]).name
+        poster = target / Path(clip["poster"]).name
+        if not src.exists():
+            # Источника нет, а копия лежит: свежий клон. Тогда публиковать нечего
+            # — уже опубликовано, и постер рядом с ней.
+            if dst.exists() and poster.exists():
+                total += dst.stat().st_size + poster.stat().st_size
+                continue
+            shown_file(clip["id"], clip["accepted"])  # скажет, чем это лечится
+        fresh = dst.exists() and dst.stat().st_mtime >= src.stat().st_mtime
+        if not fresh or force:
+            # -c copy: перекодировать нечего, поток уже H.264/yuv420p. Ремукс
+            # нужен ради faststart, иначе плеер на планшете ждёт весь файл.
+            # -an: звуковой дорожки у клипов нет, и появиться она не должна —
+            # репетируют под фонограмму номера, а не под тишину клипа.
+            run = subprocess.run([
+                "ffmpeg", "-y", "-v", "error", "-i", str(src),
+                "-c", "copy", "-an", "-movflags", "+faststart", str(dst),
+            ], capture_output=True, text=True)
+            if run.returncode != 0 or not dst.exists():
+                raise SystemExit("FFmpeg не переложил %s:\n%s"
+                                 % (src.name, run.stderr[-500:]))
+        stale = poster.exists() and poster.stat().st_mtime >= dst.stat().st_mtime
+        if not stale or force:
+            # Кадр с середины клипа: на первом кадре он ещё в замахе, а карточке
+            # нужен узнаваемый силуэт. Постер обязателен из-за preload="none" —
+            # без него на странице семь чёрных прямоугольников.
+            run = subprocess.run([
+                "ffmpeg", "-y", "-v", "error", "-ss", "%.2f" % (clip["duration"] / 2),
+                "-i", str(dst), "-frames:v", "1",
+                "-vf", "scale=%s:-2:flags=lanczos" % CLIP_POSTER_WIDTH,
+                "-c:v", "libwebp", "-quality", CLIP_POSTER_QUALITY, str(poster),
+            ], capture_output=True, text=True)
+            if run.returncode != 0 or not poster.exists():
+                raise SystemExit("FFmpeg не снял постер %s:\n%s"
+                                 % (poster.name, run.stderr[-500:]))
+        total += dst.stat().st_size + poster.stat().st_size
+    return total
 
 
 def verify_soundtrack(video: Path) -> None:
@@ -286,6 +441,12 @@ def main() -> int:
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
 
+    # Клипы кладутся рядом со страницей — той же папкой, что и ролик номера.
+    # Тогда и локальная сборка в output/, и версионируемая в site/ открываются
+    # одинаково, и раздел не бывает пустым только на одной из них.
+    weight = pack_clips(payload["clips"], out.parent / CLIPS_SUB,
+                        force=args.force_video)
+
     # Сверка до записи: страница, которая играет чужой звук, не должна лечь на
     # диск даже на минуту — её успеют скопировать на планшет.
     verify_soundtrack(out.parent / payload["video"])
@@ -298,6 +459,9 @@ def main() -> int:
           f"контактов: {len(payload['hits'])}")
     print(f"  кадров экрана: {len(payload['shots'])}, "
           f"реплик: {len(payload['lines'])}")
+    print(f"  тренировочных клипов: {len(payload['clips'])} в "
+          f"{(out.parent / CLIPS_SUB).relative_to(ROOT)} "
+          f"({weight / 1024 / 1024:.1f} МБ с постерами)")
     return 0
 
 

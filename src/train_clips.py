@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -38,6 +39,22 @@ PLACEHOLDERS = ("{who}", "{shot}", "{char}", "{poses}", "{real}", "{slow}")
 # больше — см. docs/status/2026-08-10-train-clips.md.
 MAX_PANELS = 4
 
+# Идентификатор задания на сервере: тридцать два знака в шестнадцатеричном
+# виде. По нему клип забирается обратно без повторной оплаты, и он же связывает
+# принятую попытку со строкой в docs/atlas-ledger.csv.
+PREDICTION = re.compile(r"^[0-9a-f]{32}$")
+
+
+def attempt_name(cid: str, number: int) -> str:
+    """Имя файла попытки в assets/train_clips/.
+
+    Одно на проект: так называет файл tools/atlas_train.py при скачивании, и по
+    этому же имени страница тренажёра находит принятую попытку. Рядом лежат
+    отклонённые попытки с похожими именами, так что складывать это имя в двух
+    местах нельзя — разойдётся, и на сайт уедет отклонённый клип.
+    """
+    return "%s_a%d.mp4" % (cid, number)
+
 
 class ClipError(Exception):
     pass
@@ -59,6 +76,11 @@ class Clip:
     real: float          # сколько длится движение на самом деле, секунды
     first: float         # время первой доли клипа
     last: float          # время последней
+    beats: tuple[int, ...]     # номера долей удара, которые клип показывает
+    attempt: int         # какая попытка признана годной
+    prediction: str      # её задание на сервере, ключ к docs/atlas-ledger.csv
+    watch: str           # что на клипе смотреть
+    missing: tuple[str, ...]   # чего на клипе нет — это важнее того, что есть
 
     @property
     def refs(self) -> tuple[Path, ...]:
@@ -68,6 +90,11 @@ class Clip:
     @property
     def slow(self) -> float:
         return self.duration / self.real
+
+    @property
+    def accepted(self) -> str:
+        """Имя файла принятой попытки в assets/train_clips/."""
+        return attempt_name(self.id, self.attempt)
 
 
 def _fmt_slow(value: float) -> str:
@@ -84,12 +111,36 @@ def _span(first: int, last: int) -> str:
     return "images %d-%d" % (first, last)
 
 
-def load(strikes, path: Path | str = CLIPS) -> list[Clip]:
+def caveat(path: Path | str = CLIPS) -> str:
+    """Общая оговорка ко всем клипам: чего они не показывают в принципе.
+
+    Лежит одной строкой на файл, а не копией в каждом клипе, по той же причине,
+    по которой так лежит описание персонажа: семь копий разойдутся. На странице
+    она стоит один раз в начале раздела.
+    """
+    raw = json.loads(Path(path).read_text(encoding="utf-8"))
+    text = str(raw.get("общая оговорка", "")).strip()
+    if not text:
+        raise ClipError("в файле нет общей оговорки. Без неё раздел на сайте "
+                        "выглядит как метроном, а доли внутри клипов стоят не "
+                        "там, где их считает сценарий")
+    return text
+
+
+def load(strikes, path: Path | str = CLIPS,
+         require_refs: bool = True) -> list[Clip]:
     """Задания вместе с подстановкой темпа из долей удара.
 
     `strikes` — уже разрешённые удары из src.strikes.resolve_strikes: времена
     берутся оттуда, потому что в самом сценарии они лежат смещениями от
     звуковых событий, а не абсолютными числами.
+
+    `require_refs` — требовать, чтобы картинки входа лежали на диске. Для
+    генерации это обязательно: за задание платят, и уехавшая молча поза дорога.
+    Но и панели, и официальный арт производные или чужие, и обе папки в
+    .gitignore, — а страница тренажёра собирается из свежего клона, где их нет,
+    и никаких картинок на сервер не отправляет. Проверка защищает генерацию, а
+    не сборку страницы, поэтому она выключаемая.
     """
     raw = json.loads(Path(path).read_text(encoding="utf-8"))
     negative = str(raw.get("общий запрет", "")).strip()
@@ -113,7 +164,7 @@ def load(strikes, path: Path | str = CLIPS) -> list[Clip]:
         raise ClipError("в файле нет референсов внешности. Одного описания "
                         "словами мало: проверено на листах, персонаж уезжает")
     lost = [p.name for p in faces if not p.exists()]
-    if lost:
+    if lost and require_refs:
         raise ClipError("нет референсов внешности %s в %s"
                         % (", ".join(lost), FACES.relative_to(ROOT)))
 
@@ -169,11 +220,11 @@ def load(strikes, path: Path | str = CLIPS) -> list[Clip]:
                 "клип %s: долей %d, а панелей %d. Одна поза уехала бы на сервер "
                 "молча, и на готовом видео этого не увидеть"
                 % (cid, len(beats), len(panels)))
-        missing = [p.name for p in panels if not p.exists()]
-        if missing:
+        lost_panels = [p.name for p in panels if not p.exists()]
+        if lost_panels and require_refs:
             raise ClipError(
                 "клип %s: нет панелей %s в %s. Нарезать: python tools/cut_panels.py"
-                % (cid, ", ".join(missing), PANELS.relative_to(ROOT)))
+                % (cid, ", ".join(lost_panels), PANELS.relative_to(ROOT)))
 
         duration = int(item.get("duration", 0))
         if duration not in DURATIONS:
@@ -208,13 +259,48 @@ def load(strikes, path: Path | str = CLIPS) -> list[Clip]:
             raise ClipError("клип %s: в промпте осталась незакрытая подстановка "
                             "— на сервер уехали бы фигурные скобки" % cid)
 
+        # Какая попытка признана годной. Рядом на диске лежат отклонённые —
+        # копьё вверх ногами, наезд камеры, двухголовое оружие, — и отличаются
+        # они от принятой одной цифрой в имени. Выбирать файл по последней
+        # попытке нельзя: последняя не значит лучшая.
+        pub = item.get("публикация") or {}
+        attempt = int(pub.get("попытка", 0))
+        if attempt < 1:
+            raise ClipError(
+                "клип %s не говорит, какая попытка принята. Рядом лежат "
+                "отклонённые с похожими именами, и страница взяла бы любую" % cid)
+        prediction = str(pub.get("prediction", "")).strip()
+        if not PREDICTION.match(prediction):
+            raise ClipError(
+                "клип %s: prediction %r не похож на задание Atlas. По нему клип "
+                "забирается обратно без повторной оплаты и сверяется со строкой "
+                "в docs/atlas-ledger.csv" % (cid, prediction))
+        watch = str(pub.get("смотреть", "")).strip()
+        if not watch:
+            raise ClipError("клип %s не говорит, что на нём смотреть. Без этого "
+                            "раздел на сайте — просто семь плееров" % cid)
+        # «Чего нет» обязательно у каждого клипа, и это не формальность: клип
+        # показывает, КАК выглядит движение, но врёт про то, КОГДА оно
+        # случается. Не написать этого рядом с плеером значит учить репетировать
+        # под клип вместо звука.
+        gaps = tuple(str(x).strip() for x in pub.get("чего нет", [])
+                     if str(x).strip())
+        if not gaps:
+            raise ClipError(
+                "клип %s не говорит, чего на нём нет. У каждого из семи есть что "
+                "сказать: у финала нет переворота копья, у приёма удара корпус не "
+                "замирает, у вспышки 3 весь оборот кончается на половине клипа" % cid)
+
         out.append(Clip(id=cid, strike=strike_id,
                         title=str(item.get("title", cid)),
                         duration=duration,
                         resolution=str(item.get("resolution", "480p")),
                         faces=faces, panels=panels,
                         prompt=prompt, negative=negative,
-                        real=real, first=first, last=last))
+                        real=real, first=first, last=last,
+                        beats=tuple(numbers),
+                        attempt=attempt, prediction=prediction,
+                        watch=watch, missing=gaps))
 
     if not out:
         raise ClipError("в файле нет ни одного клипа")

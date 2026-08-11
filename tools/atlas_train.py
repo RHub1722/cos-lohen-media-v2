@@ -37,7 +37,7 @@ from src.models import Timeline  # noqa: E402
 from src.movements import load_movements, resolve_times  # noqa: E402
 from src.peaks import peak_offsets  # noqa: E402
 from src.strikes import load_strikes, resolve_strikes  # noqa: E402
-from src.train_clips import Clip, ClipError, load  # noqa: E402
+from src.train_clips import Clip, ClipError, attempt_name, load  # noqa: E402
 from src.footage import BaseShot  # noqa: E402
 from tools.atlas_gen import (AtlasError, MODEL, TOKENS_PER_SECOND,  # noqa: E402
                              download, estimate, full_prompt, key, ledger_rows,
@@ -69,7 +69,9 @@ def as_shot(clip: Clip) -> BaseShot:
 
 
 def attempt_path(cid: str, number: int) -> Path:
-    return OUT / ("%s_a%d.mp4" % (cid, number))
+    # Имя складывает src.train_clips: по нему же страница тренажёра находит
+    # принятую попытку, и разойтись эти два места не должны.
+    return OUT / attempt_name(cid, number)
 
 
 def attempts(cid: str) -> list[int]:

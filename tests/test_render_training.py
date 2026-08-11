@@ -5,6 +5,9 @@
 ассетов через FFmpeg, и на каждый тест это шестнадцать секунд.
 """
 
+import re
+import subprocess
+
 import pytest
 
 from src.render_training import (MARKER, NUMBER_VIDEO, ROOT, SITE_DIR,
@@ -100,6 +103,80 @@ def test_the_published_copy_is_whole():
         worst = min(corr for _, corr in match_windows(video, SOUNDTRACK))
         assert worst > 0.90, (
             f"худшее окно {worst:.3f}: site/{SITE_VIDEO} играет не фонограмму номера")
+
+
+def test_the_payload_carries_the_seven_training_clips(payload):
+    clips = payload["clips"]
+    assert len(clips) == 7
+    assert {c["id"] for c in clips} == {"burst_1", "burst_2", "burst_3a",
+                                       "burst_3b", "take_the_hit", "burst_4",
+                                       "spear_down"}
+    for clip in clips:
+        assert clip["file"] == "clips/%s.mp4" % clip["id"]
+        assert clip["poster"] == "clips/%s.webp" % clip["id"]
+        assert clip["beats"], clip["id"]
+        assert 3.0 < clip["slow"] < 6.0, clip["id"]
+        assert clip["watch"] and clip["missing"], clip["id"]
+
+
+def test_every_published_clip_lies_next_to_the_page(payload):
+    """Клип отдаётся тем же Pages, что и страница, поэтому лежать он должен
+    рядом с ней, а не в assets/train_clips/: та папка не версионируется, там же
+    лежат отклонённые попытки, и по мобильной связи её нет вовсе."""
+    for clip in payload["clips"]:
+        video = SITE_DIR / clip["file"]
+        poster = SITE_DIR / clip["poster"]
+        assert video.exists(), (
+            "нет %s: python src/render_training.py --site" % clip["file"])
+        assert poster.exists(), (
+            "нет постера %s — при preload=none карточка будет чёрной"
+            % clip["poster"])
+
+
+def test_the_page_knows_the_frame_size_before_anything_loads(payload):
+    """Пропорции кадра снимаются с самого файла и уезжают в данные. Без них при
+    preload="none" семь карточек прыгают, когда догружаются постеры."""
+    for clip in payload["clips"]:
+        assert clip["w"] > 0 and clip["h"] > 0, clip["id"]
+        assert 1.5 < clip["w"] / clip["h"] < 2.0, clip["id"]
+
+
+def test_no_published_clip_brings_its_own_sound(payload):
+    """Репетируют под фонограмму номера, которая играет в плеере слева. Клип со
+    своей дорожкой перебивал бы её ровно в тот момент, когда сверяют попадание."""
+    for clip in payload["clips"]:
+        streams = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries", "stream=codec_type",
+             "-of", "csv=p=0", str(SITE_DIR / clip["file"])],
+            capture_output=True, text=True).stdout.split()
+        assert streams == ["video"], "%s: %s" % (clip["id"], streams)
+
+
+def test_the_published_clips_stay_light_enough_for_mobile(payload):
+    """Их семь, и открывают их с телефона на площадке. Предел взят с запасом к
+    нынешним 9.7 МБ: перегенерируем в 720p — и тест скажет об этом раньше, чем
+    страница перестанет открываться."""
+    weight = sum((SITE_DIR / c["file"]).stat().st_size
+                 + (SITE_DIR / c["poster"]).stat().st_size
+                 for c in payload["clips"])
+    megabytes = weight / 1024 / 1024
+    assert megabytes < 14, (
+        "%.1f МБ на семь клипов — многовато для мобильной связи" % megabytes)
+
+
+def test_every_tab_of_the_page_has_a_section_to_show():
+    """Вкладка без раздела открывает пустой экран, и заметить это можно только
+    щёлкнув по ней. Виды объявлены в шаблоне списком, разделы — разметкой, и
+    сойтись они обязаны."""
+    html = (ROOT / "src/training_template.html").read_text(encoding="utf-8")
+    block = html.split("const VIEWS = [")[1].split("];")[0]
+    names = re.findall(r'\["(\w+)", "', block)
+    assert names == ["run", "fight", "clips", "moves", "how"]
+    for name in names:
+        assert 'id="view-%s"' % name in html, name
+        # id раздела не равен имени вида намеренно: имя уезжает в хеш адреса, и
+        # браузер прокрутил бы страницу к элементу с тем же id поверх showView.
+        assert 'id="%s"' % name not in html, name
 
 
 def test_render_leaves_no_marker_and_closes_no_script():
