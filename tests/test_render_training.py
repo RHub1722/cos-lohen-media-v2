@@ -179,6 +179,45 @@ def test_every_tab_of_the_page_has_a_section_to_show():
         assert 'id="%s"' % name not in html, name
 
 
+def test_the_windows_of_the_strikes_do_not_overlap(payload):
+    """Окно приёма — от слышимого времени первой доли клипа до последней. Вид
+    «Пульт» выбирает по ним, какой приём идёт сейчас, и если два окна налезут
+    друг на друга, слот начнёт мигать между двумя клипами на каждом кадре."""
+    windows = sorted(((c["beats"][0]["heard"], c["beats"][-1]["heard"], c["id"])
+                      for c in payload["clips"]))
+    for (start, end, cid) in windows:
+        assert 0 < start < end < payload["total"], cid
+    for (a_start, a_end, a_id), (b_start, b_end, b_id) in zip(windows, windows[1:]):
+        assert a_end <= b_start, "окна %s и %s налезают" % (a_id, b_id)
+
+
+def test_the_clips_reach_the_page_in_the_order_of_the_number(payload):
+    """Вид «Пульт» сортирует окна сам, но если в данных порядок сбился, значит
+    сбился он и в сценарии клипов — а там по нему читают глазами."""
+    starts = [c["beats"][0]["heard"] for c in payload["clips"]]
+    assert starts == sorted(starts)
+
+
+def test_no_clip_asks_the_browser_for_an_impossible_speed(payload):
+    """Слот «сейчас» ведётся темпом: playbackRate = темп номера × замедление
+    клипа. Предел в браузере — 16, и выше он зажимает темп МОЛЧА: синхронизация
+    выродится в перемотку каждые 0.15 с, и никто об этом не узнает."""
+    for clip in payload["clips"]:
+        assert 1.0 < clip["slow"] <= 16.0, (clip["id"], clip["slow"])
+
+
+def test_only_the_second_contact_of_burst_2_has_no_clip(payload):
+    """Дыра, о которой вид «Пульт» обязан сказать вслух: контакт в 36.58 не
+    покрыт ни одним клипом — burst_2 показывает четыре доли из пяти. Тест
+    сторожит и обратное: если однажды покрытие изменится, подпись на странице
+    станет ложной, и заметить это будет негде."""
+    windows = [(c["beats"][0]["heard"], c["beats"][-1]["heard"])
+               for c in payload["clips"]]
+    uncovered = [round(h["t"], 2) for h in payload["hits"]
+                 if not any(start <= h["t"] <= end for start, end in windows)]
+    assert uncovered == [36.58]
+
+
 def test_render_leaves_no_marker_and_closes_no_script():
     """`</` внутри данных оборвал бы <script> посреди JSON."""
     html = render({"total": 60.0, "video": "v.mp4", "note": "</script>"})
