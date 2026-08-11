@@ -425,6 +425,36 @@
   .move .mini { grid-column: 2; display: flex; gap: 10px; font-size: 0.74rem; color: var(--muted); }
   .move .mini i { font-style: normal; letter-spacing: 0.1em; }
 
+  /* ── вид «Пульт» ─────────────────────────────────────────────────────── */
+  /* Панель с роликом номера становится главной колонкой только здесь. Второго
+     плеера не создаём: тот же файл скачивался бы и расшифровывался дважды, а
+     перенос живого <video> по DOM в части браузеров сбрасывает воспроизведение. */
+  body[data-view="pult"] { --railw: 58%; }
+  .pult-note { margin: 0 0 10px; font-size: 0.88rem; }
+  .duo { display: grid; gap: 10px; }
+  .slot {
+    display: grid; gap: 6px;
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 10px; padding: 8px 10px;
+  }
+  .slot video {
+    display: block; width: 100%; height: auto;
+    border-radius: 8px; background: #000;
+  }
+  /* Приёма сейчас нет — держим прошедший стоп-кадром, но приглушённо, чтобы он
+     не читался как происходящее. */
+  .slot.idle video { opacity: 0.34; }
+  .slot .cap { font-size: 0.82rem; color: var(--muted); min-height: 2.4em; }
+  .slot .cap b { color: var(--accent); font-weight: 700; }
+  /* Ниже 640 панель лежит строкой: ролик занимает 46% ширины, чипы стоят рядом.
+     Для пульта это вверх ногами — сцена здесь главная, а не спутник. Замерено на
+     375 px: сцена выходила 162 px против 334 у клипа, то есть вдвое мельче того,
+     под что репетируют. */
+  @media (max-width: 639px) {
+    body[data-view="pult"] .rail { flex-direction: column; }
+    body[data-view="pult"] .screen { flex: none; width: 100%; max-width: none; }
+  }
+
   /* ── вид «Клипы» ─────────────────────────────────────────────────────── */
   .clips { display: grid; gap: 12px; }
   .clip {
@@ -587,6 +617,29 @@
     <div class="strikes" id="strikes"></div>
   </section>
 
+  <!-- id не `pult`: то же правило, что у видов «Движения» и «Клипы» — имя вида
+       уезжает в хеш адреса, и браузер прокрутил бы страницу к элементу с таким
+       же id поверх нашего showView. Ролика номера здесь нет: он в левой панели,
+       и панели в этом виде разрешено стать широкой. -->
+  <section class="view" id="view-pult">
+    <p class="warn pult-note">Клип справа встаёт в верную точку <b>окна</b>, но
+    не обязательно в верную <b>позу</b>: внутри себя клипы врут про время — у
+    части 1 вспышки 3 весь оборот кончен к 2.55 с из 5.04. Он отвечает, какой
+    приём идёт сейчас, а не в какой ты позе.</p>
+    <div class="duo">
+      <div class="slot" id="slotNow">
+        <div class="label">Сейчас</div>
+        <video id="clipNow" playsinline preload="auto" muted></video>
+        <div class="cap" id="capNow">—</div>
+      </div>
+      <div class="slot" id="slotNext">
+        <div class="label">Дальше</div>
+        <video id="clipNext" playsinline preload="auto" muted loop></video>
+        <div class="cap" id="capNext">—</div>
+      </div>
+    </div>
+  </section>
+
   <!-- Тренировочные клипы: по одному видео на удар, сгенерированы по панелям
        листов движений. Оговорка стоит ПЕРВОЙ и до плееров намеренно: клип
        показывает, как движение выглядит, но врёт про то, когда оно случается. -->
@@ -616,6 +669,11 @@
           <li><b>Прогон</b> — то, что нужно во время проходки: что делаешь
           сейчас, что дальше, через сколько секунд, какая реплика идёт и что в
           этот момент показывает экран за спиной.</li>
+          <li><b>Пульт</b> — ролик номера и клип приёма рядом, под одними
+          часами: слева то, что зал видит за спиной, справа то, что ты в этот
+          момент делаешь, и предпросмотр следующего приёма. Клипов на бой семь,
+          и покрывают они 9.4 секунды из шестидесяти — остальное время справа
+          стоит стоп-кадр прошедшего приёма.</li>
           <li><b>Бой</b> — разбор шести боевых действий по долям: замах, взмах,
           контакт, возврат. Здесь же рисунки позы, план площадки сверху,
           референс и петля на кусок.</li>
@@ -822,6 +880,7 @@ const BEAT_LEAD = 1.2;           // разгон при переходе к до
 const RATES = [0.25, 0.5, 0.75, 1];
 const VIEWS = [
   ["run", "Прогон"],
+  ["pult", "Пульт"],
   ["fight", "Бой"],
   ["clips", "Клипы"],
   ["moves", "Движения"],
@@ -998,6 +1057,10 @@ function showView(name) {
     if (tab) tab.setAttribute("aria-selected", String(id === name));
   });
   if (location.hash.slice(1) !== name) history.replaceState(null, "", "#" + name);
+  // Вид уезжает в атрибут body: по нему стилями включается широкая панель.
+  document.body.dataset.view = name;
+  // Ушли с пульта — клипы не должны играть за кадром.
+  if (name !== "pult") { clipNow.pause(); clipNext.pause(); }
   window.scrollTo({ top: 0 });
 }
 VIEWS.forEach(([id, title], i) => {
@@ -1257,6 +1320,120 @@ DATA.strikes.forEach((s) => {
   $("strikes").appendChild(card);
 });
 
+// ── вид «Пульт» ───────────────────────────────────────────────────────────
+// Окно приёма — от слышимого времени первой доли клипа до последней. Порядок
+// задаём сортировкой, а не верой в порядок в данных.
+const PULT = (DATA.clips || [])
+  .map((c) => ({ clip: c, from: c.beats[0].heard, to: c.beats[c.beats.length - 1].heard }))
+  .sort((a, b) => a.from - b.from);
+const DRIFT = 0.15;        // допуск расхождения клипа с часами номера, секунды
+const clipNow = $("clipNow");
+const clipNext = $("clipNext");
+
+// Стык 39.92 достаётся второму клипу: там кончается часть 1 вспышки 3 и с этого
+// же мгновения начинается часть 2. Без строгого `<` слот мигал бы между ними.
+function windowAt(t) {
+  for (const w of PULT) if (t >= w.from && t < w.to) return w;
+  return null;
+}
+function windowBefore(t) {
+  let found = null;
+  for (const w of PULT) if (w.to <= t) found = w;
+  return found;
+}
+function windowAfter(t) {
+  for (const w of PULT) if (w.from > t) return w;
+  return null;
+}
+// Контакт, которого нет ни в одном клипе. Не вписан числом: у вспышки 2 второе
+// попадание в 36.58 действительно не покрыто, а у вспышки 3 второе попадание
+// покрыто частью 2 — разница видна только проверкой по всем окнам.
+function uncoveredAfter(w) {
+  const strike = DATA.strikes.find((s) => s.id === w.clip.strike);
+  if (!strike) return null;
+  return strike.beats.find((b) => b.role === "contact" && b.heard > w.to + 0.001
+    && !PULT.some((x) => b.heard >= x.from && b.heard <= x.to)) || null;
+}
+
+// Источник ставится только при смене клипа: присваивать src каждый кадр значит
+// перезапускать загрузку шестьдесят раз в секунду.
+function setClip(v, clip) {
+  const id = clip ? clip.id : "";
+  if (v.dataset.clip === id) return;
+  v.dataset.clip = id;
+  if (!clip) {
+    v.removeAttribute("src");
+    v.removeAttribute("poster");
+    v.load();
+    return;
+  }
+  v.style.aspectRatio = (clip.w && clip.h) ? clip.w + " / " + clip.h : "";
+  v.poster = clip.poster;
+  v.src = clip.file;
+}
+
+// Ведём клип часами номера. Не перемоткой каждый кадр — это семьдесят перемоток
+// в секунду по потоку без опорных кадров под каждую, и на планшете это заикание.
+// Вместо этого выставляется темп, а прыжок делается только когда разошлось.
+function drive(v, want, rate) {
+  if (v.readyState < 1) return;               // метаданных нет — перематывать нечего
+  const at = Math.max(0, Math.min(v.duration || want, want));
+  if (rate > 0) {
+    if (v.dataset.rate !== String(rate)) {
+      v.dataset.rate = String(rate);
+      v.playbackRate = rate;
+    }
+    if (v.paused) v.play().catch(() => {});
+    if (Math.abs(v.currentTime - at) > DRIFT) v.currentTime = at;
+  } else {
+    if (!v.paused) v.pause();
+    if (Math.abs(v.currentTime - at) > 0.01) v.currentTime = at;
+  }
+}
+
+function pult(t) {
+  const now = windowAt(t);
+  const shown = now || windowBefore(t);
+  const nxt = windowAfter(t);
+  setClip(clipNow, shown ? shown.clip : null);
+  setClip(clipNext, nxt ? nxt.clip : null);
+  $("slotNow").classList.toggle("idle", !now);
+
+  if (shown) {
+    const c = shown.clip;
+    // Идёт приём — линейно по окну; прошёл — стоп-кадром на последнем кадре.
+    const want = now
+      ? (t - now.from) / (now.to - now.from) * c.duration
+      : c.duration - 0.04;
+    drive(clipNow, want, now && !video.paused ? video.playbackRate * c.slow : 0);
+  }
+  // «Дальше» крутится своим темпом и встаёт вместе с номером: два разных
+  // состояния на одном экране путают больше, чем помогают.
+  if (nxt && clipNext.readyState >= 1) {
+    if (clipNext.dataset.rate !== "1") { clipNext.dataset.rate = "1"; clipNext.playbackRate = 1; }
+    if (video.paused) { if (!clipNext.paused) clipNext.pause(); }
+    else if (clipNext.paused) clipNext.play().catch(() => {});
+  }
+
+  if (now) {
+    const beat = now.clip.beats.filter((b) => b.heard <= t + 0.001).pop()
+      || now.clip.beats[0];
+    $("capNow").innerHTML = "<b>" + now.clip.title + "</b><br>доля: "
+      + (ROLE_NAMES[beat.role] || beat.role) + " " + beat.heard.toFixed(2);
+  } else if (shown) {
+    const late = uncoveredAfter(shown);
+    $("capNow").innerHTML = "прошёл: <b>" + shown.clip.title + "</b>"
+      + (late ? "<br>попадание в " + late.heard.toFixed(2)
+                + " в клип не вошло — держишь его сам" : "");
+  } else {
+    $("capNow").innerHTML = "приёмов ещё не было<br>первый в "
+      + (PULT.length ? PULT[0].from.toFixed(2) : "—");
+  }
+  $("capNext").innerHTML = nxt
+    ? "<b>" + nxt.clip.title + "</b><br>через " + Math.max(0, nxt.from - t).toFixed(1) + " с"
+    : "ударов больше нет<br>дальше лёд";
+}
+
 // ── вид «Клипы» ───────────────────────────────────────────────────────────
 $("clipsCaveat").textContent = DATA.clips_caveat || "";
 (DATA.clips || []).forEach((c) => {
@@ -1420,6 +1597,8 @@ function render(t) {
   $("fill").style.width = pct;
   $("head").style.left = pct;
   $("cur").textContent = fmt1(t);
+
+  if (currentView === "pult") pult(t);
 
   // Подсветка живой карточки и живой доли — только на виде «Бой»: перебирать
   // строки на каждом кадре в остальных видах незачем.
