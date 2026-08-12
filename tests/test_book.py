@@ -5,11 +5,13 @@
 не память.
 """
 
+import math
 import re
 
 import pytest
 
-from src.figures import MAX_LABELS, content_box, figure, floor_plan, panel, standalone
+from src.figures import (FOREARM, MAX_LABELS, SHOULDER_W, UPPER_ARM, content_box,
+                         figure, floor_plan, panel, standalone)
 # Имя build занято сборщиком книжки, а нужен ещё и сборщик скелета: у обоих оно
 # самое естественное, поэтому один из двух приезжает под псевдонимом.
 from src.figures import build as skeleton
@@ -326,6 +328,53 @@ def test_no_grip_is_drawn_where_there_is_no_grip(fight):
     held, free = spear.beats[-2], spear.beats[-1]
     assert _spear(skeleton(held.pose)).count(grip_mark) == 2
     assert _spear(skeleton(free.pose)).count(grip_mark) == 0
+
+
+def test_no_pose_of_the_fight_puts_the_spear_through_the_floor(fight):
+    """Копьё не проваливается в пол ни на одной доле.
+
+    Проверка общая, а не про одну долю, потому что чинить пришлось восемь:
+    у приёма удара наконечник висел на 35 см ниже пола все четыре доли, у замаха
+    вспышки 3 — на 42 см, у замаха вспышки 2 — на 3 см. Рисунок считается из
+    этих же чисел, лист рисуется с рисунка, а видео генерируется с листа —
+    сломанная поза доезжает до готового клипа и там уже неисправима.
+    """
+    _, _, strikes = fight
+    under = []
+    for strike in strikes:
+        for beat in strike.beats:
+            sk = skeleton(beat.pose)
+            low = min(sk.tip[1], sk.butt[1])
+            if low < -0.012:            # 2 см при росте 162
+                under.append("%s/%s %.2f: %.0f см" % (strike.id, beat.role,
+                                                      beat.heard, low * 162))
+    assert not under, "концы копья под полом: " + "; ".join(under)
+
+
+def test_no_pose_of_the_fight_stretches_the_arm_past_its_length(fight):
+    """Кисть не улетает от плеча дальше длины руки.
+
+    Дальше предела two_bone просто выпрямляет руку в струну, и на рисунке
+    получается резиновая конечность — а по этому рисунку человек разучивает хват.
+    Чинилось сдвигом кисти ВВЕРХ, к высоте плеча: у замаха вспышки 3 она висела
+    на уровне колена при плече на уровне груди, и сдвиг к оси тела там не
+    помогал вовсе.
+    """
+    _, _, strikes = fight
+    limit = UPPER_ARM + FOREARM
+    long = []
+    for strike in strikes:
+        for beat in strike.beats:
+            sk = skeleton(beat.pose)
+            half = (sk.across[0] * SHOULDER_W / 2, sk.across[1] * SHOULDER_W / 2)
+            sh_l = (sk.shoulder[0] - half[0], sk.shoulder[1] - half[1])
+            sh_r = (sk.shoulder[0] + half[0], sk.shoulder[1] + half[1])
+            reach = max(math.dist(sh_l, sk.hands[0]), math.dist(sh_r, sk.hands[1]))
+            if reach > limit + 0.004:   # 0.6 см при росте 162
+                long.append("%s/%s %.2f: %.0f см при %.0f"
+                            % (strike.id, beat.role, beat.heard,
+                               reach * 162, limit * 162))
+    assert not long, "рука выпрямлена в струну: " + "; ".join(long)
 
 
 def test_the_point_of_the_finale_lands_on_the_floor_not_under_it(fight):
