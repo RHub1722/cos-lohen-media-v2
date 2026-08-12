@@ -117,6 +117,13 @@ def test_the_payload_carries_the_seven_training_clips(payload):
         assert clip["beats"], clip["id"]
         assert 3.0 < clip["slow"] < 6.0, clip["id"]
         assert clip["watch"] and clip["missing"], clip["id"]
+        # Отметка доли внутри клипа: по паре (heard, at) пульт сопоставляет время
+        # кусочно. Без `at` он молча вернулся бы к прямой.
+        for beat in clip["beats"]:
+            assert isinstance(beat["at"], (int, float)), (clip["id"], beat["role"])
+        marks = [b["at"] for b in clip["beats"]]
+        assert marks == sorted(marks) and marks[0] == 0.0, clip["id"]
+        assert marks[-1] <= clip["duration"], clip["id"]
 
 
 def test_every_published_clip_lies_next_to_the_page(payload):

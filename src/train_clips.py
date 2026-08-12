@@ -81,6 +81,7 @@ class Clip:
     prediction: str      # её задание на сервере, ключ к docs/atlas-ledger.csv
     watch: str           # что на клипе смотреть
     missing: tuple[str, ...]   # чего на клипе нет — это важнее того, что есть
+    marks: tuple[float, ...]   # где каждая доля стоит ВНУТРИ клипа, секунды
 
     @property
     def refs(self) -> tuple[Path, ...]:
@@ -291,6 +292,27 @@ def load(strikes, path: Path | str = CLIPS,
                 "сказать: у финала нет переворота копья, у приёма удара корпус не "
                 "замирает, у вспышки 3 весь оборот кончается на половине клипа" % cid)
 
+        # Где доли стоят ВНУТРИ клипа. Без них время номера сопоставлялось бы
+        # времени клипа одной прямой, а клипы внутри себя держат свой темп: у
+        # части 1 вспышки 3 весь оборот кончен к 2.45 с из 5.04. Отметки
+        # замерены по кадрам, см. «как замерены доли внутри клипа».
+        marks = tuple(float(x) for x in pub.get("доли в клипе", []))
+        if len(marks) != len(beats):
+            raise ClipError(
+                "клип %s: отметок долей %d, а долей %d. Отметка нужна каждой: по "
+                "ним пульт находит, куда встать клипу, и лишняя молча сдвинет все "
+                "следующие" % (cid, len(marks), len(beats)))
+        if marks and marks[0] != 0.0:
+            raise ClipError("клип %s: первая отметка %.2f, а клип начинается с "
+                            "первой доли — она обязана стоять в нуле"
+                            % (cid, marks[0]))
+        if list(marks) != sorted(marks):
+            raise ClipError("клип %s: отметки идут не по порядку: %s. Время может "
+                            "только идти вперёд" % (cid, list(marks)))
+        if marks and marks[-1] > duration:
+            raise ClipError("клип %s: последняя отметка %.2f, а клип длится %d с"
+                            % (cid, marks[-1], duration))
+
         out.append(Clip(id=cid, strike=strike_id,
                         title=str(item.get("title", cid)),
                         duration=duration,
@@ -300,7 +322,7 @@ def load(strikes, path: Path | str = CLIPS,
                         real=real, first=first, last=last,
                         beats=tuple(numbers),
                         attempt=attempt, prediction=prediction,
-                        watch=watch, missing=gaps))
+                        watch=watch, missing=gaps, marks=marks))
 
     if not out:
         raise ClipError("в файле нет ни одного клипа")

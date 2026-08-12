@@ -13,7 +13,9 @@
 
   "почему принятая попытка записана здесь": "Потому что до сих пор она была записана только прозой в docs/status/ и строкой в docs/atlas-ledger.csv, а на диске рядом лежат отклонённые попытки с похожими именами: spear_down_a1 с копьём вверх ногами, burst_4_a1 с наездом камеры, take_the_hit_a1 с двухголовым копьём. Страница тренажёра выбирает файл из этого поля, а не по совпадению имени, — иначе на сайт однажды уедет отклонённая попытка, и заметить это можно будет только глазами.",
 
-  "общая оговорка": "Клип показывает, КАК движение выглядит, но не КОГДА оно случается. Доли внутри клипа стоят не там, где их считает сценарий: у вспышки 3 весь оборот закончен к 2.55 с из 5.04, хотя контакт посчитан на 5.04, а у приёма удара хлопок попал в 1.67 против 1.76. Время берётся только из scenario/strikes.json и только оттуда. Ещё стиль между клипами плавает — детали брони и полы плаща отличаются от клипа к клипу; так же они плавают и на листах, и это принято.",
+  "общая оговорка": "Клип показывает, КАК движение выглядит, но темп внутри себя держит свой: у части 1 вспышки 3 весь оборот закончен к 2.45 с из 5.04, а у приёма удара рывок головы приходит к 1.30 вместо 1.75, куда его поставила бы прямая. Поэтому вид «Пульт» сопоставляет время по замеренным отметкам долей, а не одной прямой — см. «как замерены доли внутри клипа». Само время номера берётся только из scenario/strikes.json и только оттуда. Ещё стиль между клипами плавает — детали брони и полы плаща отличаются от клипа к клипу; так же они плавают и на листах, и это принято.",
+
+  "как замерены доли внутри клипа": "Замер 12 августа по кадрам, 26 отметок. Нужны потому, что клип внутри себя врёт про время: у части 1 вспышки 3 весь оборот кончен к 2.45 с из 5.04, а вид «Пульт» без отметок сопоставлял время номера времени клипа одной прямой и показывал не ту позу. Отметка — момент, когда поза ПРИХОДИТ: конец движения, которое в неё ведёт. Искались по движению между соседними кадрами: контакт в этой хореографии мёртвая остановка, то есть провал сразу после пика. Автоматика села верно в 22 отметках из 26 и промахнулась в четырёх, исправлены глазами: у части 1 вспышки 3 контакт стоял на 3.54, где он уже просто стоит; у приёма удара весь клип тихий (двигается только голова), и пик пришёлся на первые кадры — там контакт 1.30, пауза 1.90 и возврат 3.90 сняты по движению в самой голове, отдельной обрезкой кадра.",
 
   "запреты": "Отдельного поля запретов у модели нет — negative уезжает склеенным с prompt, см. docs/atlas-api.md. Здесь он лежит отдельно, потому что документирует замысел и проверяется тестами.",
 
@@ -41,7 +43,8 @@
         "смотреть": "Кисти почти не едут по воздуху — древко проезжает СКВОЗЬ хват, около 25 см вперёд. Бьёт середина древка, а не лезвие, и на контакте всё встаёт разом.",
         "чего нет": [
           "Настоящего темпа не почувствовать: замедление 4.5x — самое сильное из семи, на площадке весь смах уложится в 1.10 с."
-        ]
+        ],
+        "доли в клипе": [0.0, 1.89, 4.08, 4.54]
       },
       "duration": 5,
       "resolution": "480p",
@@ -61,10 +64,11 @@
       "публикация": {
         "попытка": 1,
         "prediction": "78247d9d8cbc45ea8a37b99ece359442",
-        "смотреть": "Уход через спину идёт по частям: сначала голова, потом плечи, потом стопы. Копьё тащится низом позади и обгоняет тело только в выпаде. Древко проезжает через хват около 45 см.",
+        "смотреть": "Уход через спину идёт по частям: сначала голова, потом плечи, потом стопы. Копьё тащится низом позади и обгоняет тело только в выпаде. Древко проезжает через хват около 40 см.",
         "чего нет": [
           "Второго попадания в 36.58 в клипе нет: показаны первые четыре доли из пяти. Возврат на 34.55 — не конец удара."
-        ]
+        ],
+        "доли в клипе": [0.0, 1.34, 2.92, 5.92]
       },
       "duration": 6,
       "resolution": "480p",
@@ -74,7 +78,7 @@
         "burst_2__3_contact__34_00.png",
         "burst_2__4_recover__34_55.png"
       ],
-      "prompt": "{char} show WHO the character is and WHAT his weapon looks like. {poses} are the key poses of that same character, in order.\n\n{who}\n\nIMPORTANT: {poses} come from a technique sheet and their character design is WRONG — wrong hair colour, wrong face, wrong costume, wrong weapon. Use them ONLY for body position: the tilt of the torso, where the feet are, where the hands sit on the shaft, and the angle of the shaft. The character in the video must look exactly like the one in {char}, from the first frame to the last — his hair stays pale mint-green the whole way through and never changes colour.\n\nHe turns away through his back — head leads first, then shoulders, then feet — and the polearm trails low and behind him with its point close to the floor, chasing his body rather than leading it. As the turn finishes the shaft swings up and forward past him, and he drops into a deep long lunge toward the camera, rear leg stretched back to its limit, the shaft levelling to horizontal at chest height. Then he rises and settles into an easy walking stance with the point raised. His forward hand stays near waist height throughout; the shaft slides forward through his grip, about 45 cm of it in total.\n\nThe whole action takes {real} seconds in reality. Play it in slow motion, about {slow} slower, filling the clip.\n\n{shot}"
+      "prompt": "{char} show WHO the character is and WHAT his weapon looks like. {poses} are the key poses of that same character, in order.\n\n{who}\n\nIMPORTANT: {poses} come from a technique sheet and their character design is WRONG — wrong hair colour, wrong face, wrong costume, wrong weapon. Use them ONLY for body position: the tilt of the torso, where the feet are, where the hands sit on the shaft, and the angle of the shaft. The character in the video must look exactly like the one in {char}, from the first frame to the last — his hair stays pale mint-green the whole way through and never changes colour.\n\nHe turns away through his back — head leads first, then shoulders, then feet — and the polearm trails low and behind him with its point close to the floor, chasing his body rather than leading it. As the turn finishes the shaft swings up and forward past him, and he drops into a deep long lunge toward the camera, rear leg stretched back to its limit, the shaft levelling to horizontal at chest height. Then he rises and settles into an easy walking stance with the point raised. His forward hand stays near waist height throughout; the shaft slides forward through his grip, about 40 cm of it in total.\n\nThe whole action takes {real} seconds in reality. Play it in slow motion, about {slow} slower, filling the clip.\n\n{shot}"
     },
     {
       "id": "burst_3a",
@@ -87,7 +91,8 @@
         "смотреть": "Взгляд остаётся на цели дольше, чем корпус: голова уходит последней. Оборот — полный круг на месте через левое плечо, и удар приходит выше собственной головы.",
         "чего нет": [
           "Весь оборот закончен к 2.55 с из 5.04, дальше он просто стоит две с половиной секунды. Контакт посчитан на 5.04 — темп с этого клипа не снимать."
-        ]
+        ],
+        "доли в клипе": [0.0, 1.62, 2.22, 2.45]
       },
       "duration": 5,
       "resolution": "480p",
@@ -110,7 +115,8 @@
         "смотреть": "Из верхней остановки вниз: колени складываются, стойка расширяется, второе попадание идёт низом у самого пола. После него подъём медленный, без спешки.",
         "чего нет": [
           "Клип начинается уже на остановке первого попадания — как в неё пришли, смотри в части 1. Доля 39.92 показана в обоих клипах, это перекрытие, а не два разных удара."
-        ]
+        ],
+        "доли в клипе": [0.0, 1.92, 6.42]
       },
       "duration": 7,
       "resolution": "480p",
@@ -134,7 +140,8 @@
           "Корпус не замирает: измеренное движение 9–14 там, где в задании стоит ноль.",
           "Голова не возвращается до конца — 13.3 на последнем кадре, и в конце он ещё улыбается.",
           "Хлопок попал в 1.67 с против 1.76 по сценарию. Три попытки; дело не в формулировке, больше не переделывается."
-        ]
+        ],
+        "доли в клипе": [0.0, 1.3, 1.9, 3.9]
       },
       "duration": 5,
       "resolution": "480p",
@@ -158,7 +165,8 @@
         "чего нет": [
           "Удар не по чему: цель за кадром, и попадания не видно. У контакта 44.98 нет своего звука вовсе — эту долю держишь счётом, а не слухом.",
           "Первая попытка этого клипа наезжала камерой и сыпала искры; здесь этого нет, но и целиться не на что."
-        ]
+        ],
+        "доли в клипе": [0.0, 1.63, 3.17]
       },
       "duration": 4,
       "resolution": "480p",
@@ -181,7 +189,8 @@
         "чего нет": [
           "Переворота копья нет: на 0.20 и 1.20 с вверху золотой колпачок пятки, то есть наконечник всё время внизу. Он поднимает копьё наконечником вниз и вбивает его.",
           "Три попытки при верных панелях и прямом указании в промпте. Разворот на 172° читай по схемам в книжке движений — они считаются из чисел и соврать не могут."
-        ]
+        ],
+        "доли в клипе": [0.0, 0.56, 4.25, 5.58]
       },
       "duration": 6,
       "resolution": "480p",

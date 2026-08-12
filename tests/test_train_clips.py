@@ -475,6 +475,69 @@ def test_a_clip_that_hides_its_gaps_is_loud(strikes, raw, tmp_path):
         load(strikes, write(tmp_path, raw))
 
 
+def test_every_beat_has_a_mark_inside_its_clip(clips):
+    """Двадцать шесть отметок: где каждая доля стоит ВНУТРИ клипа.
+
+    Без них пульт сопоставлял время номера времени клипа одной прямой, а клипы
+    внутри себя держат свой темп. Отметка обязана быть у каждой доли: лишняя или
+    недостающая молча сдвинет все следующие.
+    """
+    assert sum(len(c.marks) for c in clips) == 26
+    for clip in clips:
+        assert len(clip.marks) == len(clip.beats), clip.id
+        assert clip.marks[0] == 0.0, clip.id
+        assert list(clip.marks) == sorted(clip.marks), clip.id
+        assert clip.marks[-1] <= clip.duration, clip.id
+
+
+def test_the_marks_are_measured_and_not_derived_from_the_clock(clips, strikes):
+    """Если бы отметки просто считались из времён долей, они были бы прямой — и
+    чинить было бы нечего. Проверка в том, что они от прямой ОТЛИЧАЮТСЯ, и
+    сильнее всего там, где это и замерено: у части 1 вспышки 3 оборот кончен к
+    2.45 с из 5.04, то есть контакт стоит вдвое раньше прямой."""
+    by_id = {s.id: s for s in strikes}
+
+    def straight(clip, number):
+        """Куда поставила бы долю одна прямая — то, что и чинят отметки."""
+        heard = by_id[clip.strike].beats[number - 1].heard
+        return (heard - clip.first) / clip.real * clip.duration
+
+    part1 = next(c for c in clips if c.id == "burst_3a")
+    assert part1.marks[-1] == 2.45
+    assert straight(part1, part1.beats[-1]) - part1.marks[-1] > 2.0, (
+        "контакт части 1 вспышки 3 замерен на 2.45 при прямой в конце клипа")
+
+    worst = max(abs(straight(clip, number) - mark)
+                for clip in clips
+                for number, mark in zip(clip.beats, clip.marks))
+    assert worst > 1.0, ("отметки почти совпали с прямой — значит их не замеряли, "
+                         "худшее расхождение всего %.2f с" % worst)
+
+
+def test_a_clip_with_the_wrong_number_of_marks_is_loud(strikes, raw, tmp_path):
+    pick(raw, "burst_1")["публикация"]["доли в клипе"] = [0.0, 1.0]
+    with pytest.raises(ClipError, match="отметок долей"):
+        load(strikes, write(tmp_path, raw))
+
+
+def test_marks_that_go_backwards_are_loud(strikes, raw, tmp_path):
+    pick(raw, "burst_1")["публикация"]["доли в клипе"] = [0.0, 2.0, 1.0, 3.0]
+    with pytest.raises(ClipError, match="не по порядку"):
+        load(strikes, write(tmp_path, raw))
+
+
+def test_the_first_mark_must_sit_at_zero(strikes, raw, tmp_path):
+    pick(raw, "burst_1")["публикация"]["доли в клипе"] = [0.4, 1.9, 4.1, 4.5]
+    with pytest.raises(ClipError, match="обязана стоять в нуле"):
+        load(strikes, write(tmp_path, raw))
+
+
+def test_a_mark_past_the_end_of_the_clip_is_loud(strikes, raw, tmp_path):
+    pick(raw, "burst_1")["публикация"]["доли в клипе"] = [0.0, 1.9, 4.1, 9.0]
+    with pytest.raises(ClipError, match="а клип длится"):
+        load(strikes, write(tmp_path, raw))
+
+
 def test_a_file_without_the_general_caveat_is_loud(raw, tmp_path):
     raw.pop("общая оговорка")
     with pytest.raises(ClipError, match="метроном"):

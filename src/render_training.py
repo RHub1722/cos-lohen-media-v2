@@ -210,8 +210,11 @@ def build_clips(strikes) -> list[dict]:
             "slow": round(clip.slow, 1),
             "watch": clip.watch,
             "missing": list(clip.missing),
-            "beats": [{"role": b.role, "heard": b.heard, "what": b.what}
-                      for b in beats],
+            # `at` — где эта доля стоит внутри клипа. По паре (heard, at) пульт
+            # сопоставляет время кусочно, а не одной прямой.
+            "beats": [{"role": b.role, "heard": b.heard, "what": b.what,
+                       "at": at}
+                      for b, at in zip(beats, clip.marks)],
         })
     return out
 
