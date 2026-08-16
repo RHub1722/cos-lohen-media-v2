@@ -328,7 +328,28 @@
   .rc-m { margin-top: 2px; font-size: 11px; color: var(--dim); }
   .rc-x { margin-top: 4px; font-size: 11px; color: var(--warn); }
   .card-w { margin-top: 4px; font-size: 11px; font-weight: 600; color: var(--warn); }
+  /* ── полоса сайта: четыре страницы, одна навигация ────────────────────── */
+  .sitebar {
+    display: flex; gap: 2px; flex-wrap: wrap; align-items: center;
+    background: var(--panel); border-bottom: 1px solid var(--line);
+    padding: 6px 20px; font-family: var(--sans); font-size: 13px;
+  }
+  .sitebar a {
+    color: var(--muted); text-decoration: none;
+    padding: 5px 12px; border-radius: 3px; white-space: nowrap;
+  }
+  .sitebar a:hover { color: var(--text); background: var(--panel-2); }
+  .sitebar a[aria-current="page"] {
+    color: var(--text); background: var(--panel-2); font-weight: 600;
+  }
 </style>
+
+<nav class="sitebar">
+  <a href="index.html">Тренажёр</a>
+  <a href="book.html">Книжка движений</a>
+  <a href="spear.html" aria-current="page">Копьё</a>
+  <a href="paint.html" title="Кинжал: покраска">Кинжал</a>
+</nav>
 
 <div class="bar">
   <div class="bar-in">
