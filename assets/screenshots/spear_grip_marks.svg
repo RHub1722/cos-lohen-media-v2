@@ -1,0 +1,184 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1560 1076" style="width:100%;height:auto;display:block;min-width:1080px" font-family="system-ui,-apple-system,Segoe UI,sans-serif">
+<rect width="1560" height="1076" fill="#12151b"/>
+<text x="210.0" y="44.0" font-size="21" fill="#e8e6e3" font-weight="700" text-anchor="start" letter-spacing="1.5">ГДЕ БРАТЬСЯ ЗА КОПЬЁ</text>
+<text x="210.0" y="68.0" font-size="13" fill="#8b9099" font-weight="400" text-anchor="start" letter-spacing="0">Хват каждой доли боя в миллиметрах от пятки · числа из scenario/strikes.json, пределы из гайда §8</text>
+<rect x="210.0" y="104" width="240.8" height="34" fill="#2a2f3c" rx="2"/>
+<rect x="450.8" y="104" width="475.9" height="34" fill="#d9b678" rx="2"/>
+<rect x="926.7" y="104" width="573.3" height="34" fill="#e0574f" fill-opacity="0.20" rx="2"/>
+<rect x="926.7" y="104" width="573.3" height="34" fill="none" stroke="#e0574f" stroke-opacity="0.5" stroke-dasharray="4 3" rx="2"/>
+<text x="330.4" y="126.0" font-size="11" fill="#8b9099" font-weight="700" text-anchor="middle" letter-spacing="0.8">ПЯТОЧНАЯ ГРУППА</text>
+<text x="688.7" y="126.0" font-size="12" fill="#2a2214" font-weight="700" text-anchor="middle" letter-spacing="0.5">ОБМОТКА ШНУРОМ — здесь и держат</text>
+<text x="1213.3" y="126.0" font-size="12" fill="#e0574f" font-weight="700" text-anchor="middle" letter-spacing="0.8">НЕ БРАТЬСЯ</text>
+<line x1="450.8" y1="90" x2="450.8" y2="146" stroke="#d9b678" stroke-width="1.5"/>
+<line x1="855.0" y1="90" x2="855.0" y2="146" stroke="#d9b678" stroke-width="1.5"/>
+<line x1="926.7" y1="90" x2="926.7" y2="146" stroke="#e0574f" stroke-width="1.5"/>
+<line x1="1017.7" y1="90" x2="1017.7" y2="146" stroke="#e0574f" stroke-width="1.5"/>
+<text x="450.8" y="84.0" font-size="11" fill="#d9b678" font-weight="600" text-anchor="middle" letter-spacing="0">336 начало обмотки</text>
+<text x="849.0" y="84.0" font-size="12" fill="#d9b678" font-weight="700" text-anchor="end" letter-spacing="0">900 ВАЛИК-МЕТКА · перекрут</text>
+<text x="932.7" y="84.0" font-size="12" fill="#e0574f" font-weight="700" text-anchor="start" letter-spacing="0">1000 ВАЛИК-УПОР · выше рука не проедет</text>
+<text x="1017.7" y="64.0" font-size="11" fill="#e0574f" font-weight="600" text-anchor="middle" letter-spacing="0">1127 крылья</text>
+<line x1="210.0" y1="164" x2="1500.0" y2="164" stroke="#3a4150"/>
+<line x1="210.0" y1="164" x2="210.0" y2="169" stroke="#3a4150"/>
+<text x="210.0" y="183.0" font-size="11" fill="#8b9099" font-weight="400" text-anchor="middle" letter-spacing="0">0</text>
+<line x1="353.3" y1="164" x2="353.3" y2="169" stroke="#3a4150"/>
+<text x="353.3" y="183.0" font-size="11" fill="#8b9099" font-weight="400" text-anchor="middle" letter-spacing="0">200</text>
+<line x1="496.7" y1="164" x2="496.7" y2="169" stroke="#3a4150"/>
+<text x="496.7" y="183.0" font-size="11" fill="#8b9099" font-weight="400" text-anchor="middle" letter-spacing="0">400</text>
+<line x1="640.0" y1="164" x2="640.0" y2="169" stroke="#3a4150"/>
+<text x="640.0" y="183.0" font-size="11" fill="#8b9099" font-weight="400" text-anchor="middle" letter-spacing="0">600</text>
+<line x1="783.3" y1="164" x2="783.3" y2="169" stroke="#3a4150"/>
+<text x="783.3" y="183.0" font-size="11" fill="#8b9099" font-weight="400" text-anchor="middle" letter-spacing="0">800</text>
+<line x1="926.7" y1="164" x2="926.7" y2="169" stroke="#3a4150"/>
+<text x="926.7" y="183.0" font-size="11" fill="#8b9099" font-weight="400" text-anchor="middle" letter-spacing="0">1000</text>
+<line x1="1070.0" y1="164" x2="1070.0" y2="169" stroke="#3a4150"/>
+<text x="1070.0" y="183.0" font-size="11" fill="#8b9099" font-weight="400" text-anchor="middle" letter-spacing="0">1200</text>
+<line x1="1213.3" y1="164" x2="1213.3" y2="169" stroke="#3a4150"/>
+<text x="1213.3" y="183.0" font-size="11" fill="#8b9099" font-weight="400" text-anchor="middle" letter-spacing="0">1400</text>
+<line x1="1356.7" y1="164" x2="1356.7" y2="169" stroke="#3a4150"/>
+<text x="1356.7" y="183.0" font-size="11" fill="#8b9099" font-weight="400" text-anchor="middle" letter-spacing="0">1600</text>
+<line x1="1500.0" y1="164" x2="1500.0" y2="169" stroke="#3a4150"/>
+<text x="1500.0" y="183.0" font-size="11" fill="#8b9099" font-weight="400" text-anchor="middle" letter-spacing="0">1800</text>
+<text x="210.0" y="216.0" font-size="13" fill="#e8e6e3" font-weight="400" text-anchor="start" letter-spacing="0">Правило простое: ладонь всегда на золотом. Валик на 900 находится на ощупь — это хват перекрута; валик на 1000 упирается в руку и дальше не пускает.</text>
+<text x="210.0" y="236.0" font-size="12" fill="#8b9099" font-weight="400" text-anchor="start" letter-spacing="0">Задняя кисть идёт ниже передней примерно на 275 мм. Точки ниже — передняя кисть.</text>
+<line x1="210" y1="274" x2="1500" y2="274" stroke="#3a4150" stroke-opacity="0.5"/>
+<text x="196.0" y="296.0" font-size="14" fill="#e8e6e3" font-weight="700" text-anchor="end" letter-spacing="0">Вспышка 1</text>
+<text x="196.0" y="314.0" font-size="11" fill="#8b9099" font-weight="400" text-anchor="end" letter-spacing="0">burst_1</text>
+<rect x="450.8" y="294" width="475.9" height="12" fill="#d9b678" fill-opacity="0.13" rx="6"/>
+<line x1="926.7" y1="280" x2="926.7" y2="322" stroke="#e0574f" stroke-width="1" stroke-opacity="0.55"/>
+<circle cx="597.0" cy="300" r="8" fill="#7b93d4"/>
+<text x="597.0" y="304.0" font-size="10" fill="#0d1016" font-weight="700" text-anchor="middle" letter-spacing="0">1</text>
+<text x="597.0" y="284.0" font-size="11" fill="#8b9099" font-weight="600" text-anchor="middle" letter-spacing="0">замах</text>
+<text x="597.0" y="272.0" font-size="11" fill="#7b93d4" font-weight="700" text-anchor="middle" letter-spacing="0">540</text>
+<circle cx="661.5" cy="300" r="8" fill="#7b93d4"/>
+<text x="661.5" y="304.0" font-size="10" fill="#0d1016" font-weight="700" text-anchor="middle" letter-spacing="0">2</text>
+<text x="661.5" y="326.0" font-size="11" fill="#8b9099" font-weight="600" text-anchor="middle" letter-spacing="0">взмах</text>
+<text x="661.5" y="338.0" font-size="11" fill="#7b93d4" font-weight="700" text-anchor="middle" letter-spacing="0">630</text>
+<circle cx="790.5" cy="300" r="8" fill="#7b93d4"/>
+<text x="790.5" y="304.0" font-size="10" fill="#0d1016" font-weight="700" text-anchor="middle" letter-spacing="0">3</text>
+<text x="790.5" y="284.0" font-size="11" fill="#8b9099" font-weight="600" text-anchor="middle" letter-spacing="0">контакт</text>
+<text x="790.5" y="272.0" font-size="11" fill="#7b93d4" font-weight="700" text-anchor="middle" letter-spacing="0">810</text>
+<circle cx="726.0" cy="300" r="8" fill="#7b93d4"/>
+<text x="726.0" y="304.0" font-size="10" fill="#0d1016" font-weight="700" text-anchor="middle" letter-spacing="0">4</text>
+<text x="726.0" y="326.0" font-size="11" fill="#8b9099" font-weight="600" text-anchor="middle" letter-spacing="0">возврат</text>
+<text x="726.0" y="338.0" font-size="11" fill="#7b93d4" font-weight="700" text-anchor="middle" letter-spacing="0">720</text>
+<line x1="210" y1="370" x2="1500" y2="370" stroke="#3a4150" stroke-opacity="0.5"/>
+<text x="196.0" y="392.0" font-size="14" fill="#e8e6e3" font-weight="700" text-anchor="end" letter-spacing="0">Вспышка 2</text>
+<text x="196.0" y="410.0" font-size="11" fill="#8b9099" font-weight="400" text-anchor="end" letter-spacing="0">burst_2</text>
+<rect x="450.8" y="390" width="475.9" height="12" fill="#d9b678" fill-opacity="0.13" rx="6"/>
+<line x1="926.7" y1="376" x2="926.7" y2="418" stroke="#e0574f" stroke-width="1" stroke-opacity="0.55"/>
+<circle cx="571.2" cy="396" r="8" fill="#7b93d4"/>
+<text x="571.2" y="400.0" font-size="10" fill="#0d1016" font-weight="700" text-anchor="middle" letter-spacing="0">1</text>
+<text x="571.2" y="380.0" font-size="11" fill="#8b9099" font-weight="600" text-anchor="middle" letter-spacing="0">замах</text>
+<text x="571.2" y="368.0" font-size="11" fill="#7b93d4" font-weight="700" text-anchor="middle" letter-spacing="0">504</text>
+<circle cx="597.0" cy="396" r="8" fill="#7b93d4"/>
+<text x="597.0" y="400.0" font-size="10" fill="#0d1016" font-weight="700" text-anchor="middle" letter-spacing="0">2</text>
+<text x="597.0" y="422.0" font-size="11" fill="#8b9099" font-weight="600" text-anchor="middle" letter-spacing="0">взмах</text>
+<text x="597.0" y="434.0" font-size="11" fill="#7b93d4" font-weight="700" text-anchor="middle" letter-spacing="0">540</text>
+<circle cx="855.0" cy="396" r="8" fill="#7b93d4"/>
+<text x="855.0" y="400.0" font-size="10" fill="#0d1016" font-weight="700" text-anchor="middle" letter-spacing="0">3</text>
+<text x="855.0" y="380.0" font-size="11" fill="#8b9099" font-weight="600" text-anchor="middle" letter-spacing="0">контакт</text>
+<text x="855.0" y="368.0" font-size="11" fill="#7b93d4" font-weight="700" text-anchor="middle" letter-spacing="0">900</text>
+<circle cx="726.0" cy="396" r="8" fill="#7b93d4"/>
+<text x="726.0" y="400.0" font-size="10" fill="#0d1016" font-weight="700" text-anchor="middle" letter-spacing="0">4</text>
+<text x="726.0" y="422.0" font-size="11" fill="#8b9099" font-weight="600" text-anchor="middle" letter-spacing="0">возврат</text>
+<text x="726.0" y="434.0" font-size="11" fill="#7b93d4" font-weight="700" text-anchor="middle" letter-spacing="0">720</text>
+<circle cx="790.5" cy="396" r="8" fill="#7b93d4"/>
+<text x="790.5" y="400.0" font-size="10" fill="#0d1016" font-weight="700" text-anchor="middle" letter-spacing="0">5</text>
+<text x="790.5" y="380.0" font-size="11" fill="#8b9099" font-weight="600" text-anchor="middle" letter-spacing="0">контакт</text>
+<text x="790.5" y="368.0" font-size="11" fill="#7b93d4" font-weight="700" text-anchor="middle" letter-spacing="0">810</text>
+<line x1="210" y1="466" x2="1500" y2="466" stroke="#3a4150" stroke-opacity="0.5"/>
+<text x="196.0" y="488.0" font-size="14" fill="#e8e6e3" font-weight="700" text-anchor="end" letter-spacing="0">Вспышка 3</text>
+<text x="196.0" y="506.0" font-size="11" fill="#8b9099" font-weight="400" text-anchor="end" letter-spacing="0">burst_3</text>
+<rect x="450.8" y="486" width="475.9" height="12" fill="#d9b678" fill-opacity="0.13" rx="6"/>
+<line x1="926.7" y1="472" x2="926.7" y2="514" stroke="#e0574f" stroke-width="1" stroke-opacity="0.55"/>
+<circle cx="597.0" cy="492" r="8" fill="#7b93d4"/>
+<text x="597.0" y="496.0" font-size="10" fill="#0d1016" font-weight="700" text-anchor="middle" letter-spacing="0">1</text>
+<text x="597.0" y="476.0" font-size="11" fill="#8b9099" font-weight="600" text-anchor="middle" letter-spacing="0">держать</text>
+<text x="597.0" y="464.0" font-size="11" fill="#7b93d4" font-weight="700" text-anchor="middle" letter-spacing="0">540</text>
+<circle cx="880.8" cy="492" r="8" fill="#7b93d4"/>
+<text x="880.8" y="496.0" font-size="10" fill="#0d1016" font-weight="700" text-anchor="middle" letter-spacing="0">2</text>
+<text x="880.8" y="518.0" font-size="11" fill="#8b9099" font-weight="600" text-anchor="middle" letter-spacing="0">замах</text>
+<text x="880.8" y="530.0" font-size="11" fill="#7b93d4" font-weight="700" text-anchor="middle" letter-spacing="0">936</text>
+<circle cx="622.8" cy="492" r="8" fill="#7b93d4"/>
+<text x="622.8" y="496.0" font-size="10" fill="#0d1016" font-weight="700" text-anchor="middle" letter-spacing="0">3</text>
+<text x="622.8" y="476.0" font-size="11" fill="#8b9099" font-weight="600" text-anchor="middle" letter-spacing="0">взмах</text>
+<text x="622.8" y="464.0" font-size="11" fill="#7b93d4" font-weight="700" text-anchor="middle" letter-spacing="0">576</text>
+<circle cx="790.5" cy="492" r="8" fill="#7b93d4"/>
+<text x="790.5" y="496.0" font-size="10" fill="#0d1016" font-weight="700" text-anchor="middle" letter-spacing="0">4</text>
+<text x="790.5" y="518.0" font-size="11" fill="#8b9099" font-weight="600" text-anchor="middle" letter-spacing="0">контакт</text>
+<text x="790.5" y="530.0" font-size="11" fill="#7b93d4" font-weight="700" text-anchor="middle" letter-spacing="0">810</text>
+<circle cx="855.0" cy="492" r="8" fill="#7b93d4"/>
+<text x="855.0" y="496.0" font-size="10" fill="#0d1016" font-weight="700" text-anchor="middle" letter-spacing="0">5</text>
+<text x="855.0" y="476.0" font-size="11" fill="#8b9099" font-weight="600" text-anchor="middle" letter-spacing="0">контакт</text>
+<text x="855.0" y="464.0" font-size="11" fill="#7b93d4" font-weight="700" text-anchor="middle" letter-spacing="0">900</text>
+<circle cx="790.5" cy="492" r="8" fill="#7b93d4"/>
+<text x="790.5" y="496.0" font-size="10" fill="#0d1016" font-weight="700" text-anchor="middle" letter-spacing="0">6</text>
+<text x="790.5" y="518.0" font-size="11" fill="#8b9099" font-weight="600" text-anchor="middle" letter-spacing="0">возврат</text>
+<text x="790.5" y="530.0" font-size="11" fill="#7b93d4" font-weight="700" text-anchor="middle" letter-spacing="0">810</text>
+<line x1="210" y1="562" x2="1500" y2="562" stroke="#3a4150" stroke-opacity="0.5"/>
+<text x="196.0" y="584.0" font-size="14" fill="#e8e6e3" font-weight="700" text-anchor="end" letter-spacing="0">Принять удар</text>
+<text x="196.0" y="602.0" font-size="11" fill="#8b9099" font-weight="400" text-anchor="end" letter-spacing="0">take_the_hit</text>
+<rect x="450.8" y="582" width="475.9" height="12" fill="#d9b678" fill-opacity="0.13" rx="6"/>
+<line x1="926.7" y1="568" x2="926.7" y2="610" stroke="#e0574f" stroke-width="1" stroke-opacity="0.55"/>
+<circle cx="958.2" cy="588" r="8" fill="#e0574f"/>
+<text x="958.2" y="592.0" font-size="10" fill="#0d1016" font-weight="700" text-anchor="middle" letter-spacing="0">1</text>
+<text x="958.2" y="572.0" font-size="11" fill="#e0574f" font-weight="600" text-anchor="middle" letter-spacing="0">держать</text>
+<text x="958.2" y="560.0" font-size="11" fill="#e0574f" font-weight="700" text-anchor="middle" letter-spacing="0">1044</text>
+<circle cx="958.2" cy="588" r="8" fill="#e0574f"/>
+<text x="958.2" y="592.0" font-size="10" fill="#0d1016" font-weight="700" text-anchor="middle" letter-spacing="0">2</text>
+<text x="958.2" y="614.0" font-size="11" fill="#e0574f" font-weight="600" text-anchor="middle" letter-spacing="0">контакт</text>
+<text x="958.2" y="626.0" font-size="11" fill="#e0574f" font-weight="700" text-anchor="middle" letter-spacing="0">1044</text>
+<circle cx="958.2" cy="588" r="8" fill="#e0574f"/>
+<text x="958.2" y="592.0" font-size="10" fill="#0d1016" font-weight="700" text-anchor="middle" letter-spacing="0">3</text>
+<text x="958.2" y="572.0" font-size="11" fill="#e0574f" font-weight="600" text-anchor="middle" letter-spacing="0">держать</text>
+<text x="958.2" y="560.0" font-size="11" fill="#e0574f" font-weight="700" text-anchor="middle" letter-spacing="0">1044</text>
+<circle cx="932.4" cy="588" r="8" fill="#e0574f"/>
+<text x="932.4" y="592.0" font-size="10" fill="#0d1016" font-weight="700" text-anchor="middle" letter-spacing="0">4</text>
+<text x="932.4" y="614.0" font-size="11" fill="#e0574f" font-weight="600" text-anchor="middle" letter-spacing="0">возврат</text>
+<text x="932.4" y="626.0" font-size="11" fill="#e0574f" font-weight="700" text-anchor="middle" letter-spacing="0">1008</text>
+<line x1="210" y1="658" x2="1500" y2="658" stroke="#3a4150" stroke-opacity="0.5"/>
+<text x="196.0" y="680.0" font-size="14" fill="#e8e6e3" font-weight="700" text-anchor="end" letter-spacing="0">Вспышка 4</text>
+<text x="196.0" y="698.0" font-size="11" fill="#8b9099" font-weight="400" text-anchor="end" letter-spacing="0">burst_4</text>
+<rect x="450.8" y="678" width="475.9" height="12" fill="#d9b678" fill-opacity="0.13" rx="6"/>
+<line x1="926.7" y1="664" x2="926.7" y2="706" stroke="#e0574f" stroke-width="1" stroke-opacity="0.55"/>
+<circle cx="571.2" cy="684" r="8" fill="#7b93d4"/>
+<text x="571.2" y="688.0" font-size="10" fill="#0d1016" font-weight="700" text-anchor="middle" letter-spacing="0">1</text>
+<text x="571.2" y="668.0" font-size="11" fill="#8b9099" font-weight="600" text-anchor="middle" letter-spacing="0">взмах</text>
+<text x="571.2" y="656.0" font-size="11" fill="#7b93d4" font-weight="700" text-anchor="middle" letter-spacing="0">504</text>
+<circle cx="751.8" cy="684" r="8" fill="#7b93d4"/>
+<text x="751.8" y="688.0" font-size="10" fill="#0d1016" font-weight="700" text-anchor="middle" letter-spacing="0">2</text>
+<text x="751.8" y="710.0" font-size="11" fill="#8b9099" font-weight="600" text-anchor="middle" letter-spacing="0">контакт</text>
+<text x="751.8" y="722.0" font-size="11" fill="#7b93d4" font-weight="700" text-anchor="middle" letter-spacing="0">756</text>
+<circle cx="726.0" cy="684" r="8" fill="#7b93d4"/>
+<text x="726.0" y="688.0" font-size="10" fill="#0d1016" font-weight="700" text-anchor="middle" letter-spacing="0">3</text>
+<text x="726.0" y="668.0" font-size="11" fill="#8b9099" font-weight="600" text-anchor="middle" letter-spacing="0">возврат</text>
+<text x="726.0" y="656.0" font-size="11" fill="#7b93d4" font-weight="700" text-anchor="middle" letter-spacing="0">720</text>
+<line x1="210" y1="754" x2="1500" y2="754" stroke="#3a4150" stroke-opacity="0.5"/>
+<text x="196.0" y="776.0" font-size="14" fill="#e8e6e3" font-weight="700" text-anchor="end" letter-spacing="0">Копьё в пол</text>
+<text x="196.0" y="794.0" font-size="11" fill="#8b9099" font-weight="400" text-anchor="end" letter-spacing="0">spear_down</text>
+<rect x="450.8" y="774" width="475.9" height="12" fill="#d9b678" fill-opacity="0.13" rx="6"/>
+<line x1="926.7" y1="760" x2="926.7" y2="802" stroke="#e0574f" stroke-width="1" stroke-opacity="0.55"/>
+<circle cx="532.5" cy="780" r="8" fill="#7b93d4"/>
+<text x="532.5" y="784.0" font-size="10" fill="#0d1016" font-weight="700" text-anchor="middle" letter-spacing="0">1</text>
+<text x="532.5" y="764.0" font-size="11" fill="#8b9099" font-weight="600" text-anchor="middle" letter-spacing="0">замах</text>
+<text x="532.5" y="752.0" font-size="11" fill="#7b93d4" font-weight="700" text-anchor="middle" letter-spacing="0">450</text>
+<circle cx="493.8" cy="780" r="8" fill="#7b93d4"/>
+<text x="493.8" y="784.0" font-size="10" fill="#0d1016" font-weight="700" text-anchor="middle" letter-spacing="0">2</text>
+<text x="493.8" y="806.0" font-size="11" fill="#8b9099" font-weight="600" text-anchor="middle" letter-spacing="0">держать</text>
+<text x="493.8" y="818.0" font-size="11" fill="#7b93d4" font-weight="700" text-anchor="middle" letter-spacing="0">396</text>
+<circle cx="919.5" cy="780" r="8" fill="#7b93d4"/>
+<text x="919.5" y="784.0" font-size="10" fill="#0d1016" font-weight="700" text-anchor="middle" letter-spacing="0">3</text>
+<text x="919.5" y="764.0" font-size="11" fill="#8b9099" font-weight="600" text-anchor="middle" letter-spacing="0">контакт</text>
+<text x="919.5" y="752.0" font-size="11" fill="#7b93d4" font-weight="700" text-anchor="middle" letter-spacing="0">990</text>
+<circle cx="364.8" cy="780" r="8" fill="#e0574f"/>
+<text x="364.8" y="784.0" font-size="10" fill="#0d1016" font-weight="700" text-anchor="middle" letter-spacing="0">4</text>
+<text x="364.8" y="806.0" font-size="11" fill="#e0574f" font-weight="600" text-anchor="middle" letter-spacing="0">держать</text>
+<text x="364.8" y="818.0" font-size="11" fill="#e0574f" font-weight="700" text-anchor="middle" letter-spacing="0">216</text>
+<rect x="196" y="892" width="1318" height="132" fill="#e0574f" fill-opacity="0.10" stroke="#e0574f" stroke-opacity="0.5" rx="4"/>
+<text x="210.0" y="918.0" font-size="14" fill="#e0574f" font-weight="700" text-anchor="start" letter-spacing="0.8">ПЯТЬ ДОЛЕЙ ИЗ 26 НЕ ПОМЕЩАЮТСЯ В ЭТО КОПЬЁ</text>
+<text x="210.0" y="942.0" font-size="12.5" fill="#e8e6e3" font-weight="400" text-anchor="start" letter-spacing="0">«Принять удар», все четыре доли — 1008 и 1044 мм, выше упора. До крыла остаётся 83–119 мм, а гайд отверг 71 мм как «аварию, ждущую повода».</text>
+<text x="210.0" y="962.0" font-size="12.5" fill="#8b9099" font-weight="400" text-anchor="start" letter-spacing="0">Практически туда и не попасть: на 1000 стоит валик, рука упрётся. Позу опускать под 1000.</text>
+<text x="210.0" y="986.0" font-size="12.5" fill="#e8e6e3" font-weight="400" text-anchor="start" letter-spacing="0">«Копьё в пол», доля 4 — 216 мм, на 120 мм ниже обмотки: ладонь ложится на лакированный пластик ровно в момент удара в пол.</text>
+<text x="210.0" y="1006.0" font-size="12.5" fill="#8b9099" font-weight="400" text-anchor="start" letter-spacing="0">Либо поднимать хват до 336, либо не лакировать пятку. По §8 лак идёт на всё, кроме 336…1000.</text>
+<text x="210.0" y="1060.0" font-size="11.5" fill="#8b9099" font-weight="400" text-anchor="start" letter-spacing="0">Копьё 1800 мм · обмотка 336…1000, диаметр в ладони 28 мм · хват задан долей древка позади кистей, здесь переведён в миллиметры</text>
+</svg>
