@@ -87,3 +87,31 @@ def test_the_same_digit_on_two_different_strikes_is_not_a_collision():
     assert collisions([_burst_1(), second]) == collisions([_burst_1()])
     repeats = repeated_digits([_burst_1(), second])
     assert repeats["девять"] == [29.14, 34.00]
+
+
+from src.counting import RISER, risers
+
+
+def test_a_riser_peaks_exactly_on_the_first_contact():
+    rows = risers([_burst_1()])
+    assert len(rows) == 1
+    assert rows[0]["strike"] == "burst_1"
+    assert rows[0]["peak"] == pytest.approx(29.14)
+    assert rows[0]["start"] == pytest.approx(29.14 - RISER)
+
+
+def test_a_riser_never_starts_before_the_previous_strike_ended():
+    """У приёма удара место самое тесное: 1.23 с от конца серии 3 до контакта.
+    Риз длиннее наехал бы на предыдущий приём и перестал бы что-либо значить."""
+    early = FakeStrike("burst_3", [FakeBeat("contact", 40.95),
+                                   FakeBeat("recover", 41.60)])
+    late = FakeStrike("take_the_hit", [FakeBeat("hold", 42.40),
+                                       FakeBeat("contact", 42.83)])
+    rows = risers([early, late])
+    assert rows[1]["start"] >= 41.60
+    assert rows[1]["peak"] == pytest.approx(42.83)
+
+
+def test_a_strike_without_a_contact_is_refused():
+    with pytest.raises(CountError):
+        risers([FakeStrike("empty", [FakeBeat("hold", 10.0)])])

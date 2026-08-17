@@ -28,6 +28,11 @@ WORDS: tuple[str, ...] = ("один", "два", "три", "четыре", "пя�
 CYCLE = len(WORDS)
 STEP = 0.5
 
+# Длина нарастающего шума. 1.2 с — это самое тесное место в номере минус запас:
+# у приёма удара от конца серии 3 до контакта 1.23 с. Единая длина у всех шести
+# намеренно: риз одинаковой формы читается как один и тот же знак.
+RISER = 1.2
+
 
 class CountError(Exception):
     """Сетку не из чего построить или её просят о невозможном."""
@@ -110,3 +115,28 @@ def repeated_digits(strikes, step: float = STEP) -> dict[str, list[float]]:
         if row["role"] == "contact":
             seen.setdefault(row["word"], []).append(row["t"])
     return {w: ts for w, ts in seen.items() if len(ts) > 1}
+
+
+def risers(strikes, length: float = RISER) -> list[dict]:
+    """По одному ризу на приём, вершина в первый контакт.
+
+    Начало подрезается концом предыдущего приёма: риз, наехавший на прошлое
+    действие, перестаёт означать «сейчас будет удар».
+    """
+    ordered = sorted(strikes, key=lambda s: min(b.heard for b in s.beats))
+    out, prev_end = [], 0.0
+    for strike in ordered:
+        contacts = [b.heard for b in strike.beats if b.role == "contact"]
+        if not contacts:
+            raise CountError(
+                f"{strike.id}: приём без контакта, ризу некуда целиться")
+        peak = min(contacts)
+        start = max(prev_end, peak - length)
+        if start >= peak:
+            raise CountError(
+                f"{strike.id}: на риз не осталось места, контакт {peak:.2f} "
+                f"стоит не позже конца прошлого приёма {prev_end:.2f}")
+        out.append({"strike": strike.id, "start": round(start, 4),
+                    "peak": round(peak, 4)})
+        prev_end = max(b.heard for b in strike.beats)
+    return out
