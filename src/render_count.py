@@ -28,7 +28,7 @@ from src.counting import (STEP, WORDS, assign, collisions,  # noqa: E402
 from src.models import Timeline  # noqa: E402
 from src.movements import load_movements, resolve_times  # noqa: E402
 from src.peaks import peak_offsets  # noqa: E402
-from src.strikes import load_strikes, resolve_strikes  # noqa: E402
+from src.strikes import ROLE_NAMES, load_strikes, resolve_strikes  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -270,6 +270,11 @@ def build_track(work: Path, rows: list[dict], cue_db: float = 0.0) -> Path:
 def sheet(strikes) -> str:
     """Печатный лист. Пишется здесь, а не в шаблоне: он весь из чисел."""
     rows = assign(strikes)
+    # Лист читает человек, а не программа, поэтому в нём стоит название приёма,
+    # а не ключ вроде burst_1. Берётся часть до двоеточия: полное название
+    # («Вспышка 3: полный оборот, два попадания, низкий выпад») в столбец
+    # таблицы не влезает.
+    names = {s.id: s.title.split(":")[0].strip() for s in strikes}
     lines = [
         "# Лист счёта: какой удар на какой цифре",
         "",
@@ -297,7 +302,8 @@ def sheet(strikes) -> str:
     for row in rows:
         if row["role"] == "contact":
             lines.append("| %.2f | %s | **«%s»** | %+.3f с |"
-                         % (row["t"], row["strike"], row["word"], row["miss"]))
+                         % (row["t"], names[row["strike"]], row["word"],
+                            row["miss"]))
 
     repeats = repeated_digits(strikes)
     if repeats:
@@ -326,7 +332,8 @@ def sheet(strikes) -> str:
         "|---|---|",
     ]
     for word, beats in hits:
-        what = ", ".join("%.2f %s/%s" % (b["t"], b["strike"], b["role"])
+        what = ", ".join("%.2f %s, %s" % (b["t"], names[b["strike"]],
+                                          ROLE_NAMES.get(b["role"], b["role"]))
                          for b in beats)
         lines.append("| «%s» | %s |" % (word, what))
 
@@ -339,7 +346,8 @@ def sheet(strikes) -> str:
     ]
     for row in rows:
         lines.append("| %.2f | %s | %s | «%s» | %+.3f с |"
-                     % (row["t"], row["strike"], row["role"],
+                     % (row["t"], names[row["strike"]],
+                        ROLE_NAMES.get(row["role"], row["role"]),
                         row["word"], row["miss"]))
 
     lines += [
