@@ -71,3 +71,42 @@ def grid(total: float, step: float = STEP) -> list[Mark]:
         out.append(Mark(t=round(k * step, 6), index=k % CYCLE))
         k += 1
     return out
+
+
+def assign(strikes, step: float = STEP) -> list[dict]:
+    """Цифра, промах и ячейка для каждой доли каждого приёма."""
+    out = []
+    for strike in strikes:
+        for beat in strike.beats:
+            if beat.heard < 0:
+                raise CountError(
+                    f"{strike.id}/{beat.role}: доля без времени. "
+                    "Сначала resolve_strikes, потом счёт.")
+            word, miss = digit_at(beat.heard, step)
+            out.append({"t": beat.heard, "strike": strike.id,
+                        "role": beat.role, "what": getattr(beat, "what", ""),
+                        "word": word, "miss": miss,
+                        "cell": cell(beat.heard, step)})
+    return sorted(out, key=lambda r: r["t"])
+
+
+def collisions(strikes, step: float = STEP) -> list[tuple[str, list[dict]]]:
+    """Доли, которым досталась ОДНА И ТА ЖЕ отметка сетки.
+
+    Именно одна отметка, а не одинаковое слово: 29.14 и 34.00 оба «девять», но
+    они в разных циклах и разнесены на 4.86 с. Спутать можно только соседей.
+    """
+    cells: dict[int, list[dict]] = {}
+    for row in assign(strikes, step):
+        cells.setdefault(row["cell"], []).append(row)
+    return [(rows[0]["word"], rows)
+            for _, rows in sorted(cells.items()) if len(rows) > 1]
+
+
+def repeated_digits(strikes, step: float = STEP) -> dict[str, list[float]]:
+    """Слова, доставшиеся более чем одному КОНТАКТУ, с их временами."""
+    seen: dict[str, list[float]] = {}
+    for row in assign(strikes, step):
+        if row["role"] == "contact":
+            seen.setdefault(row["word"], []).append(row["t"])
+    return {w: ts for w, ts in seen.items() if len(ts) > 1}
