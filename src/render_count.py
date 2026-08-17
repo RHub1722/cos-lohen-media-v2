@@ -23,7 +23,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from src.counting import STEP, WORDS  # noqa: E402
+from src.counting import STEP, WORDS, risers  # noqa: E402
+from src.models import Timeline  # noqa: E402
+from src.movements import load_movements, resolve_times  # noqa: E402
+from src.peaks import peak_offsets  # noqa: E402
+from src.strikes import load_strikes, resolve_strikes  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -58,6 +62,18 @@ PEAK_DB = -6.0
 # отброшена запись на скорости 1.2. У слов подсказок та же константа зовётся
 # MIN_GAP и равна 0.08; здесь шаг втрое короче, поэтому и зазор меньше.
 GAP = 0.020
+
+# Фонограмма номера, а не наш мастер: с 8 августа звучит ручное сведение из
+# монтажки. Кладём то, подо что выступают.
+SOUNDTRACK = ROOT / "output/master_ru_fx.wav"
+OUT_TRACK = ROOT / "output/count_cues.wav"
+TOTAL = 60.0
+
+# Насколько уходит вниз номер. Девять, а не четырнадцать как в репетиционной
+# дорожке: глубже — и пропадает сам звук удара, по которому проверяется
+# попадание, то есть дорожка отменяет собственную задачу.
+DUCK_DB = 9.0
+RISER_DB = -9.0
 
 
 def run(cmd: list[str]) -> str:
@@ -154,15 +170,137 @@ def cut_numerals() -> list[Path]:
     return out
 
 
+def build_cycle(work: Path) -> Path:
+    """Один цикл счёта длиной ровно CYCLE*STEP секунд.
+
+    Цикл собирается отдельно и потом зацикливается: 60 с делятся на 5.000 с
+    ровно 12 раз, поэтому склейка попадает точно в границу, а входов у FFmpeg
+    остаётся десять вместо ста двадцати.
+    """
+    parts, labels, inputs = [], [], []
+    for i in range(len(WORDS)):
+        inputs += ["-i", str(OUT_DIR / ("count_%02d.wav" % (i + 1)))]
+        ms = int(round(i * STEP * 1000))
+        parts.append("[%d:a]adelay=%d[c%d]" % (i, ms, i))
+        labels.append("[c%d]" % i)
+    parts.append("".join(labels) + "amix=inputs=%d:normalize=0:"
+                 "dropout_transition=0[m]" % len(labels))
+    parts.append("[m]apad,atrim=0:%.4f,asetpts=N/SR/TB[out]"
+                 % (len(WORDS) * STEP))
+    out = work / "cycle.wav"
+    run(["ffmpeg", "-v", "error", "-y"] + inputs
+        + ["-filter_complex", ";".join(parts), "-map", "[out]",
+           "-ar", "48000", "-ac", "1", "-c:a", "pcm_s24le", str(out)])
+    return out
+
+
+def build_count(work: Path) -> Path:
+    """Счёт на весь номер: цикл, повторённый нужное число раз."""
+    cycle = build_cycle(work)
+    times = int(round(TOTAL / (len(WORDS) * STEP)))
+    if abs(times * len(WORDS) * STEP - TOTAL) > 1e-6:
+        raise SystemExit(
+            "цикл %.3f с не укладывается в %.3f с целое число раз — "
+            "склейка попадёт внутрь цифры" % (len(WORDS) * STEP, TOTAL))
+    out = work / "count.wav"
+    run(["ffmpeg", "-v", "error", "-y", "-stream_loop", str(times - 1),
+         "-i", str(cycle), "-t", "%.4f" % TOTAL,
+         "-ar", "48000", "-ac", "1", "-c:a", "pcm_s24le", str(out)])
+    return out
+
+
+def build_risers(work: Path, rows: list[dict]) -> Path:
+    """Шесть нарастающих шумов: чирп плюс розовый шум под общей огибающей.
+
+    Синтез целиком на FFmpeg: библиотек для звука в проекте нет. Огибающая
+    степенная, а не линейная — линейная слышится как ровная полка и вершину
+    не обозначает.
+    """
+    inputs, parts, labels = [], [], []
+    for j, row in enumerate(rows):
+        length = row["peak"] - row["start"]
+        inputs += ["-f", "lavfi", "-i",
+                   "aevalsrc=sin(2*PI*(180*t+380*t*t)):d=%.4f:s=48000" % length,
+                   "-f", "lavfi", "-i",
+                   "anoisesrc=d=%.4f:c=pink:r=48000:a=0.35" % length]
+        ms = int(round(row["start"] * 1000))
+        for idx in (2 * j, 2 * j + 1):
+            parts.append("[%d:a]volume='pow(t/%.4f\\,2.2)':eval=frame,"
+                         "adelay=%d,volume=%.1fdB[r%d]"
+                         % (idx, length, ms, RISER_DB, idx))
+            labels.append("[r%d]" % idx)
+    parts.append("".join(labels) + "amix=inputs=%d:normalize=0:"
+                 "dropout_transition=0[m]" % len(labels))
+    parts.append("[m]apad,atrim=0:%.4f,asetpts=N/SR/TB[out]" % TOTAL)
+    out = work / "risers.wav"
+    run(["ffmpeg", "-v", "error", "-y"] + inputs
+        + ["-filter_complex", ";".join(parts), "-map", "[out]",
+           "-ar", "48000", "-ac", "1", "-c:a", "pcm_s24le", str(out)])
+    return out
+
+
+def build_track(work: Path, rows: list[dict], cue_db: float = 0.0) -> Path:
+    """Сведение: номер стерео вниз на 9 dB, подсказки моно жёстко вправо.
+
+    Ограничителя нет намеренно. С ним левый канал перестал бы совпадать с
+    приглушённым номером бит в бит, а это единственная проверка, которая
+    доказывает, что в левое ухо не попала ни одна подсказка. Запас
+    проверяется замером, и если его не хватит, вниз идёт один линейный гейн
+    на подсказки — так же, как сделан запас у мастера 8 августа.
+    """
+    count = build_count(work)
+    risers_wav = build_risers(work, rows)
+    OUT_TRACK.parent.mkdir(parents=True, exist_ok=True)
+    run(["ffmpeg", "-v", "error", "-y",
+         "-i", str(SOUNDTRACK), "-i", str(count), "-i", str(risers_wav),
+         "-filter_complex",
+         "[0:a]volume=-%.1fdB,atrim=0:%.4f[bed];"
+         "[1:a][2:a]amix=inputs=2:normalize=0:dropout_transition=0,"
+         "volume=%.2fdB,pan=stereo|c0=0*c0|c1=c0[cue];"
+         "[bed][cue]amix=inputs=2:normalize=0:dropout_transition=0,"
+         "atrim=0:%.4f,asetpts=N/SR/TB[out]"
+         % (DUCK_DB, TOTAL, cue_db, TOTAL),
+         "-map", "[out]", "-ar", "48000", "-ac", "2",
+         "-c:a", "pcm_s24le", str(OUT_TRACK)])
+    return OUT_TRACK
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--cut", action="store_true",
                     help="заново нарезать числительные из заказа")
+    ap.add_argument("--cue-db", type=float, default=0.0,
+                    help="линейный гейн на слой подсказок, если не хватило "
+                         "запаса по пикам")
     args = ap.parse_args()
     if args.cut:
         cut_numerals()
         return 0
-    ap.error("сборка дорожки появится в следующей задаче")
+
+    tl = Timeline.load(ROOT / "scenario/timeline.json")
+    assets = ROOT / "assets"
+    peaks = peak_offsets(assets, sorted({e.asset for e in tl.events
+                                         if e.stem == "sfx"}))
+    moves = [m.id for m in resolve_times(
+        load_movements(ROOT / "scenario/movements.json"), tl)]
+    strikes = resolve_strikes(
+        load_strikes(ROOT / "scenario/strikes.json"), tl, peaks, moves)
+
+    if not SOUNDTRACK.exists():
+        raise SystemExit("нет фонограммы %s" % SOUNDTRACK)
+    if not (OUT_DIR / "count_01.wav").exists():
+        raise SystemExit("числительные не нарезаны: "
+                         "python src/render_count.py --cut")
+
+    rows = risers(strikes)
+    work = ROOT / "output" / "count_work"
+    work.mkdir(parents=True, exist_ok=True)
+    build_track(work, rows, args.cue_db)
+    print("%s  %.3f с" % (OUT_TRACK, TOTAL))
+    for row in rows:
+        print("  риз %-13s %.2f → %.2f" % (row["strike"], row["start"],
+                                           row["peak"]))
+    return 0
 
 
 if __name__ == "__main__":
