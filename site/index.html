@@ -1398,7 +1398,12 @@ function setCount(on) {
   video.muted = on;
   $("countBtn").classList.toggle("on", on);
   if (on) {
-    if (!countTrack.src) countTrack.src = DATA.count;
+    // load() обязателен. При preload="none" дорожка не начинает грузиться до
+    // первого play, а присвоение currentTime у неготового элемента молча
+    // пропадает — замерено: readyState 0, duration неизвестна. Без этого
+    // первое нажатие «счёт» дало бы тишину вместо счёта и догоняло бы уже на
+    // ходу. С load() файл (0.7 МБ) готов к моменту, когда его попросят.
+    if (!countTrack.src) { countTrack.src = DATA.count; countTrack.load(); }
     countTrack.currentTime = video.currentTime;
     if (!video.paused) countTrack.play().catch(() => {});
   } else {
