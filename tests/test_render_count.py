@@ -8,7 +8,7 @@ import pytest
 
 from src.counting import STEP, WORDS
 from src.render_count import (DUCK_DB, GAP, NUMERALS, OUT_DIR, OUT_TRACK,
-                              SOUNDTRACK, TAKE)
+                              SHEET, SOUNDTRACK, TAKE)
 
 
 def probe(path):
@@ -33,6 +33,13 @@ def track():
     if not OUT_TRACK.exists():
         pytest.skip("нет %s: python src/render_count.py" % OUT_TRACK.name)
     return OUT_TRACK
+
+
+@pytest.fixture(scope="module")
+def sheet_text():
+    if not SHEET.exists():
+        pytest.skip("нет %s: python src/render_count.py" % SHEET.name)
+    return SHEET.read_text(encoding="utf-8")
 
 
 def test_there_are_ten_numerals_and_their_bounds_are_written_down():
@@ -101,3 +108,27 @@ def test_the_track_keeps_headroom(track):
     left, right = channels(track, 0.0, 60.0)
     peak = 20 * np.log10(max(np.abs(left).max(), np.abs(right).max()))
     assert peak < -1.0, "%.2f dBTP — нет запаса, счёт надо опустить" % peak
+
+
+def test_the_sheet_names_all_eight_contacts(sheet_text):
+    for t in ("29.14", "34.00", "36.58", "39.92",
+              "40.95", "42.83", "44.98", "47.03"):
+        assert t in sheet_text, t
+
+
+def test_the_sheet_confesses_the_three_collisions(sheet_text):
+    """Цена выбранного темпа перечислена поимённо. Если однажды столкновений
+    станет больше, лист обязан назвать и их — иначе исполнитель будет ждать
+    цифру, которой не будет."""
+    assert "делят одну цифру" in sheet_text
+    for t in ("28.88", "43.13", "46.19"):
+        assert t in sheet_text, t
+
+
+def test_the_sheet_warns_that_one_digit_serves_two_strikes(sheet_text):
+    assert "«девять»" in sheet_text and "«один»" in sheet_text
+    assert "разных цикла" in sheet_text
+
+
+def test_the_sheet_explains_the_anchor(sheet_text):
+    assert "круглой пятёрке" in sheet_text

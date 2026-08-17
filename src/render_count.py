@@ -23,7 +23,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from src.counting import STEP, WORDS, risers  # noqa: E402
+from src.counting import (STEP, WORDS, assign, collisions,  # noqa: E402
+                          repeated_digits, risers)
 from src.models import Timeline  # noqa: E402
 from src.movements import load_movements, resolve_times  # noqa: E402
 from src.peaks import peak_offsets  # noqa: E402
@@ -67,6 +68,7 @@ GAP = 0.020
 # монтажки. Кладём то, подо что выступают.
 SOUNDTRACK = ROOT / "output/master_ru_fx.wav"
 OUT_TRACK = ROOT / "output/count_cues.wav"
+SHEET = ROOT / "output/count_sheet.md"
 TOTAL = 60.0
 
 # Насколько уходит вниз номер. Девять, а не четырнадцать как в репетиционной
@@ -265,6 +267,93 @@ def build_track(work: Path, rows: list[dict], cue_db: float = 0.0) -> Path:
     return OUT_TRACK
 
 
+def sheet(strikes) -> str:
+    """Печатный лист. Пишется здесь, а не в шаблоне: он весь из чисел."""
+    rows = assign(strikes)
+    lines = [
+        "# Лист счёта: какой удар на какой цифре",
+        "",
+        "Собран `python src/render_count.py`. Времена — из долей",
+        "`scenario/strikes.json`, то есть из того же источника, что тренажёр.",
+        "Руками здесь править нечего: сдвинется удар в сценарии — уедет и лист.",
+        "",
+        "## Как этим пользоваться",
+        "",
+        "Счёт идёт два раза в секунду и не замолкает. Цикл из десяти цифр",
+        "длится ровно пять секунд, поэтому **«один» приходится на каждой",
+        "круглой пятёрке** таймера: 0, 5, 10 и так далее. Потерялся — дождись",
+        "«один» и посмотри на таймер.",
+        "",
+        "Счёт говорит, ГДЕ ты. Точный момент удара говорит нарастающий шум:",
+        "его вершина стоит ровно в контакт. Цифра — координата, риз — попадание.",
+        "",
+        "Всё это звучит только в правом ухе. Левое слышит номер чистым.",
+        "",
+        "## Восемь ударов",
+        "",
+        "| время | приём | цифра | промах |",
+        "|---|---|---|---|",
+    ]
+    for row in rows:
+        if row["role"] == "contact":
+            lines.append("| %.2f | %s | **«%s»** | %+.3f с |"
+                         % (row["t"], row["strike"], row["word"], row["miss"]))
+
+    repeats = repeated_digits(strikes)
+    if repeats:
+        lines += [
+            "",
+            "### Одна цифра на два удара",
+            "",
+            "Это не ошибка: удары стоят в разных цикла́х, между ними целых пять",
+            "секунд, и у каждого свой риз. Но знать стоит.",
+            "",
+        ]
+        for word, times in sorted(repeats.items()):
+            lines.append("- **«%s»** — это и %s"
+                         % (word, ", и ".join("%.2f" % t for t in times)))
+
+    hits = collisions(strikes)
+    lines += [
+        "",
+        "## Доли, которые делят одну цифру",
+        "",
+        "Цена темпа два раза в секунду. Самые тесные доли номера стоят в 0.21 с",
+        "друг от друга, а шаг счёта 0.5 с — значит счёт их не различает.",
+        "Перечислены все, чтобы не ждать цифру, которой не будет.",
+        "",
+        "| цифра | доли |",
+        "|---|---|",
+    ]
+    for word, beats in hits:
+        what = ", ".join("%.2f %s/%s" % (b["t"], b["strike"], b["role"])
+                         for b in beats)
+        lines.append("| «%s» | %s |" % (word, what))
+
+    lines += [
+        "",
+        "## Все двадцать шесть долей",
+        "",
+        "| время | приём | роль | цифра | промах |",
+        "|---|---|---|---|---|",
+    ]
+    for row in rows:
+        lines.append("| %.2f | %s | %s | «%s» | %+.3f с |"
+                     % (row["t"], row["strike"], row["role"],
+                        row["word"], row["miss"]))
+
+    lines += [
+        "",
+        "## Чего этот лист не заменяет",
+        "",
+        "Прогон под запись. Подготовительные доли в `strikes.json` поставлены",
+        "по книжным 0.3–0.6 с на взмах. Твои числа могут отличаться вдвое, и",
+        "тогда сдвигать надо доли: цифры и ризы пересчитаются сами.",
+        "",
+    ]
+    return "\n".join(lines)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--cut", action="store_true",
@@ -300,6 +389,12 @@ def main() -> int:
     for row in rows:
         print("  риз %-13s %.2f → %.2f" % (row["strike"], row["start"],
                                            row["peak"]))
+
+    SHEET.write_text(sheet(strikes), encoding="utf-8")
+    print("%s" % SHEET)
+    for word, beats in collisions(strikes):
+        print("  делят «%s»: %s" % (word, ", ".join(
+            "%.2f %s" % (b["t"], b["role"]) for b in beats)))
     return 0
 
 
