@@ -71,6 +71,11 @@ OUT_TRACK = ROOT / "output/count_cues.wav"
 SHEET = ROOT / "output/count_sheet.md"
 TOTAL = 60.0
 
+# Сжатая копия для страницы тренажёра: та же дорожка, но в m4a и на 96k, чтобы
+# не тянуть в гит лишний вес по мобильной связи.
+SITE_TRACK = ROOT / "site/count_cues.m4a"
+SITE_BITRATE = "96k"
+
 # Насколько уходит вниз номер. Девять, а не четырнадцать как в репетиционной
 # дорожке: глубже — и пропадает сам звук удара, по которому проверяется
 # попадание, то есть дорожка отменяет собственную задачу.
@@ -267,6 +272,22 @@ def build_track(work: Path, rows: list[dict], cue_db: float = 0.0) -> Path:
     return OUT_TRACK
 
 
+def publish() -> Path:
+    """Сжатая копия для страницы.
+
+    Второго видео не собирается: ещё один mp4 — это около шести мегабайт в
+    гит, а звук в m4a — около одного. Страница играет то же видео с
+    выключенным звуком и ведёт эту дорожку рядом.
+    """
+    if not OUT_TRACK.exists():
+        raise SystemExit("нет %s: сначала python src/render_count.py" % OUT_TRACK)
+    SITE_TRACK.parent.mkdir(parents=True, exist_ok=True)
+    run(["ffmpeg", "-v", "error", "-y", "-i", str(OUT_TRACK),
+         "-c:a", "aac", "-b:a", SITE_BITRATE, str(SITE_TRACK)])
+    print("%s  %.1f МБ" % (SITE_TRACK, SITE_TRACK.stat().st_size / 1e6))
+    return SITE_TRACK
+
+
 def sheet(strikes) -> str:
     """Печатный лист. Пишется здесь, а не в шаблоне: он весь из чисел."""
     rows = assign(strikes)
@@ -369,6 +390,8 @@ def main() -> int:
     ap.add_argument("--cue-db", type=float, default=0.0,
                     help="линейный гейн на слой подсказок, если не хватило "
                          "запаса по пикам")
+    ap.add_argument("--site", action="store_true",
+                    help="сжать копию для страницы тренажёра")
     args = ap.parse_args()
     if args.cut:
         cut_numerals()
@@ -403,6 +426,9 @@ def main() -> int:
     for word, beats in collisions(strikes):
         print("  делят «%s»: %s" % (word, ", ".join(
             "%.2f %s" % (b["t"], b["role"]) for b in beats)))
+
+    if args.site:
+        publish()
     return 0
 
 

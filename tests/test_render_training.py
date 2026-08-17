@@ -232,3 +232,33 @@ def test_render_leaves_no_marker_and_closes_no_script():
     assert "<\\/script>" in html
     tail = html.split("const DATA = ")[-1]
     assert not tail.startswith("{\"total\": 60.0, \"video\": \"v.mp4\", \"note\": \"</")
+
+
+def test_the_page_knows_where_the_count_track_lies(payload):
+    assert payload["count"] == "count_cues.m4a"
+
+
+def test_the_count_track_is_published_next_to_the_page():
+    track = SITE_DIR / "count_cues.m4a"
+    assert track.exists(), "нет site/count_cues.m4a: python src/render_count.py --site"
+    megabytes = track.stat().st_size / 1024 / 1024
+    assert megabytes < 2.0, (
+        "%.1f МБ — многовато для мобильной связи" % megabytes)
+
+
+def test_the_page_carries_the_count_switch():
+    """Переключатель обязан быть и в разметке, и в скрипте: кнопка без
+    обработчика выглядит рабочей и не делает ничего."""
+    html = (ROOT / "src/training_template.html").read_text(encoding="utf-8")
+    assert 'id="countTrack"' in html
+    assert 'id="countBtn"' in html
+    assert "countBtn" in html.split("const VIEWS")[1]
+
+
+def test_the_count_track_is_kept_in_step_every_frame():
+    """Дорожка ведётся часами видео, как клип приёма в виде «Пульт». Без вызова
+    в покадровом цикле она разъедется с картинкой, и репетиция пойдёт по
+    неверным цифрам."""
+    html = (ROOT / "src/training_template.html").read_text(encoding="utf-8")
+    body = html.split("function frame()")[1].split("requestAnimationFrame")[0]
+    assert "syncCount()" in body

@@ -71,6 +71,11 @@ SITE_SCALE = "960:540"
 SITE_CRF = "24"
 MASTER_VIDEO = ROOT / "output" / NUMBER_VIDEO
 
+# Дорожка счёта: тот же номер, но приглушённый на 9 dB, а поверх него в правом
+# канале счёт и ризы. Собирается src/render_count.py; страница только
+# переключает звук, второго видео для этого не нужно.
+SITE_COUNT = "count_cues.m4a"
+
 # Запасной адрес видео для опубликованной копии. Нужен ровно одному случаю:
 # страницу открыли через прокси вроде raw.githack, который отдаёт mp4 с типом
 # application/octet-stream, и Safari на планшете такой файл проигрывать
@@ -279,6 +284,7 @@ def build_payload(video: str, video_fallback: str = "") -> dict:
         "clips": build_clips(strikes),
         "clips_caveat": clips_caveat(),
         "clips_fallback": CLIPS_FALLBACK,
+        "count": SITE_COUNT,
     }
 
 
