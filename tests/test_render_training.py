@@ -178,7 +178,7 @@ def test_every_tab_of_the_page_has_a_section_to_show():
     html = (ROOT / "src/training_template.html").read_text(encoding="utf-8")
     block = html.split("const VIEWS = [")[1].split("];")[0]
     names = re.findall(r'\["(\w+)", "', block)
-    assert names == ["run", "pult", "fight", "clips", "moves", "how"]
+    assert names == ["run", "pult", "fight", "clips", "moves", "grip", "how"]
     for name in names:
         assert 'id="view-%s"' % name in html, name
         # id раздела не равен имени вида намеренно: имя уезжает в хеш адреса, и
