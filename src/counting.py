@@ -89,7 +89,7 @@ def assign(strikes, step: float = STEP) -> list[dict]:
                     "Сначала resolve_strikes, потом счёт.")
             word, miss = digit_at(beat.heard, step)
             out.append({"t": beat.heard, "strike": strike.id,
-                        "role": beat.role, "what": getattr(beat, "what", ""),
+                        "role": beat.role, "what": beat.what,
                         "word": word, "miss": miss,
                         "cell": cell(beat.heard, step)})
     return sorted(out, key=lambda r: r["t"])
@@ -123,9 +123,18 @@ def risers(strikes, length: float = RISER) -> list[dict]:
     Начало подрезается концом предыдущего приёма: риз, наехавший на прошлое
     действие, перестаёт означать «сейчас будет удар».
     """
+    for strike in strikes:
+        for beat in strike.beats:
+            if beat.heard < 0:
+                raise CountError(
+                    f"{strike.id}/{beat.role}: доля без времени. "
+                    "Сначала resolve_strikes, потом ризы.")
     ordered = sorted(strikes, key=lambda s: min(b.heard for b in s.beats))
     out, prev_end = [], 0.0
     for strike in ordered:
+        # ПЕРВЫЙ контакт, а не любой: у серии 2, серии 3 и копья в пол их по
+        # два, и вершина на втором увела бы риз на 2.58 с от того удара, к
+        # которому он ведёт.
         contacts = [b.heard for b in strike.beats if b.role == "contact"]
         if not contacts:
             raise CountError(

@@ -7,8 +7,8 @@ import numpy as np
 import pytest
 
 from src.counting import STEP, WORDS
-from src.render_count import GAP, NUMERALS, OUT_DIR, TAKE
-from src.render_count import DUCK_DB, OUT_TRACK, SOUNDTRACK
+from src.render_count import (DUCK_DB, GAP, NUMERALS, OUT_DIR, OUT_TRACK,
+                              SOUNDTRACK, TAKE)
 
 
 def probe(path):
