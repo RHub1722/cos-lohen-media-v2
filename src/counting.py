@@ -130,6 +130,12 @@ def risers(strikes, length: float = RISER) -> list[dict]:
     Начало подрезается ПРЕДЫДУЩИМ КОНТАКТОМ: риз, накрывший прошлый удар,
     перестаёт означать «сейчас будет следующий». Поэтому длина у ризов разная —
     у второго попадания вспышки 3 на неё остаётся всего 1.03 с.
+
+    Долю можно исключить полем `riser: false` в сценарии. Исключение живёт
+    рядом с долей, а не списком здесь: у встречного удара вспышки 4 замаха нет
+    намеренно, и объявлять подготовку, которой не существует, значит врать о
+    движении. Отсчёт «предыдущего контакта» при этом ведётся по ВСЕМ контактам,
+    включая исключённые: удар звучит независимо от того, объявили его или нет.
     """
     contacts = []
     for strike in strikes:
@@ -138,14 +144,18 @@ def risers(strikes, length: float = RISER) -> list[dict]:
                 raise CountError(
                     f"{strike.id}/{beat.role}: доля без времени. "
                     "Сначала resolve_strikes, потом ризы.")
-        found = [b.heard for b in strike.beats if b.role == "contact"]
+        found = [b for b in strike.beats if b.role == "contact"]
         if not found:
             raise CountError(
                 f"{strike.id}: приём без контакта, ризу некуда целиться")
-        contacts += [(t, strike.id) for t in found]
+        contacts += [(b.heard, strike.id, getattr(b, "riser", True))
+                     for b in found]
 
     out, prev = [], 0.0
-    for peak, sid in sorted(contacts):
+    for peak, sid, wanted in sorted(contacts):
+        if not wanted:
+            prev = peak
+            continue
         start = max(prev, peak - length)
         if start >= peak:
             raise CountError(

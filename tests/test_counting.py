@@ -44,8 +44,9 @@ def test_a_negative_time_is_refused():
 
 
 class FakeBeat:
-    def __init__(self, role, heard):
+    def __init__(self, role, heard, riser=True):
         self.role, self.heard, self.what = role, heard, ""
+        self.riser = riser
 
 
 class FakeStrike:
@@ -119,6 +120,26 @@ def test_a_riser_never_covers_the_previous_impact():
     assert 40.95 - 39.92 < RISER, "фикстура перестала упражнять подрезку"
     assert rows[1]["start"] == pytest.approx(39.92)
     assert rows[1]["peak"] == pytest.approx(40.95)
+
+
+def test_a_beat_can_say_it_wants_no_riser():
+    """У встречного удара вспышки 4 замаха нет намеренно: он не начинает драку,
+    он её заканчивает. Нарастающий шум объявляет подготовку, и объявлять ту,
+    которой не существует, значит врать о движении."""
+    s = FakeStrike("burst_4", [FakeBeat("swing", 44.60),
+                               FakeBeat("contact", 44.98, riser=False),
+                               FakeBeat("recover", 45.50)])
+    assert risers([s]) == []
+
+
+def test_a_skipped_contact_still_pushes_the_next_riser():
+    """Удар звучит независимо от того, объявили его ризом или нет. Значит
+    следующий риз всё равно не имеет права начаться раньше него."""
+    a = FakeStrike("burst_4", [FakeBeat("contact", 44.98, riser=False)])
+    b = FakeStrike("spear_down", [FakeBeat("contact", 45.60)])
+    rows = risers([a, b])
+    assert len(rows) == 1
+    assert rows[0]["start"] == pytest.approx(44.98)
 
 
 def test_a_strike_without_a_contact_is_refused():

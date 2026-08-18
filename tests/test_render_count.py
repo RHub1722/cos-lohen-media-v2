@@ -166,6 +166,10 @@ def test_the_riser_duck_lets_go_by_the_moment_of_impact():
 
     Меряется ниже 200 Гц: там у номера 63% энергии окна, а у риза почти ничего,
     так что изменение в этой полосе — это провал, а не сам риз.
+
+    Окно взято у копья в пол (45.83 → 47.03). Раньше здесь стояла вспышка 4, но
+    у неё риза больше нет вовсе: он снят полем `riser: false` в сценарии,
+    потому что у встречного удара нет замаха и объявлять нечего.
     """
     path = track_path("riser")
     if not path.exists() or not SOUNDTRACK.exists():
@@ -180,10 +184,25 @@ def test_the_riser_duck_lets_go_by_the_moment_of_impact():
         x = np.frombuffer(raw, dtype=np.float32)
         return 20 * np.log10(np.sqrt((x ** 2).mean()) + 1e-12)
 
-    under = low_db(path, 44.2, 44.8) - low_db(SOUNDTRACK, 44.2, 44.8)
-    at_hit = low_db(path, 44.99, 45.15) - low_db(SOUNDTRACK, 44.99, 45.15)
+    under = low_db(path, 46.2, 46.9) - low_db(SOUNDTRACK, 46.2, 46.9)
+    at_hit = low_db(path, 47.03, 47.19) - low_db(SOUNDTRACK, 47.03, 47.19)
     assert under < -4.0, "под ризом провала нет: %+.2f dB" % under
     assert at_hit > -2.5, "провал не отпустил к удару: %+.2f dB" % at_hit
+
+
+def test_the_number_is_untouched_where_the_riser_was_removed():
+    """Снятый риз обязан снять и провал под собой. Иначе номер на 43.8–45.0 так
+    и уходил бы вниз без всякой причины — тише, и ничего взамен."""
+    path = track_path("riser")
+    if not path.exists() or not SOUNDTRACK.exists():
+        pytest.skip("нет %s: python src/render_count.py" % path.name)
+    left, _ = channels(path, 43.78, 45.05)
+    ref, _ = channels(SOUNDTRACK, 43.78, 45.05)
+    n = min(len(left), len(ref))
+    got = 20 * np.log10(np.sqrt((left[:n] ** 2).mean())
+                        / np.sqrt((ref[:n] ** 2).mean()))
+    assert got == pytest.approx(0.0, abs=0.15), (
+        "в окне снятого риза номер тронут на %+.2f dB" % got)
 
 
 def test_no_track_runs_out_of_headroom():
@@ -223,9 +242,16 @@ def test_every_contact_of_the_number_gets_a_riser():
 
     contacts = sorted(b.heard for s in strikes for b in s.beats
                       if b.role == "contact")
+    # Исключения объявляются полем `riser: false` в сценарии, рядом с долей.
+    # Сейчас такое одно — встречный удар вспышки 4 на 44.98, у него нет замаха,
+    # и объявлять подготовку, которой не существует, значит врать о движении.
+    skipped = sorted(b.heard for s in strikes for b in s.beats
+                     if b.role == "contact" and not b.riser)
+    want = [t for t in contacts if t not in skipped]
     peaks_of_risers = sorted(r["peak"] for r in risers(strikes))
-    assert peaks_of_risers == pytest.approx(contacts), (
+    assert peaks_of_risers == pytest.approx(want), (
         "без риза остались: %s"
-        % [t for t in contacts
+        % [t for t in want
            if not any(abs(t - p) < 0.01 for p in peaks_of_risers)])
     assert len(contacts) == 8
+    assert skipped == pytest.approx([44.9757], abs=0.001), skipped

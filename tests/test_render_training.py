@@ -301,6 +301,20 @@ def test_the_sync_never_seeks_on_an_unready_or_seeking_track():
     assert body.index("COUNT_FIX_EVERY") < body.index("a.currentTime = video")
 
 
+def test_the_loop_takes_a_breath_between_rounds():
+    """Без паузы круг склеивается со следующим, и на слух непонятно, где он
+    начался: звук идёт непрерывно, а картинка прыгает на кадр, который глазом
+    не поймать. Пауза обязана быть и в объявлении, и в самом покадровом цикле —
+    иначе прыжок случится раньше, чем она сработает."""
+    html = (ROOT / "src/training_template.html").read_text(encoding="utf-8")
+    assert "const LOOP_GAP = 500;" in html
+    assert "function restartLoop()" in html
+    body = html.split("function frame()")[1].split("requestAnimationFrame")[0]
+    assert "loopPause" in body, "покадровый цикл не знает про паузу"
+    assert "restartLoop()" in body
+    assert "seek(loopWin[0]" not in body, "прыжок в обход паузы"
+
+
 def test_the_count_track_is_kept_in_step_every_frame():
     """Дорожка ведётся часами видео, как клип приёма в виде «Пульт». Без вызова
     в покадровом цикле она разъедется с картинкой, и репетиция пойдёт по
