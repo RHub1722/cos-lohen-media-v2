@@ -197,3 +197,35 @@ def test_no_track_runs_out_of_headroom():
         left, right = channels(path, 0.0, 60.0)
         peak = 20 * np.log10(max(np.abs(left).max(), np.abs(right).max()))
         assert peak < -1.0, "%s: %.2f dBTP" % (spec["key"], peak)
+
+
+def test_every_contact_of_the_number_gets_a_riser():
+    """Сторож против ровно той дыры, которую нашёл исполнитель на линейке.
+
+    Ризы ставились по одному на ПРИЁМ, целясь в первый контакт, и вторые
+    попадания вспышки 2 и вспышки 3 оставались без предупреждения вовсе. 36.58
+    оказался единственным контактом номера, у которого нет ни риза, ни клипа.
+    """
+    from src.models import Timeline
+    from src.movements import load_movements, resolve_times
+    from src.peaks import peak_offsets
+    from src.strikes import load_strikes, resolve_strikes
+    from src.counting import risers
+    from src.render_count import ROOT
+
+    tl = Timeline.load(ROOT / "scenario/timeline.json")
+    peaks = peak_offsets(ROOT / "assets",
+                         sorted({e.asset for e in tl.events if e.stem == "sfx"}))
+    moves = [m.id for m in resolve_times(
+        load_movements(ROOT / "scenario/movements.json"), tl)]
+    strikes = resolve_strikes(
+        load_strikes(ROOT / "scenario/strikes.json"), tl, peaks, moves)
+
+    contacts = sorted(b.heard for s in strikes for b in s.beats
+                      if b.role == "contact")
+    peaks_of_risers = sorted(r["peak"] for r in risers(strikes))
+    assert peaks_of_risers == pytest.approx(contacts), (
+        "без риза остались: %s"
+        % [t for t in contacts
+           if not any(abs(t - p) < 0.01 for p in peaks_of_risers)])
+    assert len(contacts) == 8

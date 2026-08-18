@@ -95,32 +95,30 @@ def test_a_riser_peaks_exactly_on_the_first_contact():
     assert rows[0]["start"] == pytest.approx(29.14 - RISER)
 
 
-def test_a_riser_aims_at_the_first_contact_when_a_strike_has_two():
-    """У серии 2, серии 3 и копья в пол в бою РЕАЛЬНО по два контакта. Если
-    риз нацелится на второй, его вершина уедет на 2.58 с — и вести он будет
-    в пустоту. Тест на приёме с одним контактом эту подмену не заметил бы."""
+def test_every_contact_gets_its_own_riser():
+    """Вспышка 2 бьёт дважды, и второе попадание нужно предупредить так же, как
+    первое. Один риз на приём оставлял 36.58 и 40.95 совсем без предупреждения:
+    36.58 был единственным контактом номера, у которого нет ни риза, ни клипа."""
     two = FakeStrike("burst_2", [FakeBeat("windup", 33.05),
                                  FakeBeat("contact", 34.00),
                                  FakeBeat("contact", 36.58)])
-    assert risers([two])[0]["peak"] == pytest.approx(34.00)
+    rows = risers([two])
+    assert [r["peak"] for r in rows] == [34.00, 36.58]
+    assert rows[0]["start"] == pytest.approx(34.00 - RISER)
+    assert rows[1]["start"] == pytest.approx(36.58 - RISER)
 
 
-def test_a_riser_never_starts_before_the_previous_strike_ended():
-    """Проверяется сам клин, а не совпадение.
-
-    Зазор между приёмами взят 0.93 с — МЕНЬШЕ, чем длина риза 1.2 с. Значит
-    начало 41.90 достижимо только через ограничение концом прошлого приёма:
-    без клина риз начался бы в 41.63 и наехал бы на предыдущее действие,
-    перестав означать «сейчас будет удар».
-    """
-    early = FakeStrike("burst_3", [FakeBeat("contact", 40.95),
-                                   FakeBeat("recover", 41.90)])
-    late = FakeStrike("take_the_hit", [FakeBeat("hold", 42.40),
-                                       FakeBeat("contact", 42.83)])
-    rows = risers([early, late])
-    assert 42.83 - 41.90 < RISER, "фикстура перестала упражнять клин"
-    assert rows[1]["start"] == pytest.approx(41.90)
-    assert rows[1]["peak"] == pytest.approx(42.83)
+def test_a_riser_never_covers_the_previous_impact():
+    """У вспышки 3 попадания стоят в 1.03 с — ближе, чем длина риза. Начаться
+    раньше прошлого удара риз не имеет права: он перестал бы означать «сейчас
+    будет следующий». Значит он просто короче."""
+    tight = FakeStrike("burst_3", [FakeBeat("contact", 39.92),
+                                   FakeBeat("contact", 40.95),
+                                   FakeBeat("recover", 41.60)])
+    rows = risers([tight])
+    assert 40.95 - 39.92 < RISER, "фикстура перестала упражнять подрезку"
+    assert rows[1]["start"] == pytest.approx(39.92)
+    assert rows[1]["peak"] == pytest.approx(40.95)
 
 
 def test_a_strike_without_a_contact_is_refused():
@@ -129,13 +127,12 @@ def test_a_strike_without_a_contact_is_refused():
 
 
 def test_a_contact_with_no_room_left_for_a_riser_is_refused():
-    """Приём, начинающийся раньше, чем кончился предыдущий, — это ошибка
-    сценария, а не повод молча выдать риз нулевой длины."""
-    early = FakeStrike("first", [FakeBeat("contact", 10.0),
-                                 FakeBeat("recover", 12.0)])
-    late = FakeStrike("second", [FakeBeat("contact", 11.5)])
+    """Два попадания в одну и ту же точку времени — это ошибка сценария, а не
+    повод молча выдать риз нулевой длины."""
+    same = FakeStrike("broken", [FakeBeat("contact", 10.0),
+                                 FakeBeat("contact", 10.0)])
     with pytest.raises(CountError):
-        risers([early, late])
+        risers([same])
 
 
 def test_a_beat_without_a_time_is_named_as_such():

@@ -28,9 +28,10 @@ WORDS: tuple[str, ...] = ("один", "два", "три", "четыре", "пя�
 CYCLE = len(WORDS)
 STEP = 0.5
 
-# Длина нарастающего шума. 1.2 с — это самое тесное место в номере минус запас:
-# у приёма удара от конца серии 3 до контакта 1.23 с. Единая длина у всех шести
-# намеренно: риз одинаковой формы читается как один и тот же знак.
+# Предельная длина нарастающего шума. Форма у всех ризов одна намеренно: она
+# читается как один и тот же знак. А вот длина у двух из восьми меньше — там,
+# где до предыдущего удара ближе, чем 1.2 с. Накрыть прошлый удар риз не имеет
+# права: он перестал бы означать «сейчас будет следующий».
 RISER = 1.2
 
 
@@ -118,34 +119,39 @@ def repeated_digits(strikes, step: float = STEP) -> dict[str, list[float]]:
 
 
 def risers(strikes, length: float = RISER) -> list[dict]:
-    """По одному ризу на приём, вершина в первый контакт.
+    """Риз на КАЖДЫЙ контакт, вершина ровно в него.
 
-    Начало подрезается концом предыдущего приёма: риз, наехавший на прошлое
-    действие, перестаёт означать «сейчас будет удар».
+    На контакт, а не на приём. У вспышки 2 и вспышки 3 по два попадания, и
+    вторые оставались без риза вовсе: за 2.58 и 1.03 с до удара не звучало
+    ничего, хотя бить надо ровно так же. Видно это стало на линейке тренажёра —
+    36.58 оказался единственным контактом номера, у которого нет ни риза, ни
+    тренировочного клипа.
+
+    Начало подрезается ПРЕДЫДУЩИМ КОНТАКТОМ: риз, накрывший прошлый удар,
+    перестаёт означать «сейчас будет следующий». Поэтому длина у ризов разная —
+    у второго попадания вспышки 3 на неё остаётся всего 1.03 с.
     """
+    contacts = []
     for strike in strikes:
         for beat in strike.beats:
             if beat.heard < 0:
                 raise CountError(
                     f"{strike.id}/{beat.role}: доля без времени. "
                     "Сначала resolve_strikes, потом ризы.")
-    ordered = sorted(strikes, key=lambda s: min(b.heard for b in s.beats))
-    out, prev_end = [], 0.0
-    for strike in ordered:
-        # ПЕРВЫЙ контакт, а не любой: у серии 2, серии 3 и копья в пол их по
-        # два, и вершина на втором увела бы риз на 2.58 с от того удара, к
-        # которому он ведёт.
-        contacts = [b.heard for b in strike.beats if b.role == "contact"]
-        if not contacts:
+        found = [b.heard for b in strike.beats if b.role == "contact"]
+        if not found:
             raise CountError(
                 f"{strike.id}: приём без контакта, ризу некуда целиться")
-        peak = min(contacts)
-        start = max(prev_end, peak - length)
+        contacts += [(t, strike.id) for t in found]
+
+    out, prev = [], 0.0
+    for peak, sid in sorted(contacts):
+        start = max(prev, peak - length)
         if start >= peak:
             raise CountError(
-                f"{strike.id}: на риз не осталось места, контакт {peak:.2f} "
-                f"стоит не позже конца прошлого приёма {prev_end:.2f}")
-        out.append({"strike": strike.id, "start": round(start, 4),
+                f"{sid}: на риз не осталось места, контакт {peak:.2f} стоит "
+                f"не позже предыдущего {prev:.2f}")
+        out.append({"strike": sid, "start": round(start, 4),
                     "peak": round(peak, 4)})
-        prev_end = max(b.heard for b in strike.beats)
+        prev = peak
     return out
