@@ -259,21 +259,46 @@ def test_the_page_carries_the_track_switch():
     """Переключатель обязан быть и в разметке, и в скрипте: кнопки без
     обработчика выглядят рабочими и не делают ничего."""
     html = (ROOT / "src/training_template.html").read_text(encoding="utf-8")
-    assert 'id="countTrack"' in html
+    assert 'id="countAudio"' in html
     assert 'id="countBtns"' in html
     assert "countBtns" in html.split("const VIEWS")[1]
 
 
-def test_switching_tracks_reloads_the_file():
-    """Смена дорожки — это новый файл. Без load() второй вариант молча остался
-    бы первым: браузер не перечитывает src сам."""
+def test_switching_tracks_does_not_throw_away_the_previous_one():
+    """У каждой дорожки свой <audio>, и переключение их не выгружает.
+
+    С одним элементом на всех возврат к уже слышанной дорожке заново тянул её
+    из сети и вставал на буферизацию — на планшете это читалось как «тормозит».
+    Прошлая дорожка обязана только ставиться на паузу.
+    """
     html = (ROOT / "src/training_template.html").read_text(encoding="utf-8")
     # Граница — обращение к контейнеру кнопок: внутри самой setCount его нет,
     # там только селектор "#countBtns .btn".
     start = html.index("function setCount(")
     body = html[start:html.index('$("countBtns")', start)]
-    assert "countTrack.load()" in body
-    assert "countTrack.dataset.key" in body
+    assert "countPlayer(countKey)" in body, "элемент дорожки не берётся из кэша"
+    assert "prev.pause()" in body, "прошлая дорожка должна ставиться на паузу"
+    assert "a.dataset.warm" in body, "load() обязан звучать один раз на дорожку"
+
+
+def test_the_sync_never_seeks_on_an_unready_or_seeking_track():
+    """Тот самый источник тормозов.
+
+    syncCount зовётся каждый кадр. Пока дорожка буферизуется, её currentTime
+    стоит, а время видео идёт — расхождение не сходится, и правка срывалась в
+    перемотку сжатого потока шестьдесят раз в секунду. Нужны два предохранителя:
+    не трогать неготовую или уже перематывающуюся дорожку, и не править чаще
+    заданного интервала.
+    """
+    html = (ROOT / "src/training_template.html").read_text(encoding="utf-8")
+    start = html.index("function syncCount(")
+    body = html[start:html.index("function setCount(", start)]
+    assert "a.readyState < 2" in body
+    assert "a.seeking" in body
+    assert "COUNT_FIX_EVERY" in body
+    # Правка обязана стоять ПОСЛЕ обеих проверок, иначе они бесполезны.
+    assert body.index("a.readyState < 2") < body.index("a.currentTime = video")
+    assert body.index("COUNT_FIX_EVERY") < body.index("a.currentTime = video")
 
 
 def test_the_count_track_is_kept_in_step_every_frame():

@@ -554,7 +554,7 @@
 <aside class="rail">
   <div class="screen">
     <video id="video" playsinline preload="metadata"></video>
-    <audio id="countTrack" preload="none"></audio>
+    <span id="countAudio" hidden></span>
     <div class="picker" id="picker">
       <div id="pickerText">Файл номера не найден рядом со страницей.</div>
       <label>Выбрать файл…<input type="file" id="file" accept="video/*,audio/*"></label>
@@ -1383,40 +1383,85 @@ setRate(1);
 // Дорожек три, и различаются они не громкостью, а устройством: счёт в правое
 // ухо, счёт в оба, и только нарастающий шум без счёта. Кнопки работают как
 // переключатель: нажатие на включённую выключает её.
-const countTrack = $("countTrack");
-const COUNT_DRIFT = 0.15;
+//
+// У КАЖДОЙ дорожки свой <audio>, и переключение их не выгружает. С одним
+// элементом на всех возврат к уже слышанной дорожке заново тянул её из сети
+// и вставал на буферизацию.
+const COUNT_DRIFT = 0.15;      // расхождение, с которого правим, с
+const COUNT_FIX_EVERY = 250;   // но не чаще, мс
+const countPlayers = new Map();
 let countKey = "";
+let countFixedAt = 0;
+
+function countPlayer(key) {
+  let a = countPlayers.get(key);
+  if (a) return a;
+  const track = (DATA.count || []).find((t) => t.key === key);
+  if (!track) return null;
+  a = el("audio");
+  a.preload = "none";
+  a.src = track.file;
+  $("countAudio").appendChild(a);
+  countPlayers.set(key, a);
+  return a;
+}
+
 function syncCount() {
   if (!countKey) return;
-  if (countTrack.playbackRate !== video.playbackRate) {
-    countTrack.playbackRate = video.playbackRate;
+  const a = countPlayers.get(countKey);
+  if (!a) return;
+  // Пока дорожка не готова или уже перематывается, currentTime трогать нельзя.
+  // Без этой проверки на буферизации правка срывалась в перемотку на КАЖДОМ
+  // кадре: шестьдесят перемоток сжатого потока в секунду — планшет встаёт, и
+  // чем хуже связь, тем дольше он в этом сидит.
+  if (a.readyState < 2 || a.seeking) return;
+  if (a.playbackRate !== video.playbackRate) a.playbackRate = video.playbackRate;
+  if (video.paused) { if (!a.paused) a.pause(); return; }
+  if (a.paused) a.play().catch(() => {});
+  // Даже готовую дорожку правим не чаще четырёх раз в секунду: одна перемотка
+  // сама по себе занимает больше кадра, и на следующем кадре расхождение ещё
+  // не успевает сойтись — получалась та же лавина, только реже.
+  const now = performance.now();
+  if (now - countFixedAt < COUNT_FIX_EVERY) return;
+  if (Math.abs(a.currentTime - video.currentTime) > COUNT_DRIFT) {
+    a.currentTime = video.currentTime;
+    countFixedAt = now;
   }
-  if (Math.abs(countTrack.currentTime - video.currentTime) > COUNT_DRIFT) {
-    countTrack.currentTime = video.currentTime;
-  }
-  if (video.paused && !countTrack.paused) countTrack.pause();
-  if (!video.paused && countTrack.paused) countTrack.play().catch(() => {});
 }
+
 function setCount(key) {
   const track = (DATA.count || []).find((t) => t.key === key);
-  countKey = track ? key : "";
+  const next = track ? key : "";
+  if (next === countKey) return;
+  // Прошлую дорожку только ставим на паузу. Выгрузи её — и повторное включение
+  // снова полезет в сеть за тем же файлом.
+  const prev = countPlayers.get(countKey);
+  if (prev) prev.pause();
+  countKey = next;
   video.muted = Boolean(countKey);
   document.querySelectorAll("#countBtns .btn").forEach((b) => {
     b.classList.toggle("on", b.dataset.key === countKey);
   });
-  if (!countKey) { countTrack.pause(); return; }
-  // load() обязателен. При preload="none" дорожка не начинает грузиться до
-  // первого play, а присвоение currentTime у неготового элемента молча
-  // пропадает — замерено: readyState 0, duration неизвестна. Без этого первое
-  // нажатие дало бы тишину вместо подсказок и догоняло бы уже на ходу.
-  // Смена дорожки — это тоже новый файл, поэтому load() и здесь.
-  if (countTrack.dataset.key !== countKey) {
-    countTrack.dataset.key = countKey;
-    countTrack.src = track.file;
-    countTrack.load();
+  if (!countKey) return;
+
+  const a = countPlayer(countKey);
+  // load() зовётся ОДИН раз на дорожку. При preload="none" файл не начинает
+  // грузиться до первого play, а присвоение currentTime у неготового элемента
+  // молча пропадает — замерено: readyState 0, duration неизвестна.
+  if (!a.dataset.warm) {
+    a.dataset.warm = "1";
+    a.preload = "auto";
+    a.load();
   }
-  countTrack.currentTime = video.currentTime;
-  if (!video.paused) countTrack.play().catch(() => {});
+  const start = () => {
+    // За время загрузки могли переключить на другую: тогда играть эту нельзя.
+    if (countKey !== key) return;
+    countFixedAt = 0;
+    a.currentTime = video.currentTime;
+    if (!video.paused) a.play().catch(() => {});
+  };
+  if (a.readyState >= 2) start();
+  else a.addEventListener("loadeddata", start, { once: true });
 }
 (DATA.count || []).forEach((t) => {
   const b = el("button", "btn", t.name);
