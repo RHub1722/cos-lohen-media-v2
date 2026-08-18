@@ -718,7 +718,6 @@
           <thead><tr><th>Деталь</th><th>Просвет сейчас</th><th>Что делать</th></tr></thead>
           <tbody>
             <tr><td><code style="font-family:var(--mono);font-size:13px">spear_2</code></td><td class="q">Ø19.87</td><td>развернуть до 20.3 — снять <b>0.21 мм по радиусу</b>. Канал 150 мм выше перегородки, в него садится низ трубы</td></tr>
-            <tr><td><code style="font-family:var(--mono);font-size:13px">spear_4_1…4_4</code></td><td class="q">Ø19.87</td><td>то же, каждая насквозь на 191 мм</td></tr>
             <tr><td><code style="font-family:var(--mono);font-size:13px">spear_5</code></td><td class="q">Ø19.87</td><td>то же</td></tr>
             <tr><td><code style="font-family:var(--mono);font-size:13px">spear_6</code></td><td class="q">Ø19.87</td><td>то же</td></tr>
             <tr><td><code style="font-family:var(--mono);font-size:13px">spear_8</code></td><td class="q">Ø19.87 снизу</td><td>развернуть нижние <b>79 мм</b> — в них упирается верх трубы. Выше 1301.8 канала нет</td></tr>
@@ -729,18 +728,26 @@
         </table>
       </div>
       <div class="flag" style="--z:var(--warn)">
-        <h4>Разворачивать надо все восемь, а не три</h4>
+        <h4>Разворачивать надо четыре детали, а не три</h4>
         Прежняя таблица называла
         <code style="font-family:var(--mono);font-size:13px">spear_2</code>,
         <code style="font-family:var(--mono);font-size:13px">5</code> и
-        <code style="font-family:var(--mono);font-size:13px">6</code>. Перемер
-        показал: канал <b>ровно Ø19.87 во всех восьми деталях коридора</b> —
-        минимальный радиус вершин 9.936, лучами 9.94, одинаково везде.
+        <code style="font-family:var(--mono);font-size:13px">6</code> —
+        <b>пропущена <code style="font-family:var(--mono);font-size:13px">spear_8</code></b>.
+        Канал ровно <b>Ø19.87 везде</b>: минимальный радиус вершин 9.936, лучами 9.94.
+        <br><br>
+        <code style="font-family:var(--mono);font-size:13px">spear_4_1…4_4</code> в
+        список не входят — <b>они не печатаются вовсе</b>, вместо них труба и
+        обмотка. Канал у них такой же, но разворачивать нечего.
         <br><br>
         И это <b>не наш огрех от пересчёта</b>: в исходном наборе канал Ø24.935
         при авторской палке Ø25.09, натяг заложен автором. Отверстия на FDM
         садятся ещё на 0.1–0.4 мм. <b>Труба Ø20.0 в напечатанный канал не
-        войдёт</b> без работы — всего около 1116 мм канала в восьми деталях.
+        войдёт</b> без работы. Пластика труба касается на <b>444 мм из своих
+        1116</b>: <code style="font-family:var(--mono);font-size:13px">spear_2</code>
+        держит 186…336, дальше <b>671 мм труба идёт голой под обмоткой</b> — ровно
+        там, где были бы <code style="font-family:var(--mono);font-size:13px">spear_4</code>, —
+        и снова в пластике на 1008…1302.
         <br><br>
         <b>Мерило — сама труба.</b> Развернул, вставил, дошло — хватит. Шире не
         надо: за миллиметр вылезешь из периметров в заполнение, и клею держаться
