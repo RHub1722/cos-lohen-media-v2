@@ -234,25 +234,46 @@ def test_render_leaves_no_marker_and_closes_no_script():
     assert not tail.startswith("{\"total\": 60.0, \"video\": \"v.mp4\", \"note\": \"</")
 
 
-def test_the_page_knows_where_the_count_track_lies(payload):
-    assert payload["count"] == "count_cues.m4a"
+def test_the_page_offers_all_three_cue_tracks(payload):
+    """Три дорожки различаются устройством, а не громкостью: счёт в правое ухо,
+    счёт в оба, и только риз без счёта. Список берётся из самой сборки, чтобы
+    страница не просила файл, которого нет."""
+    assert [t["key"] for t in payload["count"]] == ["right", "stereo", "riser"]
+    for track in payload["count"]:
+        assert track["file"] == "count_%s.m4a" % track["key"]
+        assert track["name"] and track["hint"], track["key"]
 
 
-def test_the_count_track_is_published_next_to_the_page():
-    track = SITE_DIR / "count_cues.m4a"
-    assert track.exists(), "нет site/count_cues.m4a: python src/render_count.py --site"
-    megabytes = track.stat().st_size / 1024 / 1024
-    assert megabytes < 2.0, (
-        "%.1f МБ — многовато для мобильной связи" % megabytes)
+def test_every_cue_track_is_published_next_to_the_page(payload):
+    weight = 0.0
+    for track in payload["count"]:
+        path = SITE_DIR / track["file"]
+        assert path.exists(), (
+            "нет site/%s: python src/render_count.py --site" % track["file"])
+        weight += path.stat().st_size / 1024 / 1024
+    assert weight < 4.0, (
+        "%.1f МБ на три дорожки — многовато для мобильной связи" % weight)
 
 
-def test_the_page_carries_the_count_switch():
-    """Переключатель обязан быть и в разметке, и в скрипте: кнопка без
-    обработчика выглядит рабочей и не делает ничего."""
+def test_the_page_carries_the_track_switch():
+    """Переключатель обязан быть и в разметке, и в скрипте: кнопки без
+    обработчика выглядят рабочими и не делают ничего."""
     html = (ROOT / "src/training_template.html").read_text(encoding="utf-8")
     assert 'id="countTrack"' in html
-    assert 'id="countBtn"' in html
-    assert "countBtn" in html.split("const VIEWS")[1]
+    assert 'id="countBtns"' in html
+    assert "countBtns" in html.split("const VIEWS")[1]
+
+
+def test_switching_tracks_reloads_the_file():
+    """Смена дорожки — это новый файл. Без load() второй вариант молча остался
+    бы первым: браузер не перечитывает src сам."""
+    html = (ROOT / "src/training_template.html").read_text(encoding="utf-8")
+    # Граница — обращение к контейнеру кнопок: внутри самой setCount его нет,
+    # там только селектор "#countBtns .btn".
+    start = html.index("function setCount(")
+    body = html[start:html.index('$("countBtns")', start)]
+    assert "countTrack.load()" in body
+    assert "countTrack.dataset.key" in body
 
 
 def test_the_count_track_is_kept_in_step_every_frame():

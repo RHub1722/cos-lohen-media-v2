@@ -7,8 +7,8 @@ import numpy as np
 import pytest
 
 from src.counting import STEP, WORDS
-from src.render_count import (DUCK_DB, GAP, NUMERALS, OUT_DIR, OUT_TRACK,
-                              SHEET, SOUNDTRACK, TAKE)
+from src.render_count import (DUCK_DB, GAP, NUMERALS, OUT_DIR, SHEET,
+                              SOUNDTRACK, TAKE, TRACKS, track_path)
 
 
 def probe(path):
@@ -30,9 +30,11 @@ def channels(path, t0, t1, sr=16000):
 
 @pytest.fixture(scope="module")
 def track():
-    if not OUT_TRACK.exists():
-        pytest.skip("нет %s: python src/render_count.py" % OUT_TRACK.name)
-    return OUT_TRACK
+    """Дорожка «в правое ухо»: на ней проверяется разделение каналов."""
+    path = track_path("right")
+    if not path.exists():
+        pytest.skip("нет %s: python src/render_count.py" % path.name)
+    return path
 
 
 @pytest.fixture(scope="module")
@@ -132,3 +134,66 @@ def test_the_sheet_warns_that_one_digit_serves_two_strikes(sheet_text):
 
 def test_the_sheet_explains_the_anchor(sheet_text):
     assert "круглой пятёрке" in sheet_text
+
+
+def test_there_are_three_tracks_and_they_differ_in_kind_not_in_volume():
+    """Не три громкости одного и того же: одна с ризом без счёта вовсе, две со
+    счётом, но в разные уши. Если различие сведётся к гейну, выбирать будет
+    незачем."""
+    assert [t["key"] for t in TRACKS] == ["right", "stereo", "riser"]
+    assert [t["count"] for t in TRACKS] == [True, True, False]
+    assert len({t["pan"] for t in TRACKS}) == 2
+
+
+def test_the_riser_only_track_leaves_the_number_alone_between_risers():
+    """Постоянные 9 dB существовали ради непрерывного счёта. Без счёта ронять
+    весь номер на минуту незачем — там провал только под ризом."""
+    path = track_path("riser")
+    if not path.exists() or not SOUNDTRACK.exists():
+        pytest.skip("нет %s: python src/render_count.py" % path.name)
+    for t0, t1 in ((10.0, 20.0), (30.0, 32.0)):
+        left, _ = channels(path, t0, t1)
+        ref, _ = channels(SOUNDTRACK, t0, t1)
+        n = min(len(left), len(ref))
+        got = 20 * np.log10(np.sqrt((left[:n] ** 2).mean())
+                            / np.sqrt((ref[:n] ** 2).mean()))
+        assert got == pytest.approx(0.0, abs=0.15), (t0, got)
+
+
+def test_the_riser_duck_lets_go_by_the_moment_of_impact():
+    """Риз кончается В контакт. Приглушить сам контакт значило бы убрать тот
+    звук, под который надо попасть, — поэтому провал обязан отпустить.
+
+    Меряется ниже 200 Гц: там у номера 63% энергии окна, а у риза почти ничего,
+    так что изменение в этой полосе — это провал, а не сам риз.
+    """
+    path = track_path("riser")
+    if not path.exists() or not SOUNDTRACK.exists():
+        pytest.skip("нет %s: python src/render_count.py" % path.name)
+
+    def low_db(src, t0, t1):
+        raw = subprocess.run(
+            ["ffmpeg", "-v", "error", "-ss", "%.4f" % t0,
+             "-t", "%.4f" % (t1 - t0), "-i", str(src), "-ac", "1",
+             "-ar", "16000", "-af", "lowpass=f=200", "-f", "f32le", "-"],
+            capture_output=True).stdout
+        x = np.frombuffer(raw, dtype=np.float32)
+        return 20 * np.log10(np.sqrt((x ** 2).mean()) + 1e-12)
+
+    under = low_db(path, 44.2, 44.8) - low_db(SOUNDTRACK, 44.2, 44.8)
+    at_hit = low_db(path, 44.99, 45.15) - low_db(SOUNDTRACK, 44.99, 45.15)
+    assert under < -4.0, "под ризом провала нет: %+.2f dB" % under
+    assert at_hit > -2.5, "провал не отпустил к удару: %+.2f dB" % at_hit
+
+
+def test_no_track_runs_out_of_headroom():
+    """Ограничителя в сведении нет намеренно, значит запас проверяется замером.
+    У дорожки без счёта номер не приглушён постоянно, и сумма с ризом однажды
+    уже упёрлась в потолок — 0.00 dBTP."""
+    for spec in TRACKS:
+        path = track_path(spec["key"])
+        if not path.exists():
+            pytest.skip("нет %s: python src/render_count.py" % path.name)
+        left, right = channels(path, 0.0, 60.0)
+        peak = 20 * np.log10(max(np.abs(left).max(), np.abs(right).max()))
+        assert peak < -1.0, "%s: %.2f dBTP" % (spec["key"], peak)

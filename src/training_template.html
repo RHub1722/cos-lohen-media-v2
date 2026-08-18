@@ -1101,8 +1101,7 @@
       <button class="btn" id="stepBack" title="Кадр назад (,)">&#9666;|</button>
       <button class="btn" id="stepFwd" title="Кадр вперёд (.)">|&#9656;</button>
       <span class="rates" id="rates"></span>
-      <button class="btn" id="countBtn" type="button"
-              title="Счёт два раза в секунду и ризы — в правое ухо, номер тише на 9 dB">счёт</button>
+      <span class="rates" id="countBtns"></span>
       <button class="btn" id="loopBtn" title="Петля (L)">Петля: выкл</button>
       <span class="clock"><b id="cur">0:00.0</b> / <span id="total">1:00</span></span>
     </div>
@@ -1376,14 +1375,19 @@ function shiftRate(step) {
 }
 setRate(1);
 
-// Счёт идёт отдельной дорожкой поверх того же видео: второго ролика для этого
-// не нужно, и в гит не едет ещё шесть мегабайт. Звук видео выключается, а
-// <audio> ведётся часами видео — так же, как клип приёма в виде «Пульт».
+// Подсказки идут отдельной дорожкой поверх того же видео: второго ролика для
+// этого не нужно, и в гит не едет ещё шесть мегабайт на каждый вариант. Звук
+// видео выключается, а <audio> ведётся часами видео — так же, как клип приёма
+// в виде «Пульт».
+//
+// Дорожек три, и различаются они не громкостью, а устройством: счёт в правое
+// ухо, счёт в оба, и только нарастающий шум без счёта. Кнопки работают как
+// переключатель: нажатие на включённую выключает её.
 const countTrack = $("countTrack");
 const COUNT_DRIFT = 0.15;
-let countOn = false;
+let countKey = "";
 function syncCount() {
-  if (!countOn) return;
+  if (!countKey) return;
   if (countTrack.playbackRate !== video.playbackRate) {
     countTrack.playbackRate = video.playbackRate;
   }
@@ -1393,24 +1397,35 @@ function syncCount() {
   if (video.paused && !countTrack.paused) countTrack.pause();
   if (!video.paused && countTrack.paused) countTrack.play().catch(() => {});
 }
-function setCount(on) {
-  countOn = on;
-  video.muted = on;
-  $("countBtn").classList.toggle("on", on);
-  if (on) {
-    // load() обязателен. При preload="none" дорожка не начинает грузиться до
-    // первого play, а присвоение currentTime у неготового элемента молча
-    // пропадает — замерено: readyState 0, duration неизвестна. Без этого
-    // первое нажатие «счёт» дало бы тишину вместо счёта и догоняло бы уже на
-    // ходу. С load() файл (0.7 МБ) готов к моменту, когда его попросят.
-    if (!countTrack.src) { countTrack.src = DATA.count; countTrack.load(); }
-    countTrack.currentTime = video.currentTime;
-    if (!video.paused) countTrack.play().catch(() => {});
-  } else {
-    countTrack.pause();
+function setCount(key) {
+  const track = (DATA.count || []).find((t) => t.key === key);
+  countKey = track ? key : "";
+  video.muted = Boolean(countKey);
+  document.querySelectorAll("#countBtns .btn").forEach((b) => {
+    b.classList.toggle("on", b.dataset.key === countKey);
+  });
+  if (!countKey) { countTrack.pause(); return; }
+  // load() обязателен. При preload="none" дорожка не начинает грузиться до
+  // первого play, а присвоение currentTime у неготового элемента молча
+  // пропадает — замерено: readyState 0, duration неизвестна. Без этого первое
+  // нажатие дало бы тишину вместо подсказок и догоняло бы уже на ходу.
+  // Смена дорожки — это тоже новый файл, поэтому load() и здесь.
+  if (countTrack.dataset.key !== countKey) {
+    countTrack.dataset.key = countKey;
+    countTrack.src = track.file;
+    countTrack.load();
   }
+  countTrack.currentTime = video.currentTime;
+  if (!video.paused) countTrack.play().catch(() => {});
 }
-$("countBtn").addEventListener("click", () => setCount(!countOn));
+(DATA.count || []).forEach((t) => {
+  const b = el("button", "btn", t.name);
+  b.type = "button";
+  b.dataset.key = t.key;
+  b.title = t.hint;
+  b.addEventListener("click", () => setCount(countKey === t.key ? "" : t.key));
+  $("countBtns").appendChild(b);
+});
 video.addEventListener("seeked", syncCount);
 
 function setLoop(win, name) {

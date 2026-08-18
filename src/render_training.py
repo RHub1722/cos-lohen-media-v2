@@ -42,6 +42,7 @@ from src.models import Timeline  # noqa: E402
 from src.movements import load_movements, resolve_times  # noqa: E402
 from src.peaks import peak_offsets  # noqa: E402
 from src.render_rehearsal import build_scenes  # noqa: E402
+from src.render_count import TRACKS  # noqa: E402
 from src.soundcheck import SoundcheckError, check  # noqa: E402
 from src.strikes import load_strikes, resolve_strikes  # noqa: E402
 from src.train_clips import caveat as clips_caveat  # noqa: E402
@@ -74,7 +75,13 @@ MASTER_VIDEO = ROOT / "output" / NUMBER_VIDEO
 # Дорожка счёта: тот же номер, но приглушённый на 9 dB, а поверх него в правом
 # канале счёт и ризы. Собирается src/render_count.py; страница только
 # переключает звук, второго видео для этого не нужно.
-SITE_COUNT = "count_cues.m4a"
+# Список дорожек берётся из самой сборки, а не переписывается сюда: разъехались
+# бы они молча, и страница просила бы файл, которого нет.
+COUNT_TRACKS = [
+    {"key": t["key"], "name": t["name"], "hint": t["hint"],
+     "file": "count_%s.m4a" % t["key"]}
+    for t in TRACKS
+]
 
 # Запасной адрес видео для опубликованной копии. Нужен ровно одному случаю:
 # страницу открыли через прокси вроде raw.githack, который отдаёт mp4 с типом
@@ -284,7 +291,7 @@ def build_payload(video: str, video_fallback: str = "") -> dict:
         "clips": build_clips(strikes),
         "clips_caveat": clips_caveat(),
         "clips_fallback": CLIPS_FALLBACK,
-        "count": SITE_COUNT,
+        "count": COUNT_TRACKS,
     }
 
 

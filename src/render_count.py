@@ -1,17 +1,19 @@
-"""Дорожка счёта и ризов плюс печатный лист ориентиров.
+"""Три дорожки подсказок плюс печатный лист ориентиров.
 
-    python src/render_count.py --cut     # заново нарезать числительные
-    python src/render_count.py           # собрать дорожку и лист
+    python src/render_count.py --cut               # нарезать числительные
+    python src/render_count.py                     # собрать все три дорожки
+    python src/render_count.py --site --video      # копии для страницы и ролики
+    python src/render_count.py --only riser        # одну дорожку по ключу
 
 Третий инструмент рядом с двумя от 5 августа, и задача у него другая. Слово
 подсказки стоит на доле и говорит, ЧТО делать. Цифра счёта идёт равномерно и
 говорит, ГДЕ ты. Совместить их в одном файле нельзя: на шаге 0.5 с между двумя
 цифрами слову «готовь» негде поместиться.
 
-Всё, что подсказка, идёт в ПРАВЫЙ канал. Левое ухо остаётся чистым монитором
-номера: вынул правый наушник — слышишь выступление без единой подсказки. Это то
-же разделение, на котором построена сценическая дорожка, — она моно и идёт в
-один наушник, потому что второе ухо обязано слышать зал.
+Дорожек три, и выбирать между ними исполнителю: счёт в правое ухо, счёт в оба
+уха, и только нарастающий шум без счёта вовсе. Чем они отличаются и почему —
+в TRACKS. Отдельные ролики нужны не странице (та переключает дорожки поверх
+одного видео), а телефону: положить в галерею и гонять без сайта и без сети.
 """
 
 from __future__ import annotations
@@ -67,20 +69,69 @@ GAP = 0.020
 # Фонограмма номера, а не наш мастер: с 8 августа звучит ручное сведение из
 # монтажки. Кладём то, подо что выступают.
 SOUNDTRACK = ROOT / "output/master_ru_fx.wav"
-OUT_TRACK = ROOT / "output/count_cues.wav"
 SHEET = ROOT / "output/count_sheet.md"
 TOTAL = 60.0
 
-# Сжатая копия для страницы тренажёра: та же дорожка, но в m4a и на 96k, чтобы
-# не тянуть в гит лишний вес по мобильной связи.
-SITE_TRACK = ROOT / "site/count_cues.m4a"
+# Сжатая копия для страницы: m4a на 96k. Второго видео не собирается — страница
+# играет то же видео с выключенным звуком и переключает эти дорожки.
 SITE_BITRATE = "96k"
 
-# Насколько уходит вниз номер. Девять, а не четырнадцать как в репетиционной
-# дорожке: глубже — и пропадает сам звук удара, по которому проверяется
-# попадание, то есть дорожка отменяет собственную задачу.
+# Насколько уходит вниз номер под НЕПРЕРЫВНЫМ счётом. Девять, а не четырнадцать
+# как в репетиционной дорожке: глубже — и пропадает сам звук удара, по которому
+# проверяется попадание, то есть дорожка отменяет собственную задачу.
 DUCK_DB = 9.0
 RISER_DB = -9.0
+
+PAN_RIGHT = "pan=stereo|c0=0*c0|c1=c0"
+PAN_BOTH = "pan=stereo|c0=c0|c1=c0"
+
+# Три дорожки, между которыми переключается страница. Различаются тремя вещами:
+# идёт ли счёт, куда уходят подсказки и приглушается ли номер.
+#
+# У варианта «только риз» номер приглушается НЕ постоянно, а провалом под самим
+# ризом, и это не прихоть. Постоянные 9 dB существовали ради непрерывного счёта:
+# без них негде было бы услышать сто двадцать цифр. Риз звучит шесть раз по 1.2
+# секунды, и ронять под него весь номер на минуту значит портить то, подо что
+# выступают. Совсем без провала тоже нельзя: номер стоит на -2.00 dBTP, и сумма
+# с ризом упёрлась в потолок — замерено, 0.00 dBTP.
+#
+# Провал отпускает ровно НА контакте, а не после: риз кончается в удар, и
+# приглушить сам удар значило бы убрать тот звук, под который надо попасть.
+# Сам риз идёт громче — на 6 dB вместо 9, — и этого хватает, потому что он
+# сидит выше самой занятой полосы номера: в окнах ризов у фонограммы 63%
+# энергии ниже 200 Гц, а центр спектра риза 2.8 кГц.
+#
+# У стереоварианта подсказки получают -3 dB: моно, разложенное в оба канала,
+# звучит на те же три децибела громче, чем оно же в одном ухе.
+TRACKS = (
+    {"key": "right", "name": "счёт в правое ухо", "count": True,
+     "pan": PAN_RIGHT, "duck": DUCK_DB, "cue_db": 0.0,
+     "hint": "левое ухо слышит номер чистым: вынул правый наушник — и ты на сцене"},
+    {"key": "stereo", "name": "счёт в оба уха", "count": True,
+     "pan": PAN_BOTH, "duck": DUCK_DB, "cue_db": -3.0,
+     "hint": "счёт по центру, номер тише на 9 dB"},
+    {"key": "riser", "name": "только риз, без счёта", "count": False,
+     "pan": PAN_BOTH, "duck": "risers", "cue_db": 3.0,
+     "hint": "номер цел, провал только под ризом и отпускает в удар"},
+)
+
+
+def track_path(key: str) -> Path:
+    return ROOT / "output" / ("count_%s.wav" % key)
+
+
+def site_path(key: str) -> Path:
+    return ROOT / "site" / ("count_%s.m4a" % key)
+
+
+def video_path(key: str) -> Path:
+    return ROOT / "output" / ("count_%s.mp4" % key)
+
+
+# Картинка для отдельного видео берётся из сжатой копии страницы и КОПИРУЕТСЯ
+# потоком: пересчитывать её незачем, а 960x540 хватает, чтобы видеть, где
+# вспышка. Так файл выходит около пяти мегабайт вместо тридцати одного.
+SITE_VIDEO = ROOT / "site/lohen-60s.mp4"
 
 
 def run(cmd: list[str]) -> str:
@@ -246,46 +297,108 @@ def build_risers(work: Path, rows: list[dict]) -> Path:
     return out
 
 
-def build_track(work: Path, rows: list[dict], cue_db: float = 0.0) -> Path:
-    """Сведение: номер стерео вниз на 9 dB, подсказки моно жёстко вправо.
+# Провал номера ПОД РИЗОМ, для дорожки без счёта. Форма та же, что у провала
+# музыки под ударами в src/filtergraph.py, но отпускает он не после события, а
+# ровно НА нём: риз кончается в контакт, и приглушить сам контакт значило бы
+# убрать тот звук, под который надо попасть.
+RISER_DUCK_DB = 8.0
+RISER_DUCK_IN = 0.30
+RISER_DUCK_OUT = 0.10
 
-    Ограничителя нет намеренно. С ним левый канал перестал бы совпадать с
-    приглушённым номером бит в бит, а это единственная проверка, которая
-    доказывает, что в левое ухо не попала ни одна подсказка. Запас
-    проверяется замером, и если его не хватит, вниз идёт один линейный гейн
-    на подсказки — так же, как сделан запас у мастера 8 августа.
+
+def riser_duck(rows: list[dict]) -> str:
+    """Выражение для volume: единица везде, провал на время каждого риза.
+
+    Провалы берутся по максимуму, а не складываются: два подряд ушли бы в
+    тишину. Здесь ризы не пересекаются, но правило то же, что у слов.
     """
-    count = build_count(work)
+    depth = 1.0 - 10.0 ** (-RISER_DUCK_DB / 20.0)
+    terms = []
+    for row in rows:
+        a = row["start"]
+        b = row["peak"] + 0.05
+        env = (r"max(0\,min(1\,min((t-%.4f)/%.4f\,(%.4f-t)/%.4f)))"
+               % (a, RISER_DUCK_IN, b, RISER_DUCK_OUT))
+        terms.append("%.6f*%s" % (depth, env))
+    deepest = terms[0]
+    for term in terms[1:]:
+        deepest = r"max(%s\,%s)" % (deepest, term)
+    return "1-(%s)" % deepest
+
+
+def build_track(work: Path, rows: list[dict], spec: dict,
+                cue_db: float = 0.0) -> Path:
+    """Свести одну дорожку по её описанию из TRACKS.
+
+    Ограничителя нет намеренно. С ним левый канал варианта «в правое ухо»
+    перестал бы совпадать с приглушённым номером бит в бит, а это единственная
+    проверка, которая доказывает, что в левое ухо не попала ни одна подсказка.
+    Запас проверяется замером, и если его не хватит, вниз идёт один линейный
+    гейн на подсказки — так же, как сделан запас у мастера 8 августа.
+    """
     risers_wav = build_risers(work, rows)
-    OUT_TRACK.parent.mkdir(parents=True, exist_ok=True)
-    run(["ffmpeg", "-v", "error", "-y",
-         "-i", str(SOUNDTRACK), "-i", str(count), "-i", str(risers_wav),
-         "-filter_complex",
-         "[0:a]volume=-%.1fdB,atrim=0:%.4f[bed];"
-         "[1:a][2:a]amix=inputs=2:normalize=0:dropout_transition=0,"
-         "volume=%.2fdB,pan=stereo|c0=0*c0|c1=c0[cue];"
-         "[bed][cue]amix=inputs=2:normalize=0:dropout_transition=0,"
-         "atrim=0:%.4f,asetpts=N/SR/TB[out]"
-         % (DUCK_DB, TOTAL, cue_db, TOTAL),
-         "-map", "[out]", "-ar", "48000", "-ac", "2",
-         "-c:a", "pcm_s24le", str(OUT_TRACK)])
-    return OUT_TRACK
+    out = track_path(spec["key"])
+    out.parent.mkdir(parents=True, exist_ok=True)
+    gain = spec["cue_db"] + cue_db
+
+    inputs = ["-i", str(SOUNDTRACK)]
+    cue_src = "[1:a]"
+    if spec["count"]:
+        inputs += ["-i", str(build_count(work)), "-i", str(risers_wav)]
+        cue_src = ("[1:a][2:a]amix=inputs=2:normalize=0:"
+                   "dropout_transition=0,")
+    else:
+        inputs += ["-i", str(risers_wav)]
+        cue_src = "[1:a]"
+
+    if spec["duck"] == "risers":
+        bed = "[0:a]volume='%s':eval=frame,atrim=0:%.4f[bed]" % (
+            riser_duck(rows), TOTAL)
+    else:
+        bed = "[0:a]volume=-%.1fdB,atrim=0:%.4f[bed]" % (spec["duck"], TOTAL)
+    parts = [bed]
+    parts.append("%svolume=%.2fdB,%s[cue]" % (cue_src, gain, spec["pan"]))
+    parts.append("[bed][cue]amix=inputs=2:normalize=0:dropout_transition=0,"
+                 "atrim=0:%.4f,asetpts=N/SR/TB[out]" % TOTAL)
+
+    run(["ffmpeg", "-v", "error", "-y"] + inputs
+        + ["-filter_complex", ";".join(parts), "-map", "[out]",
+           "-ar", "48000", "-ac", "2", "-c:a", "pcm_s24le", str(out)])
+    return out
 
 
-def publish() -> Path:
-    """Сжатая копия для страницы.
+def publish(keys) -> list[Path]:
+    """Сжатые копии для страницы."""
+    out = []
+    for key in keys:
+        src, dst = track_path(key), site_path(key)
+        if not src.exists():
+            raise SystemExit("нет %s: сначала python src/render_count.py" % src)
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        run(["ffmpeg", "-v", "error", "-y", "-i", str(src),
+             "-c:a", "aac", "-b:a", SITE_BITRATE, str(dst)])
+        print("  %s  %.2f МБ" % (dst.name, dst.stat().st_size / 1e6))
+        out.append(dst)
+    return out
 
-    Второго видео не собирается: ещё один mp4 — это около шести мегабайт в
-    гит, а звук в m4a — около одного. Страница играет то же видео с
-    выключенным звуком и ведёт эту дорожку рядом.
+
+def build_video(key: str) -> Path:
+    """Отдельный ролик: картинка копируется потоком, меняется только звук.
+
+    Нужен не странице — та переключает дорожки поверх одного видео, — а
+    телефону: положить в галерею и гонять без сайта и без сети.
     """
-    if not OUT_TRACK.exists():
-        raise SystemExit("нет %s: сначала python src/render_count.py" % OUT_TRACK)
-    SITE_TRACK.parent.mkdir(parents=True, exist_ok=True)
-    run(["ffmpeg", "-v", "error", "-y", "-i", str(OUT_TRACK),
-         "-c:a", "aac", "-b:a", SITE_BITRATE, str(SITE_TRACK)])
-    print("%s  %.1f МБ" % (SITE_TRACK, SITE_TRACK.stat().st_size / 1e6))
-    return SITE_TRACK
+    if not SITE_VIDEO.exists():
+        raise SystemExit("нет %s: python src/render_training.py --site"
+                         % SITE_VIDEO)
+    src, out = track_path(key), video_path(key)
+    if not src.exists():
+        raise SystemExit("нет %s: сначала python src/render_count.py" % src)
+    run(["ffmpeg", "-v", "error", "-y", "-i", str(SITE_VIDEO), "-i", str(src),
+         "-map", "0:v:0", "-map", "1:a:0", "-c:v", "copy",
+         "-c:a", "aac", "-b:a", "192k", "-ac", "2", "-shortest", str(out)])
+    print("  %s  %.1f МБ" % (out.name, out.stat().st_size / 1e6))
+    return out
 
 
 def sheet(strikes) -> str:
@@ -388,14 +501,25 @@ def main() -> int:
     ap.add_argument("--cut", action="store_true",
                     help="заново нарезать числительные из заказа")
     ap.add_argument("--cue-db", type=float, default=0.0,
-                    help="линейный гейн на слой подсказок, если не хватило "
-                         "запаса по пикам")
+                    help="общий гейн на слой подсказок поверх того, что "
+                         "задан у дорожки, если не хватило запаса по пикам")
     ap.add_argument("--site", action="store_true",
-                    help="сжать копию для страницы тренажёра")
+                    help="сжать копии для страницы тренажёра")
+    ap.add_argument("--video", action="store_true",
+                    help="собрать отдельные ролики: картинка копируется, "
+                         "меняется только звук")
+    ap.add_argument("--only", default="",
+                    help="собрать одну дорожку по ключу: %s"
+                         % ", ".join(t["key"] for t in TRACKS))
     args = ap.parse_args()
     if args.cut:
         cut_numerals()
         return 0
+
+    specs = [t for t in TRACKS if not args.only or t["key"] == args.only]
+    if not specs:
+        raise SystemExit("нет дорожки с ключом %r, есть %s"
+                         % (args.only, [t["key"] for t in TRACKS]))
 
     tl = Timeline.load(ROOT / "scenario/timeline.json")
     assets = ROOT / "assets"
@@ -415,11 +539,15 @@ def main() -> int:
     rows = risers(strikes)
     work = ROOT / "output" / "count_work"
     work.mkdir(parents=True, exist_ok=True)
-    build_track(work, rows, args.cue_db)
-    print("%s  %.3f с" % (OUT_TRACK, TOTAL))
+
+    for spec in specs:
+        out = build_track(work, rows, spec, args.cue_db)
+        print("%-22s %s  пик %.2f dBTP  (%s)"
+              % (spec["name"], out.name, peak_db(out), spec["hint"]))
+    print("ризы:")
     for row in rows:
-        print("  риз %-13s %.2f → %.2f" % (row["strike"], row["start"],
-                                           row["peak"]))
+        print("  %-13s %.2f → %.2f" % (row["strike"], row["start"],
+                                       row["peak"]))
 
     SHEET.write_text(sheet(strikes), encoding="utf-8")
     print("%s" % SHEET)
@@ -427,8 +555,14 @@ def main() -> int:
         print("  делят «%s»: %s" % (word, ", ".join(
             "%.2f %s" % (b["t"], b["role"]) for b in beats)))
 
+    keys = [t["key"] for t in specs]
     if args.site:
-        publish()
+        print("для страницы:")
+        publish(keys)
+    if args.video:
+        print("ролики:")
+        for key in keys:
+            build_video(key)
     return 0
 
 
