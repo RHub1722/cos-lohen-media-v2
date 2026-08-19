@@ -278,7 +278,50 @@ def test_switching_tracks_does_not_throw_away_the_previous_one():
     body = html[start:html.index('$("countBtns")', start)]
     assert "countPlayer(countKey)" in body, "элемент дорожки не берётся из кэша"
     assert "prev.pause()" in body, "прошлая дорожка должна ставиться на паузу"
-    assert "a.dataset.warm" in body, "load() обязан звучать один раз на дорожку"
+    assert "countPlayers.set" in html, "элементы дорожек не запоминаются"
+
+
+def test_the_player_is_started_from_inside_the_tap():
+    """Планшет разрешает автозапуск только изнутри касания.
+
+    Прежде play() звался из обработчика загрузки — это уже другая задача, жест
+    потерян, элемент оставался на паузе, и покадровая синхронизация начинала
+    звать play() шестьдесят раз в секунду. На компьютере автозапуск разрешён,
+    поэтому там этой ветки не существует вовсе — отсюда «на планшете тормозит,
+    на компьютере нет».
+    """
+    html = (ROOT / "src/training_template.html").read_text(encoding="utf-8")
+    start = html.index("function setCount(")
+    body = html[start:html.index('$("countBtns")', start)]
+    assert "tryPlay(a)" in body, "запуск не зовётся из обработчика нажатия"
+    # play() обязан стоять ДО ожидания загрузки, иначе жест уже потерян.
+    assert body.index("tryPlay(a)") < body.index("addEventListener")
+
+
+def test_the_sync_retries_playback_on_a_backoff_not_every_frame():
+    """Отказ автозапуска — не повод звать play() на каждом кадре: шестьдесят
+    отказов в секунду, и каждый создаёт обещание. Отсюда и брался разрыв
+    кадров на планшете."""
+    html = (ROOT / "src/training_template.html").read_text(encoding="utf-8")
+    start = html.index("function syncCount(")
+    body = html[start:html.index("function setCount(", start)]
+    assert "COUNT_PLAY_EVERY" in body
+    assert body.index("COUNT_PLAY_EVERY") < body.index("tryPlay(a)")
+
+
+def test_the_diagnostics_count_what_the_guards_suppress():
+    """Иначе после починки нельзя узнать, что именно срабатывало.
+
+    Подтормаживание не воспроизводится ни на компьютере, ни в сборке — значит
+    мерить должен сам планшет, и придержанные события обязаны считаться
+    отдельно от случившихся.
+    """
+    html = (ROOT / "src/training_template.html").read_text(encoding="utf-8")
+    for counter in ("playHeld", "fixHeld", "playFails", "maxDrift",
+                    "stallAudio", "stallVideo", "worstFrame", "worstWork"):
+        assert "diag." + counter in html, counter
+    assert 'id="diag"' in html
+    assert "diag=1" in html
 
 
 def test_the_sync_never_seeks_on_an_unready_or_seeking_track():
@@ -289,15 +332,18 @@ def test_the_sync_never_seeks_on_an_unready_or_seeking_track():
     перемотку сжатого потока шестьдесят раз в секунду. Нужны два предохранителя:
     не трогать неготовую или уже перематывающуюся дорожку, и не править чаще
     заданного интервала.
+
+    Порог готовности именно 3, а не 2: на двойке поток как раз голодает —
+    данные на сейчас есть, а на дальше нет, — и правка добивала бы его.
     """
     html = (ROOT / "src/training_template.html").read_text(encoding="utf-8")
     start = html.index("function syncCount(")
     body = html[start:html.index("function setCount(", start)]
-    assert "a.readyState < 2" in body
+    assert "a.readyState < 3" in body
     assert "a.seeking" in body
     assert "COUNT_FIX_EVERY" in body
     # Правка обязана стоять ПОСЛЕ обеих проверок, иначе они бесполезны.
-    assert body.index("a.readyState < 2") < body.index("a.currentTime = video")
+    assert body.index("a.readyState < 3") < body.index("a.currentTime = video")
     assert body.index("COUNT_FIX_EVERY") < body.index("a.currentTime = video")
 
 
@@ -309,7 +355,7 @@ def test_the_loop_takes_a_breath_between_rounds():
     html = (ROOT / "src/training_template.html").read_text(encoding="utf-8")
     assert "const LOOP_GAP = 500;" in html
     assert "function restartLoop()" in html
-    body = html.split("function frame()")[1].split("requestAnimationFrame")[0]
+    body = html.split("function frame(")[1].split("requestAnimationFrame")[0]
     assert "loopPause" in body, "покадровый цикл не знает про паузу"
     assert "restartLoop()" in body
     assert "seek(loopWin[0]" not in body, "прыжок в обход паузы"
@@ -320,5 +366,5 @@ def test_the_count_track_is_kept_in_step_every_frame():
     в покадровом цикле она разъедется с картинкой, и репетиция пойдёт по
     неверным цифрам."""
     html = (ROOT / "src/training_template.html").read_text(encoding="utf-8")
-    body = html.split("function frame()")[1].split("requestAnimationFrame")[0]
+    body = html.split("function frame(")[1].split("requestAnimationFrame")[0]
     assert "syncCount()" in body

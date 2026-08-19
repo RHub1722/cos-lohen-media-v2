@@ -555,6 +555,11 @@
   <div class="screen">
     <video id="video" playsinline preload="metadata"></video>
     <span id="countAudio" hidden></span>
+    <pre id="diag" hidden style="position:fixed;left:6px;top:6px;z-index:99;
+      margin:0;padding:8px 10px;max-width:min(94vw,560px);white-space:pre-wrap;
+      font:11px/1.45 ui-monospace,Menlo,Consolas,monospace;color:#cfe8ff;
+      background:rgba(6,10,18,.92);border:1px solid #2a3a52;border-radius:8px;
+      pointer-events:none"></pre>
     <div class="picker" id="picker">
       <div id="pickerText">Файл номера не найден рядом со страницей.</div>
       <label>Выбрать файл…<input type="file" id="file" accept="video/*,audio/*"></label>
@@ -1375,6 +1380,70 @@ function shiftRate(step) {
 }
 setRate(1);
 
+// ── диагностика: числа вместо догадок ─────────────────────────────────────
+// Включается адресом с ?diag=1 и рисует панель поверх страницы. Считает в том
+// числе то, что предохранители ГАСЯТ, — «придержано». Без этого после починки
+// нельзя узнать, что именно срабатывало, и остаётся только гадать снова.
+//
+// Заведена потому, что подтормаживание воспроизвести не на чем: на компьютере
+// его нет, а планшета у сборки нет. Значит мерить должен сам планшет.
+const DIAG = /(^|[?&])diag=1(&|$)/.test(location.search);
+const diag = {
+  playTries: 0, playFails: 0, playHeld: 0, lastPlayErr: "—",
+  fixes: 0, fixHeld: 0, lastDrift: 0, maxDrift: 0,
+  stallAudio: 0, stallVideo: 0,
+  worstFrame: 0, slowFrames: 0, longTasks: 0, worstWork: 0,
+  net: []
+};
+let diagLastFrame = 0;
+let diagShownAt = 0;
+
+if (DIAG) {
+  video.addEventListener("waiting", () => { diag.stallVideo++; });
+  video.addEventListener("stalled", () => { diag.stallVideo++; });
+  if (window.PerformanceObserver) {
+    // Длинные задачи: Chrome умеет, Safari нет — отсутствие не ошибка.
+    try {
+      new PerformanceObserver((list) => { diag.longTasks += list.getEntries().length; })
+        .observe({ entryTypes: ["longtask"] });
+    } catch (err) { /* нет так нет */ }
+    try {
+      new PerformanceObserver((list) => {
+        list.getEntries().forEach((e) => {
+          if (!/\.(m4a|mp4)(\?|$)/.test(e.name)) return;
+          diag.net.push(e.name.split("/").pop() + " "
+            + Math.round((e.transferSize || 0) / 1024) + "кБ за "
+            + Math.round(e.duration) + "мс");
+          if (diag.net.length > 6) diag.net.shift();
+        });
+      }).observe({ entryTypes: ["resource"] });
+    } catch (err) { /* нет так нет */ }
+  }
+}
+
+function diagShow(now) {
+  if (!DIAG || now - diagShownAt < 400) return;
+  diagShownAt = now;
+  const a = countPlayers.get(countKey);
+  const loaded = [...countPlayers.entries()]
+    .filter(([, el]) => el.readyState > 0).map(([k]) => k);
+  $("diag").textContent = [
+    "кадр: худший " + Math.round(diag.worstFrame) + " мс, медленных "
+      + diag.slowFrames + ", наш код до " + Math.round(diag.worstWork) + " мс"
+      + (diag.longTasks ? ", длинных задач " + diag.longTasks : ""),
+    "дорожка: " + (countKey || "выкл")
+      + (a ? "  готовность " + a.readyState + (a.paused ? "  ПАУЗА" : "  играет") : ""),
+    "play: " + diag.playTries + " попыток, " + diag.playFails + " отказов ("
+      + diag.lastPlayErr + "), придержано " + diag.playHeld,
+    "правки: " + diag.fixes + ", придержано " + diag.fixHeld
+      + ", расхождение до " + diag.maxDrift.toFixed(2) + " с"
+      + " (последняя " + diag.lastDrift.toFixed(2) + ")",
+    "заминки: звук " + diag.stallAudio + ", видео " + diag.stallVideo,
+    "загружено дорожек: " + (loaded.join(", ") || "нет"),
+    diag.net.length ? "сеть: " + diag.net.join(" | ") : "сеть: тихо"
+  ].join("\n");
+}
+
 // Подсказки идут отдельной дорожкой поверх того же видео: второго ролика для
 // этого не нужно, и в гит не едет ещё шесть мегабайт на каждый вариант. Звук
 // видео выключается, а <audio> ведётся часами видео — так же, как клип приёма
@@ -1387,11 +1456,13 @@ setRate(1);
 // У КАЖДОЙ дорожки свой <audio>, и переключение их не выгружает. С одним
 // элементом на всех возврат к уже слышанной дорожке заново тянул её из сети
 // и вставал на буферизацию.
-const COUNT_DRIFT = 0.15;      // расхождение, с которого правим, с
-const COUNT_FIX_EVERY = 250;   // но не чаще, мс
+const COUNT_DRIFT = 0.15;        // расхождение, с которого правим, с
+const COUNT_FIX_EVERY = 1000;    // но не чаще, мс
+const COUNT_PLAY_EVERY = 800;    // и не чаще пробуем запуститься, мс
 const countPlayers = new Map();
 let countKey = "";
 let countFixedAt = 0;
+let countPlayTriedAt = 0;
 
 function countPlayer(key) {
   let a = countPlayers.get(key);
@@ -1401,32 +1472,60 @@ function countPlayer(key) {
   a = el("audio");
   a.preload = "none";
   a.src = track.file;
+  a.addEventListener("waiting", () => { diag.stallAudio++; });
+  a.addEventListener("stalled", () => { diag.stallAudio++; });
   $("countAudio").appendChild(a);
   countPlayers.set(key, a);
   return a;
+}
+
+function tryPlay(a) {
+  diag.playTries++;
+  const p = a.play();
+  if (p && p.catch) {
+    p.catch((err) => {
+      diag.playFails++;
+      diag.lastPlayErr = (err && err.name) || "?";
+    });
+  }
 }
 
 function syncCount() {
   if (!countKey) return;
   const a = countPlayers.get(countKey);
   if (!a) return;
-  // Пока дорожка не готова или уже перематывается, currentTime трогать нельзя.
-  // Без этой проверки на буферизации правка срывалась в перемотку на КАЖДОМ
-  // кадре: шестьдесят перемоток сжатого потока в секунду — планшет встаёт, и
-  // чем хуже связь, тем дольше он в этом сидит.
-  if (a.readyState < 2 || a.seeking) return;
   if (a.playbackRate !== video.playbackRate) a.playbackRate = video.playbackRate;
   if (video.paused) { if (!a.paused) a.pause(); return; }
-  if (a.paused) a.play().catch(() => {});
-  // Даже готовую дорожку правим не чаще четырёх раз в секунду: одна перемотка
-  // сама по себе занимает больше кадра, и на следующем кадре расхождение ещё
-  // не успевает сойтись — получалась та же лавина, только реже.
+
   const now = performance.now();
-  if (now - countFixedAt < COUNT_FIX_EVERY) return;
-  if (Math.abs(a.currentTime - video.currentTime) > COUNT_DRIFT) {
-    a.currentTime = video.currentTime;
-    countFixedAt = now;
+  if (a.paused) {
+    // НЕ на каждом кадре. Если автозапуск заблокирован — а на планшете он
+    // блокируется, когда play() зовут не изнутри касания, — прежний код
+    // возвращал отказ шестьдесят раз в секунду и делал шестьдесят обещаний.
+    // На компьютере автозапуск разрешён, элемент играет сразу, и этой ветки
+    // не существует вовсе. Отсюда «на планшете тормозит, на компьютере нет».
+    if (now - countPlayTriedAt < COUNT_PLAY_EVERY) { diag.playHeld++; return; }
+    countPlayTriedAt = now;
+    tryPlay(a);
+    return;
   }
+
+  // Правка расхождения. Здоровье потока проверяется ДО неё: перематывать
+  // дорожку, которой не хватает данных, значит заставить её буферизоваться
+  // заново — и так по кругу. readyState 3 (есть чем играть дальше), а не 2:
+  // на двойке поток как раз голодает, и правка добивала бы его.
+  const drift = a.currentTime - video.currentTime;
+  const off = Math.abs(drift);
+  if (off > diag.maxDrift) diag.maxDrift = off;
+  if (off <= COUNT_DRIFT) return;
+  if (a.readyState < 3 || a.seeking || now - countFixedAt < COUNT_FIX_EVERY) {
+    diag.fixHeld++;
+    return;
+  }
+  countFixedAt = now;
+  diag.fixes++;
+  diag.lastDrift = drift;
+  a.currentTime = video.currentTime;
 }
 
 function setCount(key) {
@@ -1445,23 +1544,21 @@ function setCount(key) {
   if (!countKey) return;
 
   const a = countPlayer(countKey);
-  // load() зовётся ОДИН раз на дорожку. При preload="none" файл не начинает
-  // грузиться до первого play, а присвоение currentTime у неготового элемента
-  // молча пропадает — замерено: readyState 0, duration неизвестна.
-  if (!a.dataset.warm) {
-    a.dataset.warm = "1";
-    a.preload = "auto";
-    a.load();
-  }
-  const start = () => {
+  countFixedAt = 0;
+  countPlayTriedAt = performance.now();
+  // play() зовётся СИНХРОННО, пока жив жест. Планшет разрешает автозапуск
+  // только изнутри касания: вызов из обработчика загрузки — это уже другая
+  // задача, жест потерян, и элемент так и остаётся на паузе. Он же и
+  // «отпирает» элемент на будущее, поэтому зовётся даже когда играть рано.
+  tryPlay(a);
+  const place = () => {
     // За время загрузки могли переключить на другую: тогда играть эту нельзя.
     if (countKey !== key) return;
-    countFixedAt = 0;
     a.currentTime = video.currentTime;
-    if (!video.paused) a.play().catch(() => {});
+    if (video.paused) a.pause();
   };
-  if (a.readyState >= 2) start();
-  else a.addEventListener("loadeddata", start, { once: true });
+  if (a.readyState >= 1) place();
+  else a.addEventListener("loadedmetadata", place, { once: true });
 }
 (DATA.count || []).forEach((t) => {
   const b = el("button", "btn", t.name);
@@ -2004,7 +2101,14 @@ function render(t) {
   }
 }
 
-function frame() {
+function frame(now) {
+  const t0 = DIAG ? performance.now() : 0;
+  if (DIAG && diagLastFrame) {
+    const gap = t0 - diagLastFrame;
+    if (gap > diag.worstFrame) diag.worstFrame = gap;
+    if (gap > 100) diag.slowFrames++;
+  }
+  if (DIAG) diagLastFrame = t0;
   try {
     const t = ready ? (video.currentTime || 0) : 0;
     if (loopOn && loopWin && !loopPause
@@ -2018,6 +2122,11 @@ function frame() {
     // молча, и репетиция шла бы вслепую.
     if (window.console) console.error(err);
   } finally {
+    if (DIAG) {
+      const spent = performance.now() - t0;
+      if (spent > diag.worstWork) diag.worstWork = spent;
+      diagShow(t0);
+    }
     requestAnimationFrame(frame);
   }
 }
@@ -2049,6 +2158,7 @@ $("rulerEnd").textContent = fmt(DATA.total);
 // Имя файла в подсказке про телефон — из данных, а не из текста: копий номера
 // четыре, и вписанное руками имя однажды отправит человека копировать не тот.
 $("videoName").textContent = DATA.video;
+if (DIAG) $("diag").hidden = false;
 showView(location.hash.slice(1) || "run");
 window.addEventListener("hashchange", () => showView(location.hash.slice(1)));
 requestAnimationFrame(frame);
