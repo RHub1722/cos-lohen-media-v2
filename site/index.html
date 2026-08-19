@@ -1396,7 +1396,6 @@ const diag = {
   net: []
 };
 let diagLastFrame = 0;
-let diagShownAt = 0;
 
 if (DIAG) {
   video.addEventListener("waiting", () => { diag.stallVideo++; });
@@ -1421,9 +1420,10 @@ if (DIAG) {
   }
 }
 
-function diagShow(now) {
-  if (!DIAG || now - diagShownAt < 400) return;
-  diagShownAt = now;
+// Рисуется по таймеру, а не из покадрового цикла: rAF не идёт в свёрнутой
+// вкладке, и панель оставалась бы пустой ровно там, где её и хотят прочитать.
+function diagShow() {
+  if (!DIAG) return;
   const a = countPlayers.get(countKey);
   const loaded = [...countPlayers.entries()]
     .filter(([, el]) => el.readyState > 0).map(([k]) => k);
@@ -2125,7 +2125,6 @@ function frame(now) {
     if (DIAG) {
       const spent = performance.now() - t0;
       if (spent > diag.worstWork) diag.worstWork = spent;
-      diagShow(t0);
     }
     requestAnimationFrame(frame);
   }
@@ -2158,7 +2157,7 @@ $("rulerEnd").textContent = fmt(DATA.total);
 // Имя файла в подсказке про телефон — из данных, а не из текста: копий номера
 // четыре, и вписанное руками имя однажды отправит человека копировать не тот.
 $("videoName").textContent = DATA.video;
-if (DIAG) $("diag").hidden = false;
+if (DIAG) { $("diag").hidden = false; diagShow(); setInterval(diagShow, 400); }
 showView(location.hash.slice(1) || "run");
 window.addEventListener("hashchange", () => showView(location.hash.slice(1)));
 requestAnimationFrame(frame);
