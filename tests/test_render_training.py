@@ -347,6 +347,54 @@ def test_the_sync_never_seeks_on_an_unready_or_seeking_track():
     assert body.index("COUNT_FIX_EVERY") < body.index("a.currentTime = video")
 
 
+def test_the_step_buttons_restart_the_loop_when_it_is_on():
+    """Обе кнопки шага при включённой петле возвращают круг в начало.
+
+    Обе одинаково намеренно: с копьём в руках нужна большая мишень, в которую
+    попадаешь не глядя. Покадровый разбор при включённой петле всё равно не
+    делают — для него петлю выключают, и там кнопки работают как раньше.
+
+    Клавиши «,» и «.» обязаны делать то же: иначе они разойдутся с кнопками,
+    которые сами же и дублируют.
+    """
+    html = (ROOT / "src/training_template.html").read_text(encoding="utf-8")
+    start = html.index("function stepOrRestart(")
+    body = html[start:html.index('$("stepBack")', start)]
+    assert "loopOn && loopWin" in body
+    assert "restartLoop(true)" in body, "нажатие обязано срабатывать сразу"
+    assert '$("stepBack").addEventListener("click", () => stepOrRestart(-1));' in html
+    assert '$("stepFwd").addEventListener("click", () => stepOrRestart(1));' in html
+    assert 'case ",": ev.preventDefault(); stepOrRestart(-1); break;' in html
+    assert 'case ".": ev.preventDefault(); stepOrRestart(1); break;' in html
+
+
+def test_the_step_buttons_stay_visible_on_a_narrow_screen_under_loop():
+    """На телефоне шаг по кадрам спрятан — место в панели дорогое. Но возврат
+    круга в начало нужен как раз на площадке, поэтому при включённой петле
+    кнопки остаются."""
+    html = (ROOT / "src/training_template.html").read_text(encoding="utf-8")
+    assert 'body:not([data-loop="on"]) #stepBack' in html
+    assert 'document.body.dataset.loop = loopOn ? "on" : "";' in html
+
+
+def test_a_loop_round_is_never_faster_than_five_seconds():
+    """Окна петель у нас от 3.26 до 5.93 с, и на коротком приёме между
+    повторами не оставалось времени вернуться в стойку.
+
+    Предел минимальный, а не жёсткий период: жёсткие пять секунд обрезали бы
+    вспышку 2 на 0.93 с, а там на 36.58 её второе попадание. Поэтому окно
+    доигрывается всегда, а ждём мы разницу — max, а не замена.
+    """
+    html = (ROOT / "src/training_template.html").read_text(encoding="utf-8")
+    assert "const LOOP_CYCLE = 5000;" in html
+    start = html.index("function restartLoop(")
+    body = html[start:html.index("function setLoop(", start)]
+    assert "Math.max(LOOP_GAP, LOOP_CYCLE - waited)" in body, (
+        "круг обязан доигрывать окно и ждать только разницу")
+    # Ручной перезапуск сбрасывает отсчёт, иначе следующий круг придёт раньше.
+    assert "loopStartedAt = performance.now()" in body
+
+
 def test_the_loop_takes_a_breath_between_rounds():
     """Без паузы круг склеивается со следующим, и на слух непонятно, где он
     начался: звук идёт непрерывно, а картинка прыгает на кадр, который глазом
@@ -354,7 +402,7 @@ def test_the_loop_takes_a_breath_between_rounds():
     иначе прыжок случится раньше, чем она сработает."""
     html = (ROOT / "src/training_template.html").read_text(encoding="utf-8")
     assert "const LOOP_GAP = 500;" in html
-    assert "function restartLoop()" in html
+    assert "function restartLoop(" in html
     body = html.split("function frame(")[1].split("requestAnimationFrame")[0]
     assert "loopPause" in body, "покадровый цикл не знает про паузу"
     assert "restartLoop()" in body

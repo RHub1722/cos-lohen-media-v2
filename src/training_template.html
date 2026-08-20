@@ -504,8 +504,11 @@
   /* ── раскладки ───────────────────────────────────────────────────────── */
   @media (max-width: 639px) {
     .tab { font-size: 0.78rem; padding: 7px 3px; }
-    /* Шаг по кадрам на телефоне не нужен, а место в нижней панели дорогое. */
-    #stepBack, #stepFwd { display: none; }
+    /* Шаг по кадрам на телефоне не нужен, а место в нижней панели дорогое.
+       Но при включённой петле те же кнопки возвращают круг в начало, и это
+       нужно как раз на площадке — поэтому там они остаются. */
+    body:not([data-loop="on"]) #stepBack,
+    body:not([data-loop="on"]) #stepFwd { display: none; }
   }
   @media (min-width: 640px) {
     .tabs { justify-content: center; }
@@ -1103,8 +1106,10 @@
     <div class="ruler"><span>0:00</span><span>0:30</span><span id="rulerEnd">1:00</span></div>
     <div class="transport">
       <button class="btn play" id="play" title="Пробел">&#9654;</button>
-      <button class="btn" id="stepBack" title="Кадр назад (,)">&#9666;|</button>
-      <button class="btn" id="stepFwd" title="Кадр вперёд (.)">|&#9656;</button>
+      <button class="btn" id="stepBack" type="button"
+              title="Кадр назад (,) — при включённой петле в начало круга">&#9666;|</button>
+      <button class="btn" id="stepFwd" type="button"
+              title="Кадр вперёд (.) — при включённой петле в начало круга">|&#9656;</button>
       <span class="rates" id="rates"></span>
       <span class="rates" id="countBtns"></span>
       <button class="btn" id="loopBtn" title="Петля (L)">Петля: выкл</button>
@@ -1358,8 +1363,17 @@ function togglePlay() {
 $("play").addEventListener("click", togglePlay);
 video.addEventListener("play", () => { $("play").innerHTML = "&#10074;&#10074;"; });
 video.addEventListener("pause", () => { $("play").innerHTML = "&#9654;"; });
-$("stepBack").addEventListener("click", () => { video.pause(); seek(video.currentTime - 1 / FPS); });
-$("stepFwd").addEventListener("click", () => { video.pause(); seek(video.currentTime + 1 / FPS); });
+// При включённой петле обе кнопки шага возвращают в начало круга, а не двигают
+// кадром. Обе одинаково намеренно: с копьём в руках нужна большая мишень, в
+// которую попадаешь не глядя, а покадровый разбор при включённой петле всё
+// равно не делают — для него петлю выключают.
+function stepOrRestart(dir) {
+  if (loopOn && loopWin) { restartLoop(true); return; }
+  video.pause();
+  seek(video.currentTime + dir / FPS);
+}
+$("stepBack").addEventListener("click", () => stepOrRestart(-1));
+$("stepFwd").addEventListener("click", () => stepOrRestart(1));
 
 RATES.forEach((r) => {
   const b = el("button", "btn rate", r === 1 ? "1×" : r + "×");
@@ -1576,25 +1590,50 @@ video.addEventListener("seeked", () => { countFixedAt = 0; syncCount(); });
 // непонятно, где он начался: звук идёт непрерывно, а картинка прыгает на кадр,
 // который глазом не поймать. Полсекунды — заметно, но ещё не ожидание.
 const LOOP_GAP = 500;
+// Круг не быстрее пяти секунд. Окна петель у нас от 3.26 до 5.93 с, и на
+// коротком приёме между повторами не оставалось времени вернуться в стойку.
+//
+// Предел МИНИМАЛЬНЫЙ, а не жёсткий период: жёсткие пять секунд обрезали бы
+// вспышку 2 на 0.93 с, а там на 36.58 стоит её второе попадание — то самое,
+// которое до этого уже оставалось без риза и без клипа. Поэтому окно всегда
+// доигрывается, а ждём мы разницу.
+const LOOP_CYCLE = 5000;
 let loopPause = false;
+let loopStartedAt = 0;
+let loopTimer = 0;
 
-function restartLoop() {
+function restartLoop(atOnce) {
   const win = loopWin;
+  if (!win) return;
   const wasPlaying = !video.paused;
-  loopPause = true;
-  video.pause();      // дорожку подсказок остановит syncCount вслед за видео
-  setTimeout(() => {
+  if (loopTimer) { clearTimeout(loopTimer); loopTimer = 0; }
+  const go = () => {
+    loopTimer = 0;
     loopPause = false;
-    // За полсекунды петлю могли выключить или сменить: тогда прыгать некуда.
+    // За время ожидания петлю могли выключить или сменить: прыгать некуда.
     if (!loopOn || loopWin !== win) return;
+    loopStartedAt = performance.now();
     countFixedAt = 0;   // после прыжка дорожку надо подтянуть сразу
     seek(win[0], wasPlaying);
-  }, LOOP_GAP);
+  };
+  // Нажатие кнопки срабатывает сразу: ждать полсекунды от того, кто сам
+  // попросил начать заново, незачем.
+  if (atOnce) { loopPause = false; go(); return; }
+  loopPause = true;
+  video.pause();      // дорожку подсказок остановит syncCount вслед за видео
+  const waited = performance.now() - loopStartedAt;
+  loopTimer = setTimeout(go, Math.max(LOOP_GAP, LOOP_CYCLE - waited));
 }
 
 function setLoop(win, name) {
   loopWin = win;
   loopOn = Boolean(win);
+  if (loopTimer) { clearTimeout(loopTimer); loopTimer = 0; }
+  loopPause = false;
+  loopStartedAt = performance.now();
+  // Состояние уезжает в атрибут body: по нему стилями кнопки шага остаются
+  // видны на узком экране, где иначе они спрятаны.
+  document.body.dataset.loop = loopOn ? "on" : "";
   $("loopBtn").classList.toggle("on", loopOn);
   $("loopBtn").textContent = loopOn
     ? "Петля: " + (name || (win[0].toFixed(1) + "–" + win[1].toFixed(1)))
@@ -2015,8 +2054,10 @@ window.addEventListener("keydown", (ev) => {
       seek(prev ? prev.t : 0);
       break;
     }
-    case ",": ev.preventDefault(); video.pause(); seek(t - 1 / FPS); break;
-    case ".": ev.preventDefault(); video.pause(); seek(t + 1 / FPS); break;
+    // Клавиши делают то же, что кнопки: при включённой петле возвращают круг
+    // в начало. Иначе они бы расходились с кнопками, которые сами же и дублируют.
+    case ",": ev.preventDefault(); stepOrRestart(-1); break;
+    case ".": ev.preventDefault(); stepOrRestart(1); break;
     case "[": ev.preventDefault(); shiftRate(-1); break;
     case "]": ev.preventDefault(); shiftRate(1); break;
     case "l": case "L": case "д": case "Д":
