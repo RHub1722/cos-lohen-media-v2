@@ -19,6 +19,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -29,6 +30,7 @@ from src.counting import (STEP, WORDS, assign, collisions,  # noqa: E402
                           repeated_digits, risers)
 from src.models import Timeline  # noqa: E402
 from src.movements import load_movements, resolve_times  # noqa: E402
+from src.render_rehearsal import build_scenes  # noqa: E402
 from src.peaks import peak_offsets  # noqa: E402
 from src.strikes import ROLE_NAMES, load_strikes, resolve_strikes  # noqa: E402
 
@@ -394,6 +396,63 @@ def publish(keys) -> list[Path]:
     return out
 
 
+# ── офлайн-ролики для планшета ────────────────────────────────────────────
+# Кладутся в галерею и гоняются без сайта и без сети. Поэтому картинка берётся
+# из МАСТЕРА и жмётся один раз, а не пережимается из сжатой копии страницы:
+# двойное сжатие видно как раз там, где смотрят — на вспышках.
+OFFLINE_DIR = ROOT / "output" / "offline"
+OFFLINE_SCALE = "960:540"
+OFFLINE_CRF = "23"
+MASTER_VIDEO = ROOT / "output/final_ru_nostrip_titles_logo_fx.mp4"
+
+# Сколько оставить после последней доли боя. Полторы секунды — это удар в метку
+# и его выдержка: обрубить их значило бы отнять у приёма конец.
+OFFLINE_TAIL = 1.5
+
+
+def fight_window(strikes, tl, raw_events) -> tuple[float, float]:
+    """Границы боя для отдельного ролика — из данных, а не вписанные руками.
+
+    Начало — начало сцены «Бой»: там хлопает дверь и поворачивается голова,
+    и этих шести секунд как раз хватает, чтобы встать в стойку.
+
+    Конец НЕ по границе сцены. Сцена «Лёд» начинается в 47.00, а последний
+    контакт боя — копьё в пол — стоит в 47.03, то есть на три сотых ПОЗЖЕ.
+    Резать по сцене значило бы обрубить последний удар номера, поэтому конец
+    считается от последней доли.
+    """
+    scenes = build_scenes(raw_events, tl.total_duration)
+    fight = next((s for s in scenes if s["key"] == "combat"), None)
+    if fight is None:
+        raise SystemExit("в сценарии нет сцены боя — не из чего резать ролик")
+    last = max(b.heard for s in strikes for b in s.beats)
+    return round(fight["t"], 3), round(min(tl.total_duration,
+                                           last + OFFLINE_TAIL), 3)
+
+
+def build_offline(key: str, name: str, start: float, end: float) -> Path:
+    """Один офлайн-ролик: кусок мастера со звуком выбранной дорожки."""
+    track = track_path(key)
+    if not track.exists():
+        raise SystemExit("нет %s: сначала python src/render_count.py" % track)
+    if not MASTER_VIDEO.exists():
+        raise SystemExit("нет мастера картинки %s" % MASTER_VIDEO)
+    OFFLINE_DIR.mkdir(parents=True, exist_ok=True)
+    out = OFFLINE_DIR / (name + ".mp4")
+    span = end - start
+    run(["ffmpeg", "-v", "error", "-y",
+         "-ss", "%.4f" % start, "-t", "%.4f" % span, "-i", str(MASTER_VIDEO),
+         "-ss", "%.4f" % start, "-t", "%.4f" % span, "-i", str(track),
+         "-map", "0:v:0", "-map", "1:a:0",
+         "-vf", "scale=" + OFFLINE_SCALE,
+         "-c:v", "libx264", "-crf", OFFLINE_CRF, "-preset", "slow",
+         "-pix_fmt", "yuv420p", "-movflags", "+faststart",
+         "-c:a", "aac", "-b:a", "192k", "-ac", "2", str(out)])
+    print("  %-22s %5.2f–%5.2f с (%.2f с)  %.1f МБ"
+          % (out.name, start, end, span, out.stat().st_size / 1e6))
+    return out
+
+
 def build_video(key: str) -> Path:
     """Отдельный ролик: картинка копируется потоком, меняется только звук.
 
@@ -520,6 +579,10 @@ def main() -> int:
     ap.add_argument("--video", action="store_true",
                     help="собрать отдельные ролики: картинка копируется, "
                          "меняется только звук")
+    ap.add_argument("--offline", metavar="КЛЮЧ", nargs="?", const="riser",
+                    help="два ролика для планшета: весь номер и только бой. "
+                         "Картинка из мастера, жмётся один раз. По умолчанию "
+                         "со звуком дорожки riser")
     ap.add_argument("--only", default="",
                     help="собрать одну дорожку по ключу: %s"
                          % ", ".join(t["key"] for t in TRACKS))
@@ -575,6 +638,18 @@ def main() -> int:
         print("ролики:")
         for key in keys:
             build_video(key)
+
+    if args.offline:
+        if not any(t["key"] == args.offline for t in TRACKS):
+            raise SystemExit("нет дорожки %r, есть %s"
+                             % (args.offline, [t["key"] for t in TRACKS]))
+        with open(ROOT / "scenario/timeline.json", encoding="utf-8") as fh:
+            raw = json.load(fh)
+        a, b = fight_window(strikes, tl, raw["events"])
+        print("офлайн-ролики, звук дорожки %r:" % args.offline)
+        build_offline(args.offline, "lohen_%s_full" % args.offline, 0.0, TOTAL)
+        build_offline(args.offline, "lohen_%s_fight" % args.offline, a, b)
+        print("  лежат в %s" % OFFLINE_DIR)
     return 0
 
 

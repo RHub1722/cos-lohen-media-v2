@@ -205,6 +205,48 @@ def test_the_number_is_untouched_where_the_riser_was_removed():
         "в окне снятого риза номер тронут на %+.2f dB" % got)
 
 
+def test_the_fight_clip_does_not_cut_off_the_last_strike():
+    """Ролик боя режется НЕ по границе сцены.
+
+    Сцена «Лёд» начинается в 47.00, а последний контакт боя — копьё в пол —
+    стоит в 47.03, то есть на три сотых ПОЗЖЕ. Резать по сцене значило бы
+    обрубить последний удар номера, поэтому конец считается от последней доли.
+    """
+    import json
+
+    from src.models import Timeline
+    from src.movements import load_movements, resolve_times
+    from src.peaks import peak_offsets
+    from src.render_count import OFFLINE_TAIL, ROOT, fight_window
+    from src.render_rehearsal import build_scenes
+    from src.strikes import load_strikes, resolve_strikes
+
+    scenario = ROOT / "scenario/timeline.json"
+    tl = Timeline.load(scenario)
+    with open(scenario, encoding="utf-8") as fh:
+        raw = json.load(fh)
+    peaks = peak_offsets(ROOT / "assets",
+                         sorted({e.asset for e in tl.events if e.stem == "sfx"}))
+    moves = [m.id for m in resolve_times(
+        load_movements(ROOT / "scenario/movements.json"), tl)]
+    strikes = resolve_strikes(
+        load_strikes(ROOT / "scenario/strikes.json"), tl, peaks, moves)
+
+    start, end = fight_window(strikes, tl, raw["events"])
+    scenes = {s["key"]: s for s in build_scenes(raw["events"], tl.total_duration)}
+    assert start == pytest.approx(scenes["combat"]["t"])
+
+    beats = [b.heard for s in strikes for b in s.beats]
+    assert end > max(beats), "последняя доля боя не влезла в окно"
+    assert end == pytest.approx(max(beats) + OFFLINE_TAIL, abs=0.01)
+    # Именно та ловушка: конец сцены раньше последнего удара.
+    assert scenes["combat"]["end"] < max(beats), (
+        "сцена перестала кончаться раньше последней доли — проверка потеряла смысл")
+    # И всё, что он бьёт, обязано быть внутри.
+    contacts = [b.heard for s in strikes for b in s.beats if b.role == "contact"]
+    assert all(start < t < end for t in contacts), contacts
+
+
 def test_no_track_runs_out_of_headroom():
     """Ограничителя в сведении нет намеренно, значит запас проверяется замером.
     У дорожки без счёта номер не приглушён постоянно, и сумма с ризом однажды
