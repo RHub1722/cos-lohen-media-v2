@@ -132,3 +132,42 @@ def test_no_cue_lands_before_its_file_starts(real):
     for anchor in ANCHORS.values():
         for cue in shift(first, anchor.start_at(0.25)):
             assert cue.t >= 0
+
+
+# --- собранные файлы ---------------------------------------------------------
+
+import subprocess  # noqa: E402
+
+from src.measure import peak_db  # noqa: E402
+
+OUT = ROOT / "output"
+STAGE = [OUT / f"stage_cues_{k}.wav" for k in ("laugh", "picture", "titles")]
+BUILT = pytest.mark.skipif(not all(p.exists() for p in STAGE),
+                           reason="сначала python src/render_cues.py")
+
+
+def _mean_db(path: Path, start: float, length: float) -> float:
+    """Средний уровень окна. Цифровая тишина даёт около -91 dB и ниже."""
+    done = subprocess.run(
+        ["ffmpeg", "-v", "info", "-ss", f"{start:.4f}", "-t", f"{length:.4f}",
+         "-i", str(path), "-af", "volumedetect", "-f", "null", "-"],
+        capture_output=True, text=True)
+    for line in done.stderr.splitlines():
+        if "mean_volume:" in line:
+            return float(line.split("mean_volume:")[1].split("dB")[0].strip())
+    raise AssertionError(f"volumedetect не дал средний уровень для {path}")
+
+
+@BUILT
+@pytest.mark.parametrize("path", STAGE, ids=lambda p: p.stem)
+def test_the_silence_between_words_is_not_digital_silence(path):
+    """Наушник на цифровой тишине уходит в энергосбережение, и первое слово
+    после паузы приходит обрезанным. Между шестью словами паузы по 4-10 с."""
+    assert _mean_db(path, 8.0, 4.0) > -85.0
+
+
+@BUILT
+@pytest.mark.parametrize("path", STAGE, ids=lambda p: p.stem)
+def test_the_floor_stays_far_under_the_words(path):
+    """Подложка обязана быть неслышной: она страховка, а не звук."""
+    assert peak_db(path) - _mean_db(path, 8.0, 4.0) > 50.0

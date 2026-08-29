@@ -27,6 +27,7 @@ import argparse
 import json
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -38,6 +39,7 @@ for stream in (sys.stdout, sys.stderr):
 from src.cues import (ANCHORS, Cue, CueError, all_cues,  # noqa: E402
                       first_cues, lengths_of, resolve_overlaps, shift,
                       track_plan)
+from src.measure import peak_db  # noqa: E402
 from src.models import Timeline  # noqa: E402
 from src.movements import load_movements, resolve_times  # noqa: E402
 from src.peaks import peak_offsets  # noqa: E402
@@ -52,6 +54,20 @@ ROOT = Path(__file__).resolve().parents[1]
 # 0.15-0.30 (SBC 0.15-0.25, AAC 0.15-0.20, aptX 0.08-0.15). Настоящее число
 # даёт один замер, порядок в листе ориентиров.
 CHAIN = 0.25
+
+# Подложка под тишиной. Перенесено из src/render_count.py, где то же сделано
+# для дорожки ризов: «наушники на тишине уходят в энергосбережение — первый
+# риз пришёл бы обрезанным или не пришёл бы вовсе». Здесь между шестью словами
+# паузы по 4-10 секунд, то есть болезнь та же.
+#
+# Оговорка оттуда переносится вместе с решением: это страховка, а не
+# доказанное лечение, и проверяется только на его наушнике.
+FLOOR_DB = -60.0
+
+# Амплитуда генератора до приведения. Уровень ставится ЗАМЕРОМ, а не верой в
+# этот параметр: цветной фильтр anoisesrc меняет пик непредсказуемо, и -60
+# «на глаз» может оказаться и -48, и -72.
+FLOOR_AMPLITUDE = 0.35
 
 # Провал номера под подсказкой в репетиционной дорожке. Глубоко: там важно
 # слово, а не микс, и это единственный файл, который зал никогда не услышит.
@@ -96,50 +112,82 @@ def duck_expression(cues: list[Cue], lengths: dict[str, float]) -> str:
     return f"1-({deepest})"
 
 
+def floor_track(work: Path, total: float) -> tuple[Path, float]:
+    """Розовый шум подо всей дорожкой и усиление до FLOOR_DB.
+
+    Возвращает файл и то, на сколько его поднять. Отдельным файлом, а не
+    фильтром на лету, потому что уровень выставляется замером пика, а
+    замерить можно только записанное.
+    """
+    path = work / "floor.wav"
+    done = subprocess.run(
+        ["ffmpeg", "-v", "error", "-y", "-f", "lavfi",
+         "-i", f"anoisesrc=d={total:.4f}:c=pink:r=48000:a={FLOOR_AMPLITUDE}",
+         "-ac", "1", "-c:a", "pcm_s24le", str(path)],
+        capture_output=True, text=True)
+    if done.returncode:
+        raise SystemExit(f"ffmpeg подложка: {done.stderr[-1500:]}")
+    return path, FLOOR_DB - peak_db(path)
+
+
 def render(cues: list[Cue], out: Path, total: float, assets: Path,
-           bed: Path | None, channels: int = 2) -> None:
+           bed: Path | None, channels: int = 2, floor: bool = False) -> None:
     """Собирает дорожку: слова через adelay, при наличии — поверх номера.
 
     channels=1 для сценической: она едет в один наушник, второе ухо обязано
     слышать зал. Моно и вдвое меньше файл на телефоне.
+
+    floor=True тоже только для сценической: подложка нужна там, где дорожка
+    идёт по Bluetooth и подолгу молчит. У репетиционной под словами играет
+    номер, тишины нет вовсе, и подложка была бы мусором в файле.
     """
     if not cues:
         raise SystemExit("ни одной подсказки — нечего собирать")
 
     lengths = lengths_of(assets, [c.word for c in cues], ffprobe_duration)
-    inputs: list[str] = []
-    if bed is not None:
-        inputs += ["-i", str(bed)]
-    for cue in cues:
-        inputs += ["-i", str(assets / f"cues/cue_{cue.word}.wav")]
 
-    base = 1 if bed is not None else 0
-    parts = []
-    labels = []
-    for i, cue in enumerate(cues):
-        ms = int(round(cue.t * 1000.0))
-        parts.append(f"[{base + i}:a]adelay={ms}|{ms},"
-                     f"volume={CUE_GAIN_DB}dB[c{i}]")
-        labels.append(f"[c{i}]")
+    with tempfile.TemporaryDirectory(prefix="cues_") as tmp:
+        work = Path(tmp)
+        inputs: list[str] = []
+        if bed is not None:
+            inputs += ["-i", str(bed)]
+        for cue in cues:
+            inputs += ["-i", str(assets / f"cues/cue_{cue.word}.wav")]
 
-    if bed is not None:
-        expr = duck_expression(cues, lengths)
-        parts.append(f"[0:a]volume='{expr}':eval=frame[bed]")
-        labels.insert(0, "[bed]")
+        base = 1 if bed is not None else 0
+        parts = []
+        labels = []
+        for i, cue in enumerate(cues):
+            ms = int(round(cue.t * 1000.0))
+            parts.append(f"[{base + i}:a]adelay={ms}|{ms},"
+                         f"volume={CUE_GAIN_DB}dB[c{i}]")
+            labels.append(f"[c{i}]")
 
-    n = len(labels)
-    parts.append("".join(labels) + f"amix=inputs={n}:normalize=0:"
-                 f"dropout_transition=0[mix]")
-    # Обрезка по длине номера обязательна: adelay продлевает поток, и последнее
-    # слово вытянуло бы файл за 60 с.
-    parts.append(f"[mix]atrim=0:{total:.4f},asetpts=N/SR/TB[out]")
+        if bed is not None:
+            expr = duck_expression(cues, lengths)
+            parts.append(f"[0:a]volume='{expr}':eval=frame[bed]")
+            labels.insert(0, "[bed]")
 
-    cmd = (["ffmpeg", "-v", "error", "-y"] + inputs
-           + ["-filter_complex", ";".join(parts), "-map", "[out]"]
-           + ["-ar", "48000", "-ac", str(channels), "-c:a", "pcm_s24le", str(out)])
-    done = subprocess.run(cmd, capture_output=True, text=True)
-    if done.returncode:
-        raise SystemExit(f"ffmpeg: {done.stderr[-1500:]}")
+        if floor:
+            path, gain = floor_track(work, total)
+            inputs += ["-i", str(path)]
+            parts.append(f"[{base + len(cues)}:a]volume={gain:.2f}dB[floor]")
+            labels.append("[floor]")
+
+        n = len(labels)
+        parts.append("".join(labels) + f"amix=inputs={n}:normalize=0:"
+                     f"dropout_transition=0[mix]")
+        # Обрезка по длине номера обязательна: adelay продлевает поток, и
+        # последнее слово вытянуло бы файл за 60 с.
+        parts.append(f"[mix]atrim=0:{total:.4f},asetpts=N/SR/TB[out]")
+
+        cmd = (["ffmpeg", "-v", "error", "-y"] + inputs
+               + ["-filter_complex", ";".join(parts), "-map", "[out]"]
+               + ["-ar", "48000", "-ac", str(channels),
+                  "-c:a", "pcm_s24le", str(out)])
+        done = subprocess.run(cmd, capture_output=True, text=True)
+        if done.returncode:
+            raise SystemExit(f"ffmpeg: {done.stderr[-1500:]}")
 
 
 def sheet(kept: list[Cue], dropped: list[Cue], first: list[Cue],
@@ -343,7 +391,7 @@ def main() -> int:
             print(f"  файл {cue.t:6.2f}  номер {cue.t + start_at:6.2f}  "
                   f"{cue.text:9} {cue.strike}")
         render(stage, path, tl.total_duration - start_at, assets, None,
-               channels=1)
+               channels=1, floor=True)
         made.append(path)
 
     text = sheet(kept, dropped, first, args.chain, strikes)
