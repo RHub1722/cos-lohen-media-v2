@@ -4,6 +4,7 @@
     python src/render_count.py                     # собрать все три дорожки
     python src/render_count.py --site --video      # копии для страницы и ролики
     python src/render_count.py --only riser        # одну дорожку по ключу
+    python src/render_count.py --cues             # подсказки в ухо, без номера
 
 Третий инструмент рядом с двумя от 5 августа, и задача у него другая. Слово
 подсказки стоит на доле и говорит, ЧТО делать. Цифра счёта идёт равномерно и
@@ -14,6 +15,10 @@
 уха, и только нарастающий шум без счёта вовсе. Чем они отличаются и почему —
 в TRACKS. Отдельные ролики нужны не странице (та переключает дорожки поверх
 одного видео), а телефону: положить в галерею и гонять без сайта и без сети.
+
+Четвёртый выход — `--cues`: подсказки БЕЗ номера, для случая, когда номер
+звучит из видео, а ризы идут в Bluetooth-наушник с телефона. Источника два,
+и это меняет сборку целиком: см. CUES_DIR.
 """
 
 from __future__ import annotations
@@ -396,6 +401,122 @@ def publish(keys) -> list[Path]:
     return out
 
 
+# ── подсказки отдельным файлом: в ухо поверх чистого видео ────────────────
+# Случай не тот, что у трёх дорожек страницы. Там номер и подсказки лежат в
+# одном файле и приходят из одного источника. Здесь номер идёт из видео, а
+# подсказки — из телефона в Bluetooth-наушник, и источника ДВА. Отсюда четыре
+# отличия, и каждое отвечает своей беде.
+#
+# Первое: номера в файле нет вовсе. Он придёт из видео, а вторая его копия в
+# ухе, да ещё с задержкой наушника, слышалась бы хлопком по каждому удару.
+#
+# Второе: файл моно. Наушник может быть один, и дорожка, разложенная по
+# каналам, в этом ухе замолчала бы наполовину или совсем.
+#
+# Третье: под тишиной лежит шум. От начала номера до первого риза 27.94 с
+# молчания, а наушники на тишине уходят в энергосбережение — первый риз
+# пришёл бы обрезанным или не пришёл бы вовсе. Это страховка, а не доказанное
+# лечение: проверяется только на его наушнике.
+#
+# Четвёртое: копий несколько, сдвинутых раньше. Bluetooth задерживает звук, и
+# величина зависит от кодека: SBC даёт 150-250 мс, AAC 150-200, aptX 80-150.
+# Своей он не знает, поэтому выбирает ухом из трёх.
+CUES_DIR = ROOT / "output" / "cues"
+CUES_BITRATE = "128k"
+
+# Уровень по ПИКУ, а не RISER_DB: те -9 dB существовали, чтобы не задавить
+# номер, которого в этом файле нет. Не ноль — AAC на сжатии перебирает пик.
+CUES_PEAK_DB = -2.0
+
+# Пол под тишиной. При громкости, на которой риз слышно поверх комнаты, это
+# порядка 25 dB SPL — тише, чем сама тихая комната.
+CUES_FLOOR_DB = -60.0
+
+# Номер тихим фоном в сверочной копии. Она не для тренировки: две копии одного
+# звука с расхождением слышны как хлопок, и это самый точный слуховой признак
+# времени, какой есть у человека. По ней ловится и промах пуска, и задержка.
+CUES_GHOST_DB = -24.0
+
+CUES_LAGS = (0, 100, 200)
+
+
+def shift_rows(rows: list[dict], lag_ms: int) -> list[dict]:
+    """Ризы, сдвинутые РАНЬШЕ на задержку наушника.
+
+    Сдвигается содержимое, а длина файла остаётся 60.000 с: устройства
+    пускаются вместе, и файл обязан совпадать с видео по длине.
+    """
+    lag = lag_ms / 1000.0
+    out = []
+    for row in rows:
+        start = row["start"] - lag
+        if start < 0.0:
+            raise SystemExit("сдвиг на %d мс выносит риз %s за начало файла"
+                             % (lag_ms, row["strike"]))
+        out.append(dict(row, start=round(start, 4),
+                        peak=round(row["peak"] - lag, 4)))
+    return out
+
+
+def cue_name(lag_ms: int = 0, ghost: bool = False) -> str:
+    if ghost:
+        return "lohen_cues_riser_sync"
+    return "lohen_cues_riser" + ("_lag%d" % lag_ms if lag_ms else "")
+
+
+def build_cues(work: Path, rows: list[dict], lag_ms: int = 0,
+               ghost: bool = False) -> Path:
+    """Один файл подсказок: ризы на тишине, без номера, моно."""
+    layer = build_risers(work, shift_rows(rows, lag_ms))
+    gain = CUES_PEAK_DB - peak_db(layer)
+
+    floor = work / "floor.wav"
+    run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi",
+         "-i", "anoisesrc=d=%.4f:c=pink:r=48000:a=0.35" % TOTAL,
+         "-ac", "1", "-c:a", "pcm_s24le", str(floor)])
+    floor_gain = CUES_FLOOR_DB - peak_db(floor)
+
+    out = work / (cue_name(lag_ms, ghost) + ".wav")
+    inputs = ["-i", str(layer), "-i", str(floor)]
+    parts = ["[0:a]volume=%.2fdB[cue]" % gain,
+             "[1:a]volume=%.2fdB[floor]" % floor_gain]
+    mix = ["[cue]", "[floor]"]
+    if ghost:
+        inputs += ["-i", str(SOUNDTRACK)]
+        parts.append("[2:a]pan=mono|c0=0.5*c0+0.5*c1,volume=%.2fdB[ghost]"
+                     % CUES_GHOST_DB)
+        mix.append("[ghost]")
+    parts.append("".join(mix) + "amix=inputs=%d:normalize=0:"
+                 "dropout_transition=0,atrim=0:%.4f,asetpts=N/SR/TB[out]"
+                 % (len(mix), TOTAL))
+    # Шестнадцать бит, а не двадцать четыре: файл едет в телефон, и лишний
+    # разряд там нечем ни воспроизвести, ни услышать.
+    run(["ffmpeg", "-v", "error", "-y"] + inputs
+        + ["-filter_complex", ";".join(parts), "-map", "[out]",
+           "-ar", "48000", "-ac", "1", "-c:a", "pcm_s16le", str(out)])
+    return out
+
+
+def publish_cues(made: list[Path], keep_wav: str = "") -> list[Path]:
+    """Готовые файлы в output/cues: m4a всем, wav только основному.
+
+    Папка целиком копируется в телефон, поэтому лишних файлов в ней быть не
+    должно — четыре несжатых по 5.8 МБ там ни к чему.
+    """
+    CUES_DIR.mkdir(parents=True, exist_ok=True)
+    out = []
+    for src in made:
+        dst = CUES_DIR / (src.stem + ".m4a")
+        run(["ffmpeg", "-v", "error", "-y", "-i", str(src),
+             "-c:a", "aac", "-b:a", CUES_BITRATE, "-ac", "1", str(dst)])
+        out.append(dst)
+        if src.stem == keep_wav:
+            wav = CUES_DIR / src.name
+            wav.write_bytes(src.read_bytes())
+            out.append(wav)
+    return out
+
+
 # ── офлайн-ролики для планшета ────────────────────────────────────────────
 # Кладутся в галерею и гоняются без сайта и без сети. Поэтому картинка берётся
 # из МАСТЕРА и жмётся один раз, а не пережимается из сжатой копии страницы:
@@ -583,6 +704,10 @@ def main() -> int:
                     help="два ролика для планшета: весь номер и только бой. "
                          "Картинка из мастера, жмётся один раз. По умолчанию "
                          "со звуком дорожки riser")
+    ap.add_argument("--cues", action="store_true",
+                    help="отдельные файлы подсказок для телефона: только "
+                         "ризы, без номера, моно, плюс копии со сдвигом под "
+                         "задержку Bluetooth")
     ap.add_argument("--only", default="",
                     help="собрать одну дорожку по ключу: %s"
                          % ", ".join(t["key"] for t in TRACKS))
@@ -650,6 +775,15 @@ def main() -> int:
         build_offline(args.offline, "lohen_%s_full" % args.offline, 0.0, TOTAL)
         build_offline(args.offline, "lohen_%s_fight" % args.offline, a, b)
         print("  лежат в %s" % OFFLINE_DIR)
+
+    if args.cues:
+        print("подсказки отдельным файлом — номера в них нет, он придёт из видео:")
+        made = [build_cues(work, rows, lag_ms=lag) for lag in CUES_LAGS]
+        made.append(build_cues(work, rows, ghost=True))
+        for path in publish_cues(made, keep_wav=cue_name()):
+            print("  %-30s %.2f МБ  пик %.2f dBFS"
+                  % (path.name, path.stat().st_size / 1e6, peak_db(path)))
+        print("  лежат в %s" % CUES_DIR)
     return 0
 
 

@@ -7,8 +7,9 @@ import numpy as np
 import pytest
 
 from src.counting import STEP, WORDS
-from src.render_count import (DUCK_DB, GAP, NUMERALS, OUT_DIR, SHEET,
-                              SOUNDTRACK, TAKE, TRACKS, track_path)
+from src.render_count import (CUES_DIR, CUES_LAGS, CUES_PEAK_DB, DUCK_DB,
+                              GAP, NUMERALS, OUT_DIR, SHEET, SOUNDTRACK, TAKE,
+                              TRACKS, cue_name, shift_rows, track_path)
 
 
 def probe(path):
@@ -297,3 +298,186 @@ def test_every_contact_of_the_number_gets_a_riser():
            if not any(abs(t - p) < 0.01 for p in peaks_of_risers)])
     assert len(contacts) == 8
     assert skipped == pytest.approx([44.9757], abs=0.001), skipped
+
+
+def scenario_strikes():
+    """Доли номера из сценария — тот же источник, что у сборки."""
+    from src.models import Timeline
+    from src.movements import load_movements, resolve_times
+    from src.peaks import peak_offsets
+    from src.render_count import ROOT
+    from src.strikes import load_strikes, resolve_strikes
+
+    tl = Timeline.load(ROOT / "scenario/timeline.json")
+    peaks = peak_offsets(ROOT / "assets",
+                         sorted({e.asset for e in tl.events if e.stem == "sfx"}))
+    moves = [m.id for m in resolve_times(
+        load_movements(ROOT / "scenario/movements.json"), tl)]
+    return resolve_strikes(
+        load_strikes(ROOT / "scenario/strikes.json"), tl, peaks, moves)
+
+
+# ── подсказки отдельным файлом ────────────────────────────────────────────
+# Файл едет в телефон и играет ПОВЕРХ чистого видео, то есть источника два.
+# Проверяется ровно то, что от этого ломается: чтобы номера в файле не было
+# (вторая его копия в ухе слышалась бы хлопком), чтобы файл был моно (наушник
+# может быть один), чтобы поток не замолкал на 28 секунд до первого риза, и
+# чтобы сдвинутые копии были сдвинуты ровно на обещанное.
+
+def mono_of(path, t0=0.0, t1=60.0, sr=48000):
+    raw = subprocess.run(
+        ["ffmpeg", "-v", "error", "-ss", "%.4f" % t0, "-t", "%.4f" % (t1 - t0),
+         "-i", str(path), "-ac", "1", "-ar", str(sr), "-f", "f32le", "-"],
+        capture_output=True).stdout
+    return np.frombuffer(raw, dtype=np.float32)
+
+
+def rms_db(x):
+    return 20 * np.log10(np.sqrt((x.astype(np.float64) ** 2).mean()) + 1e-12)
+
+
+def riser_end(x, t, sr=48000, frame=0.001, floor_db=-40.0):
+    """Где риз обрывается: конец последнего громкого кадра у контакта.
+
+    Мерить ВЕРШИНУ нельзя, и это проверено: огибающая pow(t/length, 2.2) у
+    самого верха пологая — за последние 100 мс она набирает всего 1.6 dB, а
+    разброс розового шума внутри риза больше этого. Максимум там гуляет на
+    полтора десятка миллисекунд и мерилом быть не может.
+
+    Обрыв же настоящий: с -7 dB до -74 за один кадр. Сетка кадров привязана
+    к самому контакту, иначе мерилом станет квантование, а не файл. Окно
+    после контакта короткое: следующий риз может начаться сразу, как у
+    вспышки 3, где второй начинается ровно в первый.
+    """
+    n = int(frame * sr)
+    k = int(round(t * sr))
+    before, after = n * int(0.4 / frame), n * int(0.05 / frame)
+    seg = x[k - before:k + after]
+    seg = seg[:len(seg) // n * n].reshape(-1, n)
+    rms = 20 * np.log10(np.sqrt((seg.astype(np.float64) ** 2).mean(axis=1))
+                        + 1e-12)
+    loud = np.flatnonzero(rms > floor_db)
+    assert loud.size, "вокруг %.3f с риза нет вовсе" % t
+    return (k - before + (int(loud[-1]) + 1) * n) / sr
+
+
+@pytest.fixture(scope="module")
+def cue_rows():
+    from src.counting import risers
+    return risers(scenario_strikes())
+
+
+@pytest.fixture(scope="module")
+def cues():
+    path = CUES_DIR / (cue_name() + ".m4a")
+    if not path.exists():
+        pytest.skip("нет %s: python src/render_count.py --cues" % path.name)
+    return mono_of(path)
+
+
+def test_shifting_the_cues_earlier_moves_the_whole_riser(cue_rows):
+    """Сдвиг под задержку наушника двигает НАЧАЛО и ВЕРШИНУ вместе.
+
+    Двигать одну вершину значило бы растянуть риз: он кончается в контакт, и
+    длина у него не украшение, а время на замах.
+    """
+    moved = shift_rows(cue_rows, 200)
+    assert len(moved) == len(cue_rows)
+    for was, now in zip(cue_rows, moved):
+        assert now["peak"] == pytest.approx(was["peak"] - 0.2, abs=1e-6)
+        assert now["start"] == pytest.approx(was["start"] - 0.2, abs=1e-6)
+
+
+def test_a_shift_that_runs_off_the_front_is_refused(cue_rows):
+    """Сдвиг больше, чем время до первого риза, вынес бы его за начало файла.
+    Молча обрезать нельзя: пропала бы подсказка, а файл выглядел бы целым."""
+    with pytest.raises(SystemExit):
+        shift_rows(cue_rows, int(min(r["start"] for r in cue_rows) * 1000) + 1)
+
+
+def test_the_cue_file_carries_no_number_at_all(cues):
+    """Номер придёт из видео. Вторая его копия в ухе, да ещё с задержкой
+    Bluetooth, слышалась бы хлопком по каждому удару."""
+    for a, b in ((2.0, 6.0), (12.0, 16.0), (22.0, 26.0), (50.0, 56.0)):
+        here = rms_db(cues[int(a * 48000):int(b * 48000)])
+        there = rms_db(mono_of(SOUNDTRACK, a, b))
+        assert here < -65.0, "на %.0f-%.0f с в подсказках %+.1f dB" % (a, b, here)
+        assert there - here > 40.0, (
+            "на %.0f-%.0f с номер всего на %+.1f dB громче подсказок"
+            % (a, b, there - here))
+
+
+def test_the_cue_file_never_falls_to_digital_silence(cues):
+    """От начала до первого риза 27.9 с молчания, а наушники на тишине уходят
+    в энергосбережение — первый риз пришёл бы обрезанным. Под тишиной лежит
+    шум, и проверяется, что он лежит ВЕЗДЕ, а не только в начале."""
+    quiet = min(rms_db(cues[i * 48000:(i + 1) * 48000]) for i in range(60))
+    assert quiet > -80.0, "самая тихая секунда %+.1f dB" % quiet
+    assert np.abs(cues).min() >= 0.0 and (cues != 0).any()
+
+
+def test_every_riser_is_in_the_cue_file_and_stops_on_the_contact(cues, cue_rows):
+    """Семь ризов — по одному на контакт, кроме встречного удара вспышки 4.
+    Риз обязан кончиться В контакт: он и есть подсказка «сейчас»."""
+    for row in cue_rows:
+        end = riser_end(cues, row["peak"])
+        assert end == pytest.approx(row["peak"], abs=0.010), (
+            "%s: обрыв в %.3f вместо %.3f" % (row["strike"], end, row["peak"]))
+        loud = rms_db(cues[int((row["peak"] - 0.4) * 48000):
+                           int(row["peak"] * 48000)])
+        assert loud > -25.0, "%s: риз всего %+.1f dB" % (row["strike"], loud)
+
+
+def test_the_lag_copies_are_earlier_by_exactly_the_lag(cues, cue_rows):
+    """Bluetooth задерживает звук, копии сдвинуты раньше на 100 и 200 мс.
+    Сдвиг замеряется по вершинам, а не по байтам: шум внутри риза при каждой
+    сборке новый, и совпадать копии не обязаны."""
+    for lag in CUES_LAGS:
+        if not lag:
+            continue
+        path = CUES_DIR / (cue_name(lag) + ".m4a")
+        if not path.exists():
+            pytest.skip("нет %s" % path.name)
+        x = mono_of(path)
+        for row in cue_rows:
+            want = row["peak"] - lag / 1000.0
+            assert riser_end(x, want) == pytest.approx(want, abs=0.010), (
+                "%s в копии lag%d" % (row["strike"], lag))
+
+
+def test_the_cue_files_are_mono_because_the_earbud_may_be_one():
+    """Дорожка, разложенная по каналам, в одном ухе замолчала бы наполовину."""
+    for path in sorted(CUES_DIR.glob("lohen_cues_*")) if CUES_DIR.exists() else []:
+        got = subprocess.run(
+            ["ffprobe", "-v", "error", "-select_streams", "a:0",
+             "-show_entries", "stream=channels", "-of", "csv=p=0", str(path)],
+            capture_output=True, text=True).stdout.strip()
+        assert got == "1", "%s: %s канала" % (path.name, got)
+
+
+def test_the_sync_copy_carries_the_number_and_the_plain_one_does_not(cues):
+    """Сверочная копия нужна не для тренировки, а чтобы поймать расхождение:
+    две копии одного звука с задержкой слышны как хлопок."""
+    path = CUES_DIR / (cue_name(ghost=True) + ".m4a")
+    if not path.exists():
+        pytest.skip("нет %s" % path.name)
+    ghost = mono_of(path)
+    for a, b in ((2.0, 6.0), (22.0, 26.0)):
+        lo = rms_db(cues[int(a * 48000):int(b * 48000)])
+        hi = rms_db(ghost[int(a * 48000):int(b * 48000)])
+        assert hi - lo > 20.0, (
+            "на %.0f-%.0f с сверочная копия громче основной всего на %+.1f dB"
+            % (a, b, hi - lo))
+        assert hi < CUES_PEAK_DB - 20.0, (
+            "номер в сверочной копии на %+.1f dB — он перекроет подсказку" % hi)
+
+
+def test_the_cue_files_keep_headroom():
+    """Целились в -2 dBFS с запасом под перебор кодировщика."""
+    if not CUES_DIR.exists():
+        pytest.skip("нет %s: python src/render_count.py --cues" % CUES_DIR)
+    for path in sorted(CUES_DIR.glob("lohen_cues_*")):
+        peak = 20 * np.log10(np.abs(mono_of(path)).max())
+        assert peak < -1.0, "%s: %.2f dBFS" % (path.name, peak)
+        assert peak > -4.0, "%s: %.2f dBFS, подсказку будет не слышно" % (
+            path.name, peak)
