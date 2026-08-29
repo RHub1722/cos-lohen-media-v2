@@ -69,13 +69,13 @@ def peak_db(path: str | Path) -> float:
     и loudnorm сделал бы короткое «три» громче длинного «четыре», хотя в
     счёте они обязаны звучать одинаково.
     """
-    done = subprocess.run(
+    result = subprocess.run(
         ["ffmpeg", "-v", "info", "-i", str(path),
          "-af", "volumedetect", "-f", "null", "-"],
         capture_output=True, text=True)
-    if done.returncode:
-        raise SystemExit("ffmpeg: %s" % done.stderr[-1500:])
-    for line in done.stderr.splitlines():
+    if result.returncode:
+        raise SystemExit(f"ffmpeg: {result.stderr[-1500:]}")
+    for line in result.stderr.splitlines():
         if "max_volume:" in line:
             return float(line.split("max_volume:")[1].split("dB")[0].strip())
-    raise SystemExit("volumedetect не вернул пик для %s" % path)
+    raise SystemExit(f"volumedetect не вернул пик для {path}")
