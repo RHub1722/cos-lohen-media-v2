@@ -35,8 +35,9 @@ for stream in (sys.stdout, sys.stderr):
     if hasattr(stream, "reconfigure"):
         stream.reconfigure(encoding="utf-8", errors="replace")
 
-from src.cues import (ANCHORS, Cue, all_cues, first_cues,  # noqa: E402
-                      lengths_of, resolve_overlaps, shift, track_plan)
+from src.cues import (ANCHORS, Cue, CueError, all_cues,  # noqa: E402
+                      first_cues, lengths_of, resolve_overlaps, shift,
+                      track_plan)
 from src.models import Timeline  # noqa: E402
 from src.movements import load_movements, resolve_times  # noqa: E402
 from src.peaks import peak_offsets  # noqa: E402
@@ -292,6 +293,14 @@ def main() -> int:
                     help="прямое переопределение суммы, в обход якоря и цепочки")
     args = ap.parse_args()
 
+    # План дорожек считается ДО первого рендера. Иначе неверная пара аргументов
+    # обнаружится через минуту сборки репетиционной дорожки, а не сразу. И
+    # CueError ловится здесь: пользователю нужно сообщение, а не трассировка.
+    try:
+        plan = track_plan(args.anchor, args.chain, args.start_at)
+    except CueError as err:
+        raise SystemExit(str(err))
+
     tl = Timeline.load(args.scenario)
     assets = Path(args.assets)
     # Только эффекты: у долей опорами стоят удары и взмахи, а замер пика на
@@ -325,7 +334,7 @@ def main() -> int:
            master)
 
     made: list[Path] = []
-    for anchor, start_at in track_plan(args.anchor, args.chain, args.start_at):
+    for anchor, start_at in plan:
         stage = shift(first, start_at)
         path = out / f"stage_cues_{anchor.key}.wav"
         print(f"\n{anchor.key}: ловить {anchor.catch} ({anchor.sense}), "

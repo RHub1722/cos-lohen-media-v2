@@ -698,9 +698,12 @@ Expected: PASS.
 - [ ] **Step 9: Коммит**
 
 ```bash
-git add src/render_cues.py output/cue_sheet.md
+git add src/render_cues.py
 git commit -m "cues: три дорожки под три якоря, цепочка отдельным числом"
 ```
+
+`output/cue_sheet.md` в коммит НЕ идёт: вся папка `output/` не версионируется как
+воспроизводимая, и лист там никогда не отслеживался.
 
 ---
 
