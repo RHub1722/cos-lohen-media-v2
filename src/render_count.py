@@ -33,6 +33,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.counting import (STEP, WORDS, assign, collisions,  # noqa: E402
                           repeated_digits, risers)
+from src.measure import peak_db  # noqa: E402
 from src.models import Timeline  # noqa: E402
 from src.movements import load_movements, resolve_times  # noqa: E402
 from src.render_rehearsal import build_scenes  # noqa: E402
@@ -154,21 +155,6 @@ def run(cmd: list[str]) -> str:
     if done.returncode:
         raise SystemExit("ffmpeg: %s" % done.stderr[-1500:])
     return done.stderr
-
-
-def peak_db(path: Path) -> float:
-    """Пик файла в dBFS. Нужен, чтобы привести все десять к одному уровню.
-
-    Приведение по ПИКУ, а не по громкости: числительные разной длины, и
-    loudnorm сделал бы короткое «три» громче длинного «четыре», хотя в счёте
-    они обязаны звучать одинаково.
-    """
-    err = run(["ffmpeg", "-v", "info", "-i", str(path),
-               "-af", "volumedetect", "-f", "null", "-"])
-    for line in err.splitlines():
-        if "max_volume:" in line:
-            return float(line.split("max_volume:")[1].split("dB")[0].strip())
-    raise SystemExit("volumedetect не вернул пик для %s" % path)
 
 
 def window(a: float, b: float) -> float:

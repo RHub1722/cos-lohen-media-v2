@@ -6,6 +6,7 @@ import json
 import re
 import subprocess
 from dataclasses import dataclass
+from pathlib import Path
 
 _LOUDNORM_JSON = re.compile(r"\{[^{}]*\"input_i\"[^{}]*\}", re.S)
 
@@ -55,3 +56,26 @@ def measure_duration(path: str) -> float:
         "-of", "default=nw=1:nk=1", path,
     ], capture_output=True, text=True)
     return float(result.stdout.strip())
+
+
+def peak_db(path: str | Path) -> float:
+    """Пик файла в dBFS через volumedetect.
+
+    Живёт здесь, а не в сборщике счёта: замер готового файла — ровно то, для
+    чего модуль существует, а теперь пик понадобился и сборщику подсказок,
+    чтобы выставить уровень подложки.
+
+    Приведение по ПИКУ, а не по громкости: у счёта числительные разной длины,
+    и loudnorm сделал бы короткое «три» громче длинного «четыре», хотя в
+    счёте они обязаны звучать одинаково.
+    """
+    done = subprocess.run(
+        ["ffmpeg", "-v", "info", "-i", str(path),
+         "-af", "volumedetect", "-f", "null", "-"],
+        capture_output=True, text=True)
+    if done.returncode:
+        raise SystemExit("ffmpeg: %s" % done.stderr[-1500:])
+    for line in done.stderr.splitlines():
+        if "max_volume:" in line:
+            return float(line.split("max_volume:")[1].split("dB")[0].strip())
+    raise SystemExit("volumedetect не вернул пик для %s" % path)
