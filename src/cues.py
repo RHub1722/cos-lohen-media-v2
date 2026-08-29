@@ -123,6 +123,29 @@ def anchor_by(key: str) -> Anchor:
     return ANCHORS[key]
 
 
+def track_plan(key: str | None, chain: float,
+               start_at: float | None = None) -> list[tuple[Anchor, float]]:
+    """Какие дорожки собирать и с каким сдвигом каждую.
+
+    Живёт здесь, а не в main, потому что это и есть та политика, ради которой
+    всё затевалось: якорь плюс цепочка. Проверять её надо тестом, а не глазами
+    по выводу программы.
+
+    start_at переопределяет всю сумму — им пользуются, когда сдвиг добыт
+    замером на площадке и считать его заново не из чего.
+    """
+    if start_at is not None and key is None:
+        raise CueError("start_at имеет смысл только с одним якорем: "
+                       "иначе все дорожки вышли бы одинаковыми")
+    keys = [key] if key else sorted(ANCHORS)
+    out = []
+    for k in keys:
+        anchor = anchor_by(k)
+        out.append((anchor, start_at if start_at is not None
+                    else anchor.start_at(chain)))
+    return out
+
+
 @dataclass(frozen=True)
 class Cue:
     """Одно слово в одну точку времени.

@@ -10,7 +10,8 @@ from pathlib import Path
 
 import pytest
 
-from src.cues import ANCHORS, CueError, anchor_by, first_cues, shift
+from src.cues import (ANCHORS, CueError, anchor_by, first_cues, shift,
+                      track_plan)
 from src.models import Timeline
 from src.movements import load_movements, resolve_times
 from src.peaks import peak_offsets
@@ -72,6 +73,40 @@ def test_every_anchor_says_what_to_catch():
     for anchor in ANCHORS.values():
         assert anchor.catch.strip()
         assert anchor.sense in ("ухо", "глаз")
+
+
+def test_the_key_matches_the_slot_it_sits_in():
+    """Ключ словаря и поле объекта — два места для одного имени. Опечатку в
+    одном из них не поймает больше ничто."""
+    for key, anchor in ANCHORS.items():
+        assert anchor.key == key
+
+
+# --- какие дорожки собирать --------------------------------------------------
+
+
+def test_without_an_anchor_every_track_is_built():
+    """По умолчанию собираются все три: чем ловить — вопрос к площадке."""
+    plan = track_plan(None, 0.25)
+    assert [a.key for a, _ in plan] == ["laugh", "picture", "titles"]
+    assert [s for _, s in plan] == [1.11, 0.45, 5.45]
+
+
+def test_one_anchor_builds_one_track():
+    assert [a.key for a, _ in track_plan("titles", 0.25)] == ["titles"]
+
+
+def test_an_explicit_start_overrides_the_whole_sum():
+    """Число, добытое замером на площадке, важнее любого расчёта."""
+    (anchor, start), = track_plan("laugh", 0.25, start_at=0.95)
+    assert anchor.key == "laugh"
+    assert start == 0.95
+
+
+def test_an_explicit_start_without_an_anchor_is_refused():
+    """Три дорожки с одним сдвигом — это три одинаковых файла."""
+    with pytest.raises(CueError, match="только с одним якорем"):
+        track_plan(None, 0.25, start_at=0.95)
 
 
 # --- на настоящих действиях --------------------------------------------------
