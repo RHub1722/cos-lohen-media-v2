@@ -1,17 +1,24 @@
-"""Две дорожки голосовых подсказок и печатный лист ориентиров.
+"""Дорожки голосовых подсказок и печатный лист ориентиров.
 
-    python src/render_cues.py
-    python src/render_cues.py --start-at 0.95      # свой замер промаха старта
+    python src/render_cues.py                    # все три якоря
+    python src/render_cues.py --chain 0.31       # свой замер цепочки
+    python src/render_cues.py --anchor laugh     # только один якорь
 
 Что получается:
 
-    output/rehearsal_cues_v2.wav   номер + голос поверх, для репетиции дома
-    output/stage_cues_v2.wav       только подсказки, для наушника на сцене
-    output/cue_sheet.md            печатный лист: что слышно и за сколько
+    output/rehearsal_cues_v2.wav    номер + голос поверх, для репетиции дома
+    output/stage_cues_laugh.wav     в наушник, ловить первый смех
+    output/stage_cues_picture.wav   в наушник, ловить появление картинки
+    output/stage_cues_titles.wav    в наушник, ловить смену титров
+    output/cue_sheet.md             печатный лист: что слышно и за сколько
+
+Три дорожки, потому что play жмёт помощник за кулисами, а не исполнитель, и
+чем он поймает старт — вопрос к площадке, а не к расчёту. Различаются только
+сдвигом: слова и отбор считаются ДО него и потому общие.
 
 Почему сценическая дорожка не содержит слова в точку контакта — в docstring
-`src/cues.py`. Коротко: старт телефона нажимается рукой, промах 0.25 с
-систематически, и слово в точку при таком промахе вредит.
+`src/cues.py`. Коротко: старт нажимается рукой, и слово в точку при промахе
+вредит.
 """
 
 from __future__ import annotations
@@ -28,8 +35,8 @@ for stream in (sys.stdout, sys.stderr):
     if hasattr(stream, "reconfigure"):
         stream.reconfigure(encoding="utf-8", errors="replace")
 
-from src.cues import (Cue, all_cues, first_cues, lengths_of,  # noqa: E402
-                      resolve_overlaps, shift)
+from src.cues import (ANCHORS, Cue, all_cues, first_cues,  # noqa: E402
+                      lengths_of, resolve_overlaps, shift, track_plan)
 from src.models import Timeline  # noqa: E402
 from src.movements import load_movements, resolve_times  # noqa: E402
 from src.peaks import peak_offsets  # noqa: E402
@@ -37,11 +44,13 @@ from src.strikes import load_strikes, resolve_strikes  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 
-# Куда упирается ручной старт. По умолчанию исполнитель жмёт play на первом
-# звуке номера — смех на 0.70, — и человеческая реакция добавляет ещё 0.25 с.
-# Оба числа заглушки: настоящее даёт один замер, описанный в листе ориентиров.
-SYNC_ON = 0.70
-REACTION = 0.25
+# Задержка ЦЕПОЧКИ: нажатие кнопки плюс радиоканал до наушника. Свойство
+# железа, одно на все три якоря, и потому отдельное от них.
+#
+# Заглушка: нажатие около 0.05 плюс Bluetooth, который по кодеку даёт
+# 0.15-0.30 (SBC 0.15-0.25, AAC 0.15-0.20, aptX 0.08-0.15). Настоящее число
+# даёт один замер, порядок в листе ориентиров.
+CHAIN = 0.25
 
 # Провал номера под подсказкой в репетиционной дорожке. Глубоко: там важно
 # слово, а не микс, и это единственный файл, который зал никогда не услышит.
@@ -132,15 +141,15 @@ def render(cues: list[Cue], out: Path, total: float, assets: Path,
         raise SystemExit(f"ffmpeg: {done.stderr[-1500:]}")
 
 
-def sheet(kept: list[Cue], dropped: list[Cue], stage: list[Cue],
-          start_at: float, strikes) -> str:
+def sheet(kept: list[Cue], dropped: list[Cue], first: list[Cue],
+          chain: float, strikes) -> str:
     """Печатный лист. Пишется здесь, а не в шаблоне: он весь из чисел."""
     contacts = {}
     for strike in strikes:
-        first = min((b.heard for b in strike.beats if b.role == "contact"),
-                    default=None)
-        if first is not None:
-            contacts[strike.id] = first
+        earliest = min((b.heard for b in strike.beats if b.role == "contact"),
+                       default=None)
+        if earliest is not None:
+            contacts[strike.id] = earliest
 
     lines = [
         "# Лист ориентиров: когда наносить удары",
@@ -155,26 +164,45 @@ def sheet(kept: list[Cue], dropped: list[Cue], stage: list[Cue],
         "от покоя 0.3–0.6 с: к моменту контакта движение уже должно идти.",
         "Поэтому ориентир всегда стоит на подготовке, а не на попадании.",
         "",
-        "## Сценическая дорожка: одно слово на действие",
+        "## Три дорожки: чем ловить старт",
         "",
-        "`output/stage_cues_v2.wav` — в наушник с телефона. Слова в точку",
-        "контакта в ней нет намеренно: старт нажимается рукой, промах около",
-        "0.25 с, и слово в точку при таком промахе вредит. Контакт несёт сам",
-        "номер.",
+        "Play жмёт помощник за кулисами, а не исполнитель. Чем он поймает",
+        "начало номера — вопрос к площадке, поэтому собраны все три, а выбор",
+        "делается на месте и ДО выхода.",
         "",
-        "| слово | в номере | в файле | действие | до первого контакта |",
+        "| файл | ловить | чем | в номере | сдвиг |",
         "|---|---|---|---|---|",
     ]
-    for cue in stage:
-        c = contacts.get(cue.strike)
-        gap = f"{c - cue.t:.2f} с" if c is not None else "—"
-        lines.append(f"| **{cue.text}** | {cue.t:.2f} | "
-                     f"{max(0.0, cue.t - start_at):.2f} | {cue.strike} | {gap} |")
+    for anchor, start_at in track_plan(None, chain):
+        lines.append(f"| `stage_cues_{anchor.key}.wav` | {anchor.catch} | "
+                     f"{anchor.sense} | {anchor.t:.2f} | {start_at:.2f} |")
 
     lines += [
         "",
-        f"Файл сдвинут на {start_at:.2f} с: столько проходит от начала номера до",
-        "нажатия play. Число надо заменить своим — как замерить, ниже.",
+        f"Сдвиг = время якоря + реакция (ухо 0.16, глаз 0.20) + цепочка "
+        f"{chain:.2f}.",
+        "",
+        "Слова в точку контакта нет ни в одной намеренно: старт нажимается",
+        "рукой, и слово в точку при промахе вредит. Контакт несёт сам номер.",
+        "",
+        "**Рабочее окно старта — ±0.2 с.** При опоздании на 0.2 с у «пошёл»",
+        "остаётся 0.18 с опережения: подсказка сжимается, но помогает. При",
+        "0.38 с слово ложится ровно в контакт и начинает вредить.",
+        "",
+        "В начале каждой дорожки стоит щелчок. Услышал — канал жив и часы",
+        "пошли. Не услышал — Bluetooth оборвался, и подсказок не будет вовсе.",
+        "",
+        "## Слова и опережение",
+        "",
+        "| слово | в номере | действие | до первого контакта |",
+        "|---|---|---|---|",
+    ]
+    for cue in first:
+        c = contacts.get(cue.strike)
+        gap = f"{c - cue.t:.2f} с" if c is not None else "—"
+        lines.append(f"| **{cue.text}** | {cue.t:.2f} | {cue.strike} | {gap} |")
+
+    lines += [
         "",
         "## Репетиционная дорожка: все доли, какие влезли",
         "",
@@ -185,7 +213,8 @@ def sheet(kept: list[Cue], dropped: list[Cue], stage: list[Cue],
         "|---|---|---|---|",
     ]
     for cue in kept:
-        lines.append(f"| {cue.t:.2f} | **{cue.text}** | {cue.role} | {cue.strike} |")
+        lines.append(f"| {cue.t:.2f} | **{cue.text}** | {cue.role} | "
+                     f"{cue.strike} |")
 
     if dropped:
         lines += [
@@ -203,23 +232,35 @@ def sheet(kept: list[Cue], dropped: list[Cue], stage: list[Cue],
             "|---|---|---|---|",
         ]
         for cue in dropped:
-            lines.append(f"| {cue.t:.2f} | {cue.text} | {cue.role} | {cue.strike} |")
+            lines.append(f"| {cue.t:.2f} | {cue.text} | {cue.role} | "
+                         f"{cue.strike} |")
 
     lines += [
         "",
-        "## Как замерить свой промах старта",
+        "## Как замерить задержку цепочки",
         "",
-        "1. Включи номер в зале или на колонках, телефон с",
-        "   `stage_cues_v2.wav` — в руке.",
-        "2. Жми play на телефоне на первом звуке номера (смех, 0.70).",
-        "3. Пиши на диктофон второго устройства сразу и колонки, и наушник",
+        "Замер ОДИН на все три дорожки: мерится цепочка — нажатие плюс",
+        "радиоканал, — а она от якоря не зависит. В этом весь смысл того, что",
+        "якорь и цепочка считаются врозь.",
+        "",
+        "1. Включи номер в зале или на колонках, телефон помощника — в руке.",
+        "2. Возьми любую из трёх дорожек и жми play на её якоре.",
+        "3. Пиши на диктофон второго устройства сразу и зал, и наушник",
         "   (наушник поднеси к микрофону).",
-        "4. В записи найди смех и первое слово подсказки. Разница минус",
-        f"   {SYNC_ON:.2f} и есть твой промах.",
-        "5. Пересобери с ним: `python src/render_cues.py --start-at ЧИСЛО`.",
+        "4. В записи найди якорь и ЩЕЛЧОК в начале дорожки. Разница минус",
+        "   время якоря минус реакция и есть цепочка.",
+        "5. Пересобери с ней: `python src/render_cues.py --chain ЧИСЛО`.",
         "",
-        "Без этого замера сценическая дорожка стоит на заглушке",
-        f"{SYNC_ON:.2f} + {REACTION:.2f} = {SYNC_ON + REACTION:.2f} с.",
+        "Готовый инструмент для того же замера уже есть у дорожки ризов:",
+        "`output/cues/lohen_cues_riser_sync.m4a` кладёт номер тихим фоном, и",
+        "расхождение двух копий одного звука слышно как хлопок. Ею ловятся и",
+        "промах пуска, и задержка наушника разом.",
+        "",
+        f"Сейчас цепочка стоит на заглушке {chain:.2f} с.",
+        "",
+        "Задержка меняется при переподключении наушника: кодек",
+        "перевыбирается, и число становится другим. Мерить надо перед самым",
+        "выходом и после этого наушник не трогать.",
         "",
         "## Чего эти дорожки не заменяют",
         "",
@@ -243,8 +284,12 @@ def main() -> int:
     # иначе подсказки лягут поверх звука, которого на площадке не будет.
     ap.add_argument("--master", default=str(ROOT / "output" / "master_ru_fx.wav"))
     ap.add_argument("--out", default=str(ROOT / "output"))
-    ap.add_argument("--start-at", type=float, default=SYNC_ON + REACTION,
-                    help="время номера, в которое нажат play на телефоне")
+    ap.add_argument("--anchor", choices=sorted(ANCHORS), default=None,
+                    help="чем ловить старт; без него собираются все три")
+    ap.add_argument("--chain", type=float, default=CHAIN,
+                    help="задержка цепочки: нажатие плюс радиоканал")
+    ap.add_argument("--start-at", type=float, default=None,
+                    help="прямое переопределение суммы, в обход якоря и цепочки")
     args = ap.parse_args()
 
     tl = Timeline.load(args.scenario)
@@ -259,7 +304,7 @@ def main() -> int:
     every = all_cues(strikes)
     lengths = lengths_of(assets, [c.word for c in every], ffprobe_duration)
     kept, dropped = resolve_overlaps(every, lengths)
-    stage = shift(first_cues(strikes), args.start_at)
+    first = first_cues(strikes)
 
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -273,23 +318,29 @@ def main() -> int:
         for cue in dropped:
             print(f"  {cue.t:6.2f}  {cue.text:9} {cue.role:8} {cue.strike}")
 
-    print(f"\nсценическая: {len(stage)} слов, сдвиг {args.start_at:.2f} с")
-    for cue in stage:
-        print(f"  файл {cue.t:6.2f}  номер {cue.t + args.start_at:6.2f}  "
-              f"{cue.text:9} {cue.strike}")
-
     master = Path(args.master)
     if not master.exists():
         raise SystemExit(f"нет мастера {master}. Сначала python src/build.py")
-    render(kept, out / "rehearsal_cues_v2.wav", tl.total_duration, assets, master)
-    render(stage, out / "stage_cues_v2.wav",
-           tl.total_duration - args.start_at, assets, None, channels=1)
+    render(kept, out / "rehearsal_cues_v2.wav", tl.total_duration, assets,
+           master)
 
-    text = sheet(kept, dropped, first_cues(strikes), args.start_at, strikes)
+    made: list[Path] = []
+    for anchor, start_at in track_plan(args.anchor, args.chain, args.start_at):
+        stage = shift(first, start_at)
+        path = out / f"stage_cues_{anchor.key}.wav"
+        print(f"\n{anchor.key}: ловить {anchor.catch} ({anchor.sense}), "
+              f"сдвиг {start_at:.2f} с, {len(stage)} слов")
+        for cue in stage:
+            print(f"  файл {cue.t:6.2f}  номер {cue.t + start_at:6.2f}  "
+                  f"{cue.text:9} {cue.strike}")
+        render(stage, path, tl.total_duration - start_at, assets, None,
+               channels=1)
+        made.append(path)
+
+    text = sheet(kept, dropped, first, args.chain, strikes)
     (out / "cue_sheet.md").write_text(text, encoding="utf-8")
 
-    for name in ("rehearsal_cues_v2.wav", "stage_cues_v2.wav"):
-        path = out / name
+    for path in [out / "rehearsal_cues_v2.wav"] + made:
         print(f"\n{path}  {ffprobe_duration(path):.3f} с, "
               f"{path.stat().st_size / 1e6:.1f} МБ")
     print(f"{out / 'cue_sheet.md'}")
