@@ -505,7 +505,9 @@ def publish(made: list[Path]) -> list[Path]:
     out = []
     for src in made:
         key = src.stem.replace("stage_cues_", "")
-        dst = CUES_DIR / f"lohen_words_{key}.m4a"
+        # `lohen_stage_`, а не `lohen_words_`: слов внутри больше нет, там ризы.
+        # Имя, обещающее слова, отправило бы искать их на слух посреди номера.
+        dst = CUES_DIR / f"lohen_stage_{key}.m4a"
         done = subprocess.run(
             ["ffmpeg", "-v", "error", "-y", "-i", str(src),
              "-c:a", "aac", "-b:a", CUES_BITRATE, "-ac", "1", str(dst)],

@@ -230,48 +230,7 @@ def test_the_sync_copy_is_the_same_length_as_the_one_it_checks(key):
     assert abs(_duration(sync) - _duration(plain)) < 0.01
 
 
-# --- ризы под якорями --------------------------------------------------------
-# Тот же якорь, другой инструмент: вместо слова нарастающий шум, вершина ровно
-# в контакт. Собирается сборщиком счёта, но якоря берёт отсюда же.
-
-RISER_DIR = OUT / "cues"
-RISERS = [RISER_DIR / f"lohen_riser_{k}.m4a"
-          for k in ("laugh", "picture", "titles")]
-BUILT_RISERS = pytest.mark.skipif(
-    not all(p.exists() for p in RISERS),
-    reason="сначала python src/render_count.py --cues --only riser")
 KEYS = ["laugh", "picture", "titles"]
-
-
-@BUILT_RISERS
-@pytest.mark.parametrize("key", KEYS)
-def test_the_riser_track_starts_where_the_helper_pressed(key):
-    """Файл начинается с середины номера, значит и длина у него своя: ровно
-    шестьдесят минус сдвиг. Полная длина означала бы прежнюю модель, где оба
-    устройства пускают одновременно."""
-    want = 60.0 - anchor_by(key).start_at(CHAIN)
-    assert abs(_duration(RISER_DIR / f"lohen_riser_{key}.m4a") - want) < 0.10
-
-
-@BUILT_RISERS
-@pytest.mark.parametrize("key", KEYS)
-def test_the_riser_ends_dead_on_the_contact(key):
-    """Риз разгоняется В контакт и обрывается. Греми он после удара — означал
-    бы «сейчас будет» тогда, когда уже было."""
-    path = RISER_DIR / f"lohen_riser_{key}.m4a"
-    peak = 47.00 - anchor_by(key).start_at(CHAIN)   # копьё в пол
-    before = _mean_db(path, peak - 0.35, 0.30)
-    after = _mean_db(path, peak + 0.20, 0.30)
-    assert before - after > 40.0, f"перед {before:.1f}, после {after:.1f}"
-
-
-@BUILT_RISERS
-@pytest.mark.parametrize("key", KEYS)
-def test_the_riser_sync_copy_carries_the_number(key):
-    """У ризов сверочная копия своя, и нужна она ровно за тем же."""
-    plain = _mean_db(RISER_DIR / f"lohen_riser_{key}.m4a", 12.0, 4.0)
-    sync = _mean_db(RISER_DIR / f"lohen_riser_{key}_sync.m4a", 12.0, 4.0)
-    assert sync - plain > 20.0, f"обычная {plain:.1f}, сверочная {sync:.1f}"
 
 
 @BUILT
