@@ -36,9 +36,9 @@ for stream in (sys.stdout, sys.stderr):
     if hasattr(stream, "reconfigure"):
         stream.reconfigure(encoding="utf-8", errors="replace")
 
-from src.cues import (ANCHORS, Cue, CueError, all_cues,  # noqa: E402
-                      first_cues, lengths_of, resolve_overlaps, shift,
-                      track_plan)
+from src.cues import (ANCHORS, Anchor, Cue, CueError,  # noqa: E402
+                      all_cues, first_cues, lengths_of, resolve_overlaps,
+                      shift, track_plan)
 from src.measure import peak_db  # noqa: E402
 from src.models import Timeline  # noqa: E402
 from src.movements import load_movements, resolve_times  # noqa: E402
@@ -138,8 +138,9 @@ def floor_track(work: Path, total: float) -> tuple[Path, float]:
     фильтром на лету, потому что уровень выставляется замером пика, а
     замерить можно только записанное.
 
-    Шум идёт до конца номера, а не до последнего слова, и файл из-за этого
-    вырос с 45 до 59 секунд. Так и надо. Раньше дорожка обрывалась сразу за
+    Шум идёт до конца номера, а не до последнего слова, и файлы из-за этого
+    выросли: 58.89, 59.55 и 54.55 секунды против прежних сорока с небольшим —
+    у каждого якоря своё, это ровно 60 минус его сдвиг. Так и надо. Раньше дорожка обрывалась сразу за
     «готовь» на 45.98 — это экономило треть мегабайта и ничего больше. Теперь
     конец файла совпадает с концом номера, и у помощника появляется признак,
     которого не было: дорожка кончилась вместе с выступлением, значит она шла
@@ -263,8 +264,14 @@ def render(cues: list[Cue], out: Path, total: float, assets: Path,
 
 
 def sheet(kept: list[Cue], dropped: list[Cue], first: list[Cue],
-          chain: float, strikes) -> str:
-    """Печатный лист. Пишется здесь, а не в шаблоне: он весь из чисел."""
+          plan: list[tuple[Anchor, float]], chain: float, strikes) -> str:
+    """Печатный лист. Пишется здесь, а не в шаблоне: он весь из чисел.
+
+    План дорожек приходит СНАРУЖИ, тот самый, по которому они собраны. Считать
+    его здесь заново нельзя: при `--anchor laugh --start-at 0.95` дорожка
+    ложится на 0.95, а пересчёт напечатал бы 1.11 — и помощник прочёл бы с
+    распечатки число, которого в файле нет.
+    """
     contacts = {}
     for strike in strikes:
         earliest = min((b.heard for b in strike.beats if b.role == "contact"),
@@ -285,21 +292,32 @@ def sheet(kept: list[Cue], dropped: list[Cue], first: list[Cue],
         "от покоя 0.3–0.6 с: к моменту контакта движение уже должно идти.",
         "Поэтому ориентир всегда стоит на подготовке, а не на попадании.",
         "",
-        "## Три дорожки: чем ловить старт",
+        "## Дорожки: чем ловить старт",
         "",
         "Play жмёт помощник за кулисами, а не исполнитель. Чем он поймает",
-        "начало номера — вопрос к площадке, поэтому собраны все три, а выбор",
-        "делается на месте и ДО выхода.",
+        "начало номера — вопрос к площадке, поэтому по умолчанию собираются",
+        "все три, а выбор делается на месте и ДО выхода.",
         "",
         "| файл | ловить | чем | в номере | сдвиг |",
         "|---|---|---|---|---|",
     ]
-    for anchor, start_at in track_plan(None, chain):
+    for anchor, start_at in plan:
         lines.append(f"| `stage_cues_{anchor.key}.wav` | {anchor.catch} | "
                      f"{anchor.sense} | {anchor.t:.2f} | {start_at:.2f} |")
 
+    if len(plan) < len(ANCHORS):
+        lines += [
+            "",
+            f"**В этот прогон собрана {len(plan)} дорожка из {len(ANCHORS)}.**",
+            "Остальные не пересобирались. Если файлы от прошлого прогона лежат",
+            "рядом, этот лист их НЕ описывает — пересобери всё без `--anchor`.",
+        ]
+
+    ручной = any(abs(s - a.start_at(chain)) > 1e-9 for a, s in plan)
     lines += [
         "",
+        "Сдвиг задан вручную через `--start-at`, из якоря с цепочкой он не"
+        " выводится." if ручной else
         f"Сдвиг = время якоря + реакция (ухо 0.16, глаз 0.20) + цепочка "
         f"{chain:.2f}.",
         "",
@@ -490,7 +508,7 @@ def main() -> int:
         print(f"  {path.name}  {path.stat().st_size / 1e6:.2f} МБ")
     print(f"  лежат в {CUES_DIR}")
 
-    text = sheet(kept, dropped, first, args.chain, strikes)
+    text = sheet(kept, dropped, first, plan, args.chain, strikes)
     (out / "cue_sheet.md").write_text(text, encoding="utf-8")
 
     for path in [out / "rehearsal_cues_v2.wav"] + made:
