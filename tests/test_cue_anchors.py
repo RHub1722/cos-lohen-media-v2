@@ -176,7 +176,7 @@ def test_the_silence_between_words_is_not_digital_silence(path):
 
 @BUILT
 @pytest.mark.parametrize("path", STAGE, ids=lambda p: p.stem)
-def test_the_floor_stays_far_under_the_words(path):
+def test_the_floor_stays_far_under_the_cue(path):
     """Подложка обязана быть неслышной: она страховка, а не звук."""
     assert peak_db(path) - _mean_db(path, 8.0, 4.0) > 50.0
 
@@ -214,7 +214,7 @@ def test_the_sync_copy_carries_the_number_underneath(key):
 
 @BUILT_SYNC
 @pytest.mark.parametrize("key", ["laugh", "picture", "titles"])
-def test_the_number_stays_under_the_words(key):
+def test_the_number_stays_under_the_cue(key):
     """Номер здесь фон, а не содержание. Перекрой он подсказку — копия стала
     бы второй репетиционной дорожкой, а её задача другая."""
     path = OUT / f"stage_cues_{key}_sync.wav"
@@ -272,3 +272,16 @@ def test_the_riser_sync_copy_carries_the_number(key):
     plain = _mean_db(RISER_DIR / f"lohen_riser_{key}.m4a", 12.0, 4.0)
     sync = _mean_db(RISER_DIR / f"lohen_riser_{key}_sync.m4a", 12.0, 4.0)
     assert sync - plain > 20.0, f"обычная {plain:.1f}, сверочная {sync:.1f}"
+
+
+@BUILT
+@pytest.mark.parametrize("key", KEYS)
+def test_the_stage_track_carries_risers_not_words(key):
+    """Риз разгоняется В контакт и обрывается: перед вершиной громко, сразу
+    после неё подложка. У слова такого профиля нет — оно ровное и кончается
+    там, где кончается, а не в точке удара."""
+    path = OUT / f"stage_cues_{key}.wav"
+    peak = 47.03 - anchor_by(key).start_at(CHAIN)   # копьё в пол
+    before = _mean_db(path, peak - 0.35, 0.30)
+    after = _mean_db(path, peak + 0.20, 0.30)
+    assert before - after > 40.0, f"перед {before:.1f}, после {after:.1f}"

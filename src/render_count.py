@@ -35,6 +35,7 @@ from src.counting import (STEP, WORDS, assign, collisions,  # noqa: E402
                           repeated_digits, risers)
 from src.cues import ANCHORS, CHAIN, track_plan  # noqa: E402
 from src.measure import peak_db  # noqa: E402
+from src.risers import RISER_DB, build_risers, shift_rows  # noqa: E402
 from src.models import Timeline  # noqa: E402
 from src.movements import load_movements, resolve_times  # noqa: E402
 from src.render_rehearsal import build_scenes  # noqa: E402
@@ -89,7 +90,6 @@ SITE_BITRATE = "96k"
 # как в репетиционной дорожке: глубже — и пропадает сам звук удара, по которому
 # проверяется попадание, то есть дорожка отменяет собственную задачу.
 DUCK_DB = 9.0
-RISER_DB = -9.0
 
 PAN_RIGHT = "pan=stereo|c0=0*c0|c1=c0"
 PAN_BOTH = "pan=stereo|c0=c0|c1=c0"
@@ -269,36 +269,6 @@ def build_count(work: Path) -> Path:
     return out
 
 
-def build_risers(work: Path, rows: list[dict], total: float = TOTAL) -> Path:
-    """Шесть нарастающих шумов: чирп плюс розовый шум под общей огибающей.
-
-    Синтез целиком на FFmpeg: библиотек для звука в проекте нет. Огибающая
-    степенная, а не линейная — линейная слышится как ровная полка и вершину
-    не обозначает.
-    """
-    inputs, parts, labels = [], [], []
-    for j, row in enumerate(rows):
-        length = row["peak"] - row["start"]
-        inputs += ["-f", "lavfi", "-i",
-                   "aevalsrc=sin(2*PI*(180*t+380*t*t)):d=%.4f:s=48000" % length,
-                   "-f", "lavfi", "-i",
-                   "anoisesrc=d=%.4f:c=pink:r=48000:a=0.35" % length]
-        ms = int(round(row["start"] * 1000))
-        for idx in (2 * j, 2 * j + 1):
-            parts.append("[%d:a]volume='pow(t/%.4f\\,2.2)':eval=frame,"
-                         "adelay=%d,volume=%.1fdB[r%d]"
-                         % (idx, length, ms, RISER_DB, idx))
-            labels.append("[r%d]" % idx)
-    parts.append("".join(labels) + "amix=inputs=%d:normalize=0:"
-                 "dropout_transition=0[m]" % len(labels))
-    parts.append("[m]apad,atrim=0:%.4f,asetpts=N/SR/TB[out]" % total)
-    out = work / "risers.wav"
-    run(["ffmpeg", "-v", "error", "-y"] + inputs
-        + ["-filter_complex", ";".join(parts), "-map", "[out]",
-           "-ar", "48000", "-ac", "1", "-c:a", "pcm_s24le", str(out)])
-    return out
-
-
 # Провал номера ПОД РИЗОМ, для дорожки без счёта. Форма та же, что у провала
 # музыки под ударами в src/filtergraph.py, но отпускает он не после события, а
 # ровно НА нём: риз кончается в контакт, и приглушить сам контакт значило бы
@@ -342,7 +312,7 @@ def build_track(work: Path, rows: list[dict], spec: dict,
     Запас проверяется замером, и если его не хватит, вниз идёт один линейный
     гейн на подсказки — так же, как сделан запас у мастера 8 августа.
     """
-    risers_wav = build_risers(work, rows)
+    risers_wav = build_risers(work, rows, TOTAL)
     out = track_path(spec["key"])
     out.parent.mkdir(parents=True, exist_ok=True)
     gain = spec["cue_db"] + cue_db
@@ -425,24 +395,6 @@ CUES_FLOOR_DB = -60.0
 CUES_GHOST_DB = -24.0
 
 CUES_LAGS = (0, 100, 200)
-
-
-def shift_rows(rows: list[dict], lag_ms: int) -> list[dict]:
-    """Ризы, сдвинутые РАНЬШЕ на задержку наушника.
-
-    Сдвигается содержимое, а длина файла остаётся 60.000 с: устройства
-    пускаются вместе, и файл обязан совпадать с видео по длине.
-    """
-    lag = lag_ms / 1000.0
-    out = []
-    for row in rows:
-        start = row["start"] - lag
-        if start < 0.0:
-            raise SystemExit("сдвиг на %d мс выносит риз %s за начало файла"
-                             % (lag_ms, row["strike"]))
-        out.append(dict(row, start=round(start, 4),
-                        peak=round(row["peak"] - lag, 4)))
-    return out
 
 
 def cue_name(lag_ms: int = 0, ghost: bool = False, anchor=None) -> str:

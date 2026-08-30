@@ -40,10 +40,12 @@ for stream in (sys.stdout, sys.stderr):
 from src.cues import (ANCHORS, CHAIN, Anchor, Cue,  # noqa: E402
                       CueError, all_cues, first_cues, lengths_of,
                       resolve_overlaps, shift, track_plan)
+from src.counting import risers  # noqa: E402
 from src.measure import peak_db  # noqa: E402
 from src.models import Timeline  # noqa: E402
 from src.movements import load_movements, resolve_times  # noqa: E402
 from src.peaks import peak_offsets  # noqa: E402
+from src.risers import build_risers, shift_rows  # noqa: E402
 from src.strikes import load_strikes, resolve_strikes  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -72,6 +74,14 @@ CLICK_AT = 0.30
 CLICK_HZ = 1000
 CLICK_LEN = 0.015
 CLICK_DB = -12.0
+
+# Пик слоя ризов в сценической дорожке. Ставится замером, как подложка и
+# щелчок: у синтезированного слоя свой уровень, предсказать его нельзя.
+#
+# Минус шесть, а не минус два, как у дорожки ризов из сборщика счёта: там риз
+# единственное содержимое файла, здесь под ним живёт щелчок на -15, и разница
+# в девять децибел между ними должна остаться той же, что была у слов.
+RISER_PEAK_DB = -6.0
 
 # Номер тихим фоном в сверочной копии. Она не для тренировки: две копии
 # одного звука с расхождением слышны как хлопок, и это самый точный слуховой
@@ -195,7 +205,8 @@ def click_track(work: Path) -> tuple[Path, float]:
 def render(cues: list[Cue], out: Path, total: float, assets: Path,
            bed: Path | None, channels: int = 2, floor: bool = False,
            click: bool = False, ghost: Path | None = None,
-           ghost_at: float = 0.0) -> None:
+           ghost_at: float = 0.0,
+           riser_rows: list[dict] | None = None) -> None:
     """Собирает дорожку: слова через adelay, при наличии — поверх номера.
 
     channels=1 для сценической: она едет в один наушник, второе ухо обязано
@@ -214,11 +225,20 @@ def render(cues: list[Cue], out: Path, total: float, assets: Path,
     как хлопок, и это самый точный слуховой признак времени, какой есть у
     человека. ghost_at — с какой секунды НОМЕРА начинается файл; у сверочной
     копии он тот же, что у дорожки, которую она проверяет.
+
+    riser_rows вместо слов: сценическая дорожка несёт не слова, а нарастающие
+    шумы, каждый с вершиной ровно в свой контакт. Слово даёт точку — «сейчас»,
+    — а риз даёт разгон, по которому едешь. Слова остаются в репетиционной
+    дорожке, где они и осмысленны.
     """
-    if not cues:
+    if not cues and riser_rows is None:
         raise SystemExit("ни одной подсказки — нечего собирать")
 
-    lengths = lengths_of(assets, [c.word for c in cues], ffprobe_duration)
+    # Длины слов нужны только провалу номера под ними, то есть только
+    # репетиционной дорожке. Считать их для сценической значило бы шесть
+    # лишних вызовов ffprobe за прогон ради числа, которое никто не спросит.
+    lengths = (lengths_of(assets, [c.word for c in cues], ffprobe_duration)
+               if bed is not None else {})
 
     with tempfile.TemporaryDirectory(prefix="cues_") as tmp:
         work = Path(tmp)
@@ -241,12 +261,20 @@ def render(cues: list[Cue], out: Path, total: float, assets: Path,
 
         bed_i = add_input("-i", str(bed)) if bed is not None else None
 
-        for i, cue in enumerate(cues):
-            idx = add_input("-i", str(assets / f"cues/cue_{cue.word}.wav"))
-            ms = int(round(cue.t * 1000.0))
-            parts.append(f"[{idx}:a]adelay={ms}|{ms},"
-                         f"volume={CUE_GAIN_DB}dB[c{i}]")
-            labels.append(f"[c{i}]")
+        if riser_rows is not None:
+            layer = build_risers(work, riser_rows, total)
+            idx = add_input("-i", str(layer))
+            gain = RISER_PEAK_DB - peak_db(layer)
+            parts.append(f"[{idx}:a]volume={gain:.2f}dB[cue]")
+            labels.append("[cue]")
+        else:
+            for i, cue in enumerate(cues):
+                idx = add_input("-i",
+                                str(assets / f"cues/cue_{cue.word}.wav"))
+                ms = int(round(cue.t * 1000.0))
+                parts.append(f"[{idx}:a]adelay={ms}|{ms},"
+                             f"volume={CUE_GAIN_DB}dB[c{i}]")
+                labels.append(f"[c{i}]")
 
         if bed_i is not None:
             expr = duck_expression(cues, lengths)
@@ -292,7 +320,7 @@ def render(cues: list[Cue], out: Path, total: float, assets: Path,
             raise SystemExit(f"ffmpeg: {done.stderr[-1500:]}")
 
 
-def sheet(kept: list[Cue], dropped: list[Cue], first: list[Cue],
+def sheet(kept: list[Cue], dropped: list[Cue], rows: list[dict],
           plan: list[tuple[Anchor, float]], chain: float, strikes) -> str:
     """Печатный лист. Пишется здесь, а не в шаблоне: он весь из чисел.
 
@@ -350,8 +378,17 @@ def sheet(kept: list[Cue], dropped: list[Cue], first: list[Cue],
         f"Сдвиг = время якоря + реакция (ухо 0.16, глаз 0.20) + цепочка "
         f"{chain:.2f}.",
         "",
-        "Слова в точку контакта нет ни в одной намеренно: старт нажимается",
-        "рукой, и слово в точку при промахе вредит. Контакт несёт сам номер.",
+        "В дорожке не слова, а РИЗЫ: нарастающий шум, вершина которого",
+        "приходится ровно в контакт. Слово давало точку — «сейчас», — и при",
+        "промахе старта точка врала. Риз даёт разгон: слышишь, как набирает,",
+        "и въезжаешь в вершину. Сместился он на десятую — ты всё равно едешь",
+        "по нему, а не ловишь мгновение.",
+        "",
+        f"Ризов {len(rows)} против шести слов: они стоят на КАЖДОМ контакте,",
+        "включая вторые попадания вспышек 2 и 3, которым слова не досталось",
+        "из-за наложения. Исключён только встречный удар вспышки 4 — у него",
+        "замаха нет намеренно, и объявлять подготовку, которой не существует,",
+        "значит врать о движении. Слова остались в репетиционной дорожке.",
         "",
         "**Рабочее окно старта — ±0.2 с.** При опоздании на 0.2 с у «пошёл»",
         "остаётся 0.18 с опережения: подсказка сжимается, но помогает. При",
@@ -364,15 +401,18 @@ def sheet(kept: list[Cue], dropped: list[Cue], first: list[Cue],
         "словами тихо идёт номер. На выход он не берётся: он для замера, см.",
         "ниже. На сцене в ухе должны быть только подсказки.",
         "",
-        "## Слова и опережение",
+        "## Ризы: откуда разгон и куда вершина",
         "",
-        "| слово | в номере | действие | до первого контакта |",
+        "Времена в номере, до сдвига. Начало каждого подрезано предыдущим",
+        "контактом: риз, накрывший прошлый удар, перестаёт означать «сейчас",
+        "будет следующий», и потому длина у них разная.",
+        "",
+        "| разгон с | вершина = контакт | длина | действие |",
         "|---|---|---|---|",
     ]
-    for cue in first:
-        c = contacts.get(cue.strike)
-        gap = f"{c - cue.t:.2f} с" if c is not None else "—"
-        lines.append(f"| **{cue.text}** | {cue.t:.2f} | {cue.strike} | {gap} |")
+    for row in rows:
+        lines.append(f"| {row['start']:.2f} | **{row['peak']:.2f}** | "
+                     f"{row['peak'] - row['start']:.2f} с | {row['strike']} |")
 
     lines += [
         "",
@@ -535,25 +575,26 @@ def main() -> int:
     render(kept, out / "rehearsal_cues_v2.wav", tl.total_duration, assets,
            master)
 
+    rows = risers(strikes)
     made: list[Path] = []
     for anchor, start_at in plan:
-        stage = shift(first, start_at)
+        moved = shift_rows(rows, int(round(start_at * 1000.0)))
         path = out / f"stage_cues_{anchor.key}.wav"
         print(f"\n{anchor.key}: ловить {anchor.catch} ({anchor.sense}), "
-              f"сдвиг {start_at:.2f} с, {len(stage)} слов")
-        for cue in stage:
-            print(f"  файл {cue.t:6.2f}  номер {cue.t + start_at:6.2f}  "
-                  f"{cue.text:9} {cue.strike}")
-        render(stage, path, tl.total_duration - start_at, assets, None,
-               channels=1, floor=True, click=True)
+              f"сдвиг {start_at:.2f} с, {len(moved)} ризов")
+        for row in moved:
+            print(f"  файл {row['start']:6.2f} → {row['peak']:6.2f}   "
+                  f"номер {row['peak'] + start_at:6.2f}  {row['strike']}")
+        render([], path, tl.total_duration - start_at, assets, None,
+               channels=1, floor=True, click=True, riser_rows=moved)
         made.append(path)
 
         # Сверочная копия того же самого: под словами тихо идёт номер. Играешь
         # её вместе с залом — совпало, значит цепочка замерена верно; разошлось,
         # слышно хлопком, и величина хлопка и есть поправка.
         check = out / f"stage_cues_{anchor.key}_sync.wav"
-        render(stage, check, tl.total_duration - start_at, assets, None,
-               channels=1, floor=True, click=True,
+        render([], check, tl.total_duration - start_at, assets, None,
+               channels=1, floor=True, click=True, riser_rows=moved,
                ghost=master, ghost_at=start_at)
         made.append(check)
 
@@ -562,7 +603,7 @@ def main() -> int:
         print(f"  {path.name}  {path.stat().st_size / 1e6:.2f} МБ")
     print(f"  лежат в {CUES_DIR}")
 
-    text = sheet(kept, dropped, first, plan, args.chain, strikes)
+    text = sheet(kept, dropped, rows, plan, args.chain, strikes)
     (out / "cue_sheet.md").write_text(text, encoding="utf-8")
 
     for path in [out / "rehearsal_cues_v2.wav"] + made:
