@@ -148,6 +148,39 @@ def floor_track(work: Path, total: float) -> tuple[Path, float]:
     return path, FLOOR_DB - peak_db(path)
 
 
+def click_track(work: Path) -> tuple[Path, float]:
+    """Щелчок подтверждения и усиление до CLICK_DB.
+
+    Уровень ставится ЗАМЕРОМ, как у подложки, и по той же причине, только
+    здесь она злее: генератор `sine` в ffmpeg выдаёт не полную шкалу, а
+    восьмую её часть — голый тон меряется на -18.1 dBFS. Написанное в
+    константе `volume=-12dB` считалось бы от этих -18, и щелчок выходил на
+    -33 dBFS, то есть на 27 dB тише слов: тихий тик вместо подтверждения.
+    Константа обязана значить то, что в ней написано.
+
+    Фейды по 2 мс: без них у щелчка появятся собственные щелчки на обрыве
+    синуса, и он выйдет грязнее того, что обозначает. Пик они не трогают —
+    он в середине пятнадцатимиллисекундного тона.
+
+    В готовом файле щелчок меряется на -15, а не на -12: три децибела съедает
+    раскладка моно в стерео внутри `amix`. Гнаться за ними незачем — важно
+    отношение, а оно верное: щелчок на 9 dB тише слов и на 61 dB громче
+    подложки. Слышен, но не бьёт по уху.
+    """
+    path = work / "click.wav"
+    done = subprocess.run(
+        ["ffmpeg", "-v", "error", "-y", "-f", "lavfi",
+         "-i", f"sine=frequency={CLICK_HZ}:duration={CLICK_LEN}"
+               f":sample_rate=48000",
+         "-af", f"afade=t=in:d=0.002,"
+                f"afade=t=out:st={CLICK_LEN - 0.002:.4f}:d=0.002",
+         "-ac", "1", "-c:a", "pcm_s24le", str(path)],
+        capture_output=True, text=True)
+    if done.returncode:
+        raise SystemExit(f"ffmpeg щелчок: {done.stderr[-1500:]}")
+    return path, CLICK_DB - peak_db(path)
+
+
 def render(cues: list[Cue], out: Path, total: float, assets: Path,
            bed: Path | None, channels: int = 2, floor: bool = False,
            click: bool = False) -> None:
@@ -197,16 +230,12 @@ def render(cues: list[Cue], out: Path, total: float, assets: Path,
             labels.append("[floor]")
 
         if click:
-            inputs += ["-f", "lavfi", "-i",
-                       f"sine=frequency={CLICK_HZ}:duration={CLICK_LEN}"
-                       f":sample_rate=48000"]
+            tick, tick_gain = click_track(work)
+            inputs += ["-i", str(tick)]
             idx = base + len(cues) + (1 if floor else 0)
             ms = int(round(CLICK_AT * 1000.0))
-            # Фейды по 2 мс: без них у щелчка появятся собственные щелчки на
-            # обрыве синуса, и он выйдет грязнее того, что обозначает.
-            parts.append(f"[{idx}:a]afade=t=in:d=0.002,"
-                         f"afade=t=out:st={CLICK_LEN - 0.002:.4f}:d=0.002,"
-                         f"adelay={ms}|{ms},volume={CLICK_DB}dB[click]")
+            parts.append(f"[{idx}:a]adelay={ms}|{ms},"
+                         f"volume={tick_gain:.2f}dB[click]")
             labels.append("[click]")
 
         n = len(labels)
