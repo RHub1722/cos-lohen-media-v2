@@ -69,6 +69,17 @@ FLOOR_DB = -60.0
 # «на глаз» может оказаться и -48, и -72.
 FLOOR_AMPLITUDE = 0.35
 
+# Щелчок в начале дорожки. Помощник нажал — исполнитель услышал и знает, что
+# канал жив и часы пошли. Обрыв Bluetooth на дальности в дорожке не лечится,
+# но его можно сделать заметным сразу, а не на первом пропущенном слове.
+#
+# Не в нуле: первые ~0.2 с съедает пробуждение канала. На 0.30 щелчок звучит
+# ПОСЛЕ пробуждения и тем доказывает, что оно случилось.
+CLICK_AT = 0.30
+CLICK_HZ = 1000
+CLICK_LEN = 0.015
+CLICK_DB = -12.0
+
 # Провал номера под подсказкой в репетиционной дорожке. Глубоко: там важно
 # слово, а не микс, и это единственный файл, который зал никогда не услышит.
 DUCK_DB = 14.0
@@ -138,7 +149,8 @@ def floor_track(work: Path, total: float) -> tuple[Path, float]:
 
 
 def render(cues: list[Cue], out: Path, total: float, assets: Path,
-           bed: Path | None, channels: int = 2, floor: bool = False) -> None:
+           bed: Path | None, channels: int = 2, floor: bool = False,
+           click: bool = False) -> None:
     """Собирает дорожку: слова через adelay, при наличии — поверх номера.
 
     channels=1 для сценической: она едет в один наушник, второе ухо обязано
@@ -147,6 +159,9 @@ def render(cues: list[Cue], out: Path, total: float, assets: Path,
     floor=True тоже только для сценической: подложка нужна там, где дорожка
     идёт по Bluetooth и подолгу молчит. У репетиционной под словами играет
     номер, тишины нет вовсе, и подложка была бы мусором в файле.
+
+    click=True тоже только для сценической: дома по проводу канал не рвётся,
+    и подтверждать нечего.
     """
     if not cues:
         raise SystemExit("ни одной подсказки — нечего собирать")
@@ -180,6 +195,19 @@ def render(cues: list[Cue], out: Path, total: float, assets: Path,
             inputs += ["-i", str(path)]
             parts.append(f"[{base + len(cues)}:a]volume={gain:.2f}dB[floor]")
             labels.append("[floor]")
+
+        if click:
+            inputs += ["-f", "lavfi", "-i",
+                       f"sine=frequency={CLICK_HZ}:duration={CLICK_LEN}"
+                       f":sample_rate=48000"]
+            idx = base + len(cues) + (1 if floor else 0)
+            ms = int(round(CLICK_AT * 1000.0))
+            # Фейды по 2 мс: без них у щелчка появятся собственные щелчки на
+            # обрыве синуса, и он выйдет грязнее того, что обозначает.
+            parts.append(f"[{idx}:a]afade=t=in:d=0.002,"
+                         f"afade=t=out:st={CLICK_LEN - 0.002:.4f}:d=0.002,"
+                         f"adelay={ms}|{ms},volume={CLICK_DB}dB[click]")
+            labels.append("[click]")
 
         n = len(labels)
         parts.append("".join(labels) + f"amix=inputs={n}:normalize=0:"
@@ -398,7 +426,7 @@ def main() -> int:
             print(f"  файл {cue.t:6.2f}  номер {cue.t + start_at:6.2f}  "
                   f"{cue.text:9} {cue.strike}")
         render(stage, path, tl.total_duration - start_at, assets, None,
-               channels=1, floor=True)
+               channels=1, floor=True, click=True)
         made.append(path)
 
     text = sheet(kept, dropped, first, args.chain, strikes)

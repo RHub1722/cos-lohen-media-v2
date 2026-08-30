@@ -171,3 +171,16 @@ def test_the_silence_between_words_is_not_digital_silence(path):
 def test_the_floor_stays_far_under_the_words(path):
     """Подложка обязана быть неслышной: она страховка, а не звук."""
     assert peak_db(path) - _mean_db(path, 8.0, 4.0) > 50.0
+
+
+@BUILT
+@pytest.mark.parametrize("path", STAGE, ids=lambda p: p.stem)
+def test_a_click_confirms_the_channel_is_alive(path):
+    """Помощник нажал — исполнитель обязан услышать, что часы пошли. Без
+    этого о разорванном Bluetooth станет известно на 28.50, посреди номера.
+
+    Щелчок стоит не в нуле: первые ~0.2 с съедает пробуждение канала, и в
+    нуле его срезало бы вместе с ними."""
+    quiet = _mean_db(path, 0.05, 0.15)
+    click = _mean_db(path, 0.25, 0.20)
+    assert click - quiet > 20.0, f"тихо {quiet:.1f}, щелчок {click:.1f}"
