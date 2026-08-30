@@ -33,6 +33,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.counting import (STEP, WORDS, assign, collisions,  # noqa: E402
                           repeated_digits, risers)
+from src.cues import ANCHORS, CHAIN, track_plan  # noqa: E402
 from src.measure import peak_db  # noqa: E402
 from src.models import Timeline  # noqa: E402
 from src.movements import load_movements, resolve_times  # noqa: E402
@@ -268,7 +269,7 @@ def build_count(work: Path) -> Path:
     return out
 
 
-def build_risers(work: Path, rows: list[dict]) -> Path:
+def build_risers(work: Path, rows: list[dict], total: float = TOTAL) -> Path:
     """Шесть нарастающих шумов: чирп плюс розовый шум под общей огибающей.
 
     Синтез целиком на FFmpeg: библиотек для звука в проекте нет. Огибающая
@@ -290,7 +291,7 @@ def build_risers(work: Path, rows: list[dict]) -> Path:
             labels.append("[r%d]" % idx)
     parts.append("".join(labels) + "amix=inputs=%d:normalize=0:"
                  "dropout_transition=0[m]" % len(labels))
-    parts.append("[m]apad,atrim=0:%.4f,asetpts=N/SR/TB[out]" % TOTAL)
+    parts.append("[m]apad,atrim=0:%.4f,asetpts=N/SR/TB[out]" % total)
     out = work / "risers.wav"
     run(["ffmpeg", "-v", "error", "-y"] + inputs
         + ["-filter_complex", ";".join(parts), "-map", "[out]",
@@ -444,37 +445,63 @@ def shift_rows(rows: list[dict], lag_ms: int) -> list[dict]:
     return out
 
 
-def cue_name(lag_ms: int = 0, ghost: bool = False) -> str:
+def cue_name(lag_ms: int = 0, ghost: bool = False, anchor=None) -> str:
+    """Имя файла. У якорных ризов свой префикс, и это не косметика.
+
+    `lohen_cues_riser*` собраны в расчёте на одновременный пуск, `lohen_riser_*`
+    — под нажатие помощника по якорю. Взять на площадку не то значит разъехаться
+    с залом на секунды, и в папке телефона это обязано быть видно по имени.
+    """
+    if anchor is not None:
+        return "lohen_riser_%s%s" % (anchor.key, "_sync" if ghost else "")
     if ghost:
         return "lohen_cues_riser_sync"
     return "lohen_cues_riser" + ("_lag%d" % lag_ms if lag_ms else "")
 
 
 def build_cues(work: Path, rows: list[dict], lag_ms: int = 0,
-               ghost: bool = False) -> Path:
-    """Один файл подсказок: ризы на тишине, без номера, моно."""
-    layer = build_risers(work, shift_rows(rows, lag_ms))
+               ghost: bool = False, anchor=None, start_at: float = 0.0) -> Path:
+    """Один файл подсказок: ризы на тишине, без номера, моно.
+
+    Сдвиг задаётся двумя разными способами, и они про разное.
+
+    `lag_ms` — задержка наушника, пока она НЕ ЗАМЕРЕНА: ризы уезжают раньше на
+    сто или двести миллисекунд, и из трёх копий выбирают ухом. Длина файла
+    остаётся 60.000 с, потому что устройства пускают одновременно.
+
+    `anchor` со `start_at` — когда play жмёт помощник за кулисами и ловит старт
+    по якорю. Тогда файл НАЧИНАЕТСЯ с середины номера, и длина у него своя,
+    60 минус сдвиг. Задержка цепочки при этом уже сидит внутри `start_at`,
+    замеренная один раз, а не подобранная перебором из трёх.
+    """
+    total = TOTAL - start_at
+    ms = lag_ms if anchor is None else int(round(start_at * 1000))
+    layer = build_risers(work, shift_rows(rows, ms), total)
     gain = CUES_PEAK_DB - peak_db(layer)
 
     floor = work / "floor.wav"
     run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi",
-         "-i", "anoisesrc=d=%.4f:c=pink:r=48000:a=0.35" % TOTAL,
+         "-i", "anoisesrc=d=%.4f:c=pink:r=48000:a=0.35" % total,
          "-ac", "1", "-c:a", "pcm_s24le", str(floor)])
     floor_gain = CUES_FLOOR_DB - peak_db(floor)
 
-    out = work / (cue_name(lag_ms, ghost) + ".wav")
+    out = work / (cue_name(lag_ms, ghost, anchor) + ".wav")
     inputs = ["-i", str(layer), "-i", str(floor)]
     parts = ["[0:a]volume=%.2fdB[cue]" % gain,
              "[1:a]volume=%.2fdB[floor]" % floor_gain]
     mix = ["[cue]", "[floor]"]
     if ghost:
+        # Номер берётся с той же секунды, с которой начинается файл: сверочная
+        # копия обязана идти в ногу с той дорожкой, которую проверяет.
+        if start_at > 0:
+            inputs += ["-ss", "%.4f" % start_at]
         inputs += ["-i", str(SOUNDTRACK)]
         parts.append("[2:a]pan=mono|c0=0.5*c0+0.5*c1,volume=%.2fdB[ghost]"
                      % CUES_GHOST_DB)
         mix.append("[ghost]")
     parts.append("".join(mix) + "amix=inputs=%d:normalize=0:"
                  "dropout_transition=0,atrim=0:%.4f,asetpts=N/SR/TB[out]"
-                 % (len(mix), TOTAL))
+                 % (len(mix), total))
     # Шестнадцать бит, а не двадцать четыре: файл едет в телефон, и лишний
     # разряд там нечем ни воспроизвести, ни услышать.
     run(["ffmpeg", "-v", "error", "-y"] + inputs
@@ -681,6 +708,10 @@ def main() -> int:
     ap.add_argument("--cue-db", type=float, default=0.0,
                     help="общий гейн на слой подсказок поверх того, что "
                          "задан у дорожки, если не хватило запаса по пикам")
+    ap.add_argument("--anchor", choices=sorted(ANCHORS), default=None,
+                    help="чем помощник ловит старт; без него все три")
+    ap.add_argument("--chain", type=float, default=CHAIN,
+                    help="задержка цепочки: нажатие плюс радиоканал")
     ap.add_argument("--site", action="store_true",
                     help="сжать копии для страницы тренажёра")
     ap.add_argument("--video", action="store_true",
@@ -766,6 +797,15 @@ def main() -> int:
         print("подсказки отдельным файлом — номера в них нет, он придёт из видео:")
         made = [build_cues(work, rows, lag_ms=lag) for lag in CUES_LAGS]
         made.append(build_cues(work, rows, ghost=True))
+        # Якорные: файл начинается там, где помощник нажал, а не с нуля номера.
+        # Рядом с каждой — сверочная, по которой цепочка и меряется.
+        for anchor, start_at in track_plan(args.anchor, args.chain):
+            print("  %-8s ловить %s (%s), сдвиг %.2f с"
+                  % (anchor.key, anchor.catch, anchor.sense, start_at))
+            made.append(build_cues(work, rows, anchor=anchor,
+                                   start_at=start_at))
+            made.append(build_cues(work, rows, anchor=anchor,
+                                   start_at=start_at, ghost=True))
         for path in publish_cues(made, keep_wav=cue_name()):
             print("  %-30s %.2f МБ  пик %.2f dBFS"
                   % (path.name, path.stat().st_size / 1e6, peak_db(path)))

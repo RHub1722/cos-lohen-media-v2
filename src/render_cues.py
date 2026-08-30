@@ -37,9 +37,9 @@ for stream in (sys.stdout, sys.stderr):
     if hasattr(stream, "reconfigure"):
         stream.reconfigure(encoding="utf-8", errors="replace")
 
-from src.cues import (ANCHORS, Anchor, Cue, CueError,  # noqa: E402
-                      all_cues, first_cues, lengths_of, resolve_overlaps,
-                      shift, track_plan)
+from src.cues import (ANCHORS, CHAIN, Anchor, Cue,  # noqa: E402
+                      CueError, all_cues, first_cues, lengths_of,
+                      resolve_overlaps, shift, track_plan)
 from src.measure import peak_db  # noqa: E402
 from src.models import Timeline  # noqa: E402
 from src.movements import load_movements, resolve_times  # noqa: E402
@@ -47,14 +47,6 @@ from src.peaks import peak_offsets  # noqa: E402
 from src.strikes import load_strikes, resolve_strikes  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
-
-# Задержка ЦЕПОЧКИ: нажатие кнопки плюс радиоканал до наушника. Свойство
-# железа, одно на все три якоря, и потому отдельное от них.
-#
-# Заглушка: нажатие около 0.05 плюс Bluetooth, который по кодеку даёт
-# 0.15-0.30 (SBC 0.15-0.25, AAC 0.15-0.20, aptX 0.08-0.15). Настоящее число
-# даёт один замер, порядок в листе ориентиров.
-CHAIN = 0.25
 
 # Подложка под тишиной. Перенесено из src/render_count.py, где то же сделано
 # для дорожки ризов: «наушники на тишине уходят в энергосбережение — первый
