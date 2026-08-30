@@ -10,6 +10,7 @@
     output/stage_cues_laugh.wav     в наушник, ловить первый смех
     output/stage_cues_picture.wav   в наушник, ловить появление картинки
     output/stage_cues_titles.wav    в наушник, ловить смену титров
+    output/stage_cues_*_sync.wav    то же плюс номер тихим фоном, под замер
     output/cue_sheet.md             печатный лист: что слышно и за сколько
 
 Три дорожки, потому что play жмёт помощник за кулисами, а не исполнитель, и
@@ -80,6 +81,14 @@ CLICK_HZ = 1000
 CLICK_LEN = 0.015
 CLICK_DB = -12.0
 
+# Номер тихим фоном в сверочной копии. Она не для тренировки: две копии
+# одного звука с расхождением слышны как хлопок, и это самый точный слуховой
+# признак времени, какой есть у человека. По ней ловится и промах пуска, и
+# задержка наушника — разом и без диктофона.
+#
+# Число взято у дорожки ризов, где та же копия делается с 17 августа.
+GHOST_DB = -24.0
+
 # Та же папка, что у ризов: она целиком копируется в телефон, и держать две
 # было бы приглашением взять на площадку не ту. Префикс разный намеренно — в
 # одной папке должно быть видно, что это разные инструменты, а не варианты
@@ -140,8 +149,9 @@ def floor_track(work: Path, total: float) -> tuple[Path, float]:
 
     Шум идёт до конца номера, а не до последнего слова, и файлы из-за этого
     выросли: 58.89, 59.55 и 54.55 секунды против прежних сорока с небольшим —
-    у каждого якоря своё, это ровно 60 минус его сдвиг. Так и надо. Раньше дорожка обрывалась сразу за
-    «готовь» на 45.98 — это экономило треть мегабайта и ничего больше. Теперь
+    у каждого якоря своё, это ровно 60 минус его сдвиг. Так и надо. Раньше
+    дорожка обрывалась сразу за «готовь» на 45.98 — это экономило треть
+    мегабайта и ничего больше. Теперь
     конец файла совпадает с концом номера, и у помощника появляется признак,
     которого не было: дорожка кончилась вместе с выступлением, значит она шла
     в ногу с ним.
@@ -192,7 +202,8 @@ def click_track(work: Path) -> tuple[Path, float]:
 
 def render(cues: list[Cue], out: Path, total: float, assets: Path,
            bed: Path | None, channels: int = 2, floor: bool = False,
-           click: bool = False) -> None:
+           click: bool = False, ghost: Path | None = None,
+           ghost_at: float = 0.0) -> None:
     """Собирает дорожку: слова через adelay, при наличии — поверх номера.
 
     channels=1 для сценической: она едет в один наушник, второе ухо обязано
@@ -204,6 +215,13 @@ def render(cues: list[Cue], out: Path, total: float, assets: Path,
 
     click=True тоже только для сценической: дома по проводу канал не рвётся,
     и подтверждать нечего.
+
+    ghost — номер тихим фоном, для сверочной копии. От `bed` отличается двумя
+    вещами: уровнем и тем, что под словами он не проваливается. Его не слушают
+    — его сравнивают: две копии одного звука, разошедшиеся во времени, слышны
+    как хлопок, и это самый точный слуховой признак времени, какой есть у
+    человека. ghost_at — с какой секунды НОМЕРА начинается файл; у сверочной
+    копии он тот же, что у дорожки, которую она проверяет.
     """
     if not cues:
         raise SystemExit("ни одной подсказки — нечего собирать")
@@ -213,39 +231,58 @@ def render(cues: list[Cue], out: Path, total: float, assets: Path,
     with tempfile.TemporaryDirectory(prefix="cues_") as tmp:
         work = Path(tmp)
         inputs: list[str] = []
-        if bed is not None:
-            inputs += ["-i", str(bed)]
-        for cue in cues:
-            inputs += ["-i", str(assets / f"cues/cue_{cue.word}.wav")]
+        parts: list[str] = []
+        labels: list[str] = []
+        count = 0
 
-        base = 1 if bed is not None else 0
-        parts = []
-        labels = []
+        def add_input(*args: str) -> int:
+            """Добавляет вход и возвращает его номер.
+
+            Номера считаются здесь, а не арифметикой на каждом месте. Родов
+            входа пять, и выражение вида base + len(cues) + (1 if floor else 0)
+            ошибается МОЛЧА: сборка не падает, а вместо щелчка звучит слово.
+            """
+            nonlocal count
+            inputs.extend(args)
+            count += 1
+            return count - 1
+
+        bed_i = add_input("-i", str(bed)) if bed is not None else None
+
         for i, cue in enumerate(cues):
+            idx = add_input("-i", str(assets / f"cues/cue_{cue.word}.wav"))
             ms = int(round(cue.t * 1000.0))
-            parts.append(f"[{base + i}:a]adelay={ms}|{ms},"
+            parts.append(f"[{idx}:a]adelay={ms}|{ms},"
                          f"volume={CUE_GAIN_DB}dB[c{i}]")
             labels.append(f"[c{i}]")
 
-        if bed is not None:
+        if bed_i is not None:
             expr = duck_expression(cues, lengths)
-            parts.append(f"[0:a]volume='{expr}':eval=frame[bed]")
+            parts.append(f"[{bed_i}:a]volume='{expr}':eval=frame[bed]")
             labels.insert(0, "[bed]")
 
         if floor:
             path, gain = floor_track(work, total)
-            inputs += ["-i", str(path)]
-            parts.append(f"[{base + len(cues)}:a]volume={gain:.2f}dB[floor]")
+            idx = add_input("-i", str(path))
+            parts.append(f"[{idx}:a]volume={gain:.2f}dB[floor]")
             labels.append("[floor]")
 
         if click:
             tick, tick_gain = click_track(work)
-            inputs += ["-i", str(tick)]
-            idx = base + len(cues) + (1 if floor else 0)
+            idx = add_input("-i", str(tick))
             ms = int(round(CLICK_AT * 1000.0))
             parts.append(f"[{idx}:a]adelay={ms}|{ms},"
                          f"volume={tick_gain:.2f}dB[click]")
             labels.append("[click]")
+
+        if ghost is not None:
+            idx = add_input("-ss", f"{ghost_at:.4f}", "-i", str(ghost))
+            # Свод в моно руками, а не средствами amix: дорожка едет в один
+            # наушник, и половина номера, оставшаяся в другом канале, была бы
+            # просто потеряна.
+            parts.append(f"[{idx}:a]pan=mono|c0=0.5*c0+0.5*c1,"
+                         f"volume={GHOST_DB}dB[ghost]")
+            labels.append("[ghost]")
 
         n = len(labels)
         parts.append("".join(labels) + f"amix=inputs={n}:normalize=0:"
@@ -331,6 +368,10 @@ def sheet(kept: list[Cue], dropped: list[Cue], first: list[Cue],
         "В начале каждой дорожки стоит щелчок. Услышал — канал жив и часы",
         "пошли. Не услышал — Bluetooth оборвался, и подсказок не будет вовсе.",
         "",
+        "У каждой есть двойник `stage_cues_*_sync.wav` — то же самое, но под",
+        "словами тихо идёт номер. На выход он не берётся: он для замера, см.",
+        "ниже. На сцене в ухе должны быть только подсказки.",
+        "",
         "## Слова и опережение",
         "",
         "| слово | в номере | действие | до первого контакта |",
@@ -382,18 +423,30 @@ def sheet(kept: list[Cue], dropped: list[Cue], first: list[Cue],
         "радиоканал, — а она от якоря не зависит. В этом весь смысл того, что",
         "якорь и цепочка считаются врозь.",
         "",
-        "1. Включи номер в зале или на колонках, телефон помощника — в руке.",
-        "2. Возьми любую из трёх дорожек и жми play на её якоре.",
+        "### На слух, сверочной копией — быстро и без приборов",
+        "",
+        "У каждой дорожки есть двойник `_sync`: то же самое, но под словами",
+        "тихо идёт сам номер. Слушать его не надо — надо сравнивать.",
+        "",
+        "1. Включи номер в зале или на колонках.",
+        "2. Помощник жмёт play на `_sync` в тот же момент, что и на выходе.",
+        "3. Слушай в наушник. Совпало — цепочка верна. Разошлось — слышно",
+        "   ХЛОПКОМ: два одинаковых звука с зазором. Это самый точный",
+        "   слуховой признак времени, какой есть у человека.",
+        "4. Подбирай `--chain`, пока хлопок не схлопнется в один звук.",
+        "",
+        "**Дорожка отстаёт от зала — цепочка занижена, увеличивай.**",
+        "Обгоняет — уменьшай.",
+        "",
+        "### С диктофоном — если нужно число, а не подгонка",
+        "",
+        "1. Включи номер, телефон помощника — в руке.",
+        "2. Жми play на якоре своей дорожки.",
         "3. Пиши на диктофон второго устройства сразу и зал, и наушник",
         "   (наушник поднеси к микрофону).",
         "4. В записи найди якорь и ЩЕЛЧОК в начале дорожки. Разница минус",
         "   время якоря минус реакция и есть цепочка.",
         "5. Пересобери с ней: `python src/render_cues.py --chain ЧИСЛО`.",
-        "",
-        "Готовый инструмент для того же замера уже есть у дорожки ризов:",
-        "`output/cues/lohen_cues_riser_sync.m4a` кладёт номер тихим фоном, и",
-        "расхождение двух копий одного звука слышно как хлопок. Ею ловятся и",
-        "промах пуска, и задержка наушника разом.",
         "",
         f"Сейчас цепочка стоит на заглушке {chain:.2f} с.",
         "",
@@ -502,6 +555,15 @@ def main() -> int:
         render(stage, path, tl.total_duration - start_at, assets, None,
                channels=1, floor=True, click=True)
         made.append(path)
+
+        # Сверочная копия того же самого: под словами тихо идёт номер. Играешь
+        # её вместе с залом — совпало, значит цепочка замерена верно; разошлось,
+        # слышно хлопком, и величина хлопка и есть поправка.
+        check = out / f"stage_cues_{anchor.key}_sync.wav"
+        render(stage, check, tl.total_duration - start_at, assets, None,
+               channels=1, floor=True, click=True,
+               ghost=master, ghost_at=start_at)
+        made.append(check)
 
     print("\nв телефон помощнику:")
     for path in publish(made):

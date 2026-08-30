@@ -146,6 +146,14 @@ BUILT = pytest.mark.skipif(not all(p.exists() for p in STAGE),
                            reason="сначала python src/render_cues.py")
 
 
+def _duration(path: Path) -> float:
+    out = subprocess.run(
+        ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+         "-of", "default=nw=1:nk=1", str(path)],
+        capture_output=True, text=True).stdout.strip()
+    return float(out)
+
+
 def _mean_db(path: Path, start: float, length: float) -> float:
     """Средний уровень окна. Цифровая тишина даёт около -91 dB и ниже."""
     done = subprocess.run(
@@ -184,3 +192,39 @@ def test_a_click_confirms_the_channel_is_alive(path):
     quiet = _mean_db(path, 0.05, 0.15)
     click = _mean_db(path, 0.25, 0.20)
     assert click - quiet > 20.0, f"тихо {quiet:.1f}, щелчок {click:.1f}"
+
+
+# --- сверочные копии ---------------------------------------------------------
+
+SYNC = [OUT / f"stage_cues_{k}_sync.wav" for k in ("laugh", "picture", "titles")]
+BUILT_SYNC = pytest.mark.skipif(not all(p.exists() for p in SYNC),
+                                reason="сначала python src/render_cues.py")
+
+
+@BUILT_SYNC
+@pytest.mark.parametrize("key", ["laugh", "picture", "titles"])
+def test_the_sync_copy_carries_the_number_underneath(key):
+    """Сверочная копия существует ради одного: две копии одного звука,
+    разошедшиеся во времени, слышны как хлопок. Без номера под словами
+    сравнивать не с чем, и вся затея рассыпается."""
+    plain = _mean_db(OUT / f"stage_cues_{key}.wav", 12.0, 4.0)
+    sync = _mean_db(OUT / f"stage_cues_{key}_sync.wav", 12.0, 4.0)
+    assert sync - plain > 20.0, f"обычная {plain:.1f}, сверочная {sync:.1f}"
+
+
+@BUILT_SYNC
+@pytest.mark.parametrize("key", ["laugh", "picture", "titles"])
+def test_the_number_stays_under_the_words(key):
+    """Номер здесь фон, а не содержание. Перекрой он подсказку — копия стала
+    бы второй репетиционной дорожкой, а её задача другая."""
+    path = OUT / f"stage_cues_{key}_sync.wav"
+    assert peak_db(path) - _mean_db(path, 12.0, 4.0) > 30.0
+
+
+@BUILT_SYNC
+@pytest.mark.parametrize("key", ["laugh", "picture", "titles"])
+def test_the_sync_copy_is_the_same_length_as_the_one_it_checks(key):
+    """Проверяет она ту дорожку, что рядом, и обязана идти с ней в ногу."""
+    plain = OUT / f"stage_cues_{key}.wav"
+    sync = OUT / f"stage_cues_{key}_sync.wav"
+    assert abs(_duration(sync) - _duration(plain)) < 0.01
