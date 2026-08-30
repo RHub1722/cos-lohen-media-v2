@@ -80,6 +80,14 @@ CLICK_HZ = 1000
 CLICK_LEN = 0.015
 CLICK_DB = -12.0
 
+# Та же папка, что у ризов: она целиком копируется в телефон, и держать две
+# было бы приглашением взять на площадку не ту. Префикс разный намеренно — в
+# одной папке должно быть видно, что это разные инструменты, а не варианты
+# одного. Константы продублированы, а не импортированы: тянуть сборщик счёта
+# в сборщик слов ради двух строк дороже, чем повторить их.
+CUES_DIR = ROOT / "output" / "cues"
+CUES_BITRATE = "128k"
+
 # Провал номера под подсказкой в репетиционной дорожке. Глубоко: там важно
 # слово, а не микс, и это единственный файл, который зал никогда не услышит.
 DUCK_DB = 14.0
@@ -386,6 +394,25 @@ def sheet(kept: list[Cue], dropped: list[Cue], first: list[Cue],
     return "\n".join(lines)
 
 
+def publish(made: list[Path]) -> list[Path]:
+    """m4a в папку телефона. Несжатых там быть не должно: три файла по 8 МБ
+    в телефоне ни к чему, а разницы в наушнике на 128k нет.
+    """
+    CUES_DIR.mkdir(parents=True, exist_ok=True)
+    out = []
+    for src in made:
+        key = src.stem.replace("stage_cues_", "")
+        dst = CUES_DIR / f"lohen_words_{key}.m4a"
+        done = subprocess.run(
+            ["ffmpeg", "-v", "error", "-y", "-i", str(src),
+             "-c:a", "aac", "-b:a", CUES_BITRATE, "-ac", "1", str(dst)],
+            capture_output=True, text=True)
+        if done.returncode:
+            raise SystemExit(f"ffmpeg m4a: {done.stderr[-1500:]}")
+        out.append(dst)
+    return out
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--scenario", default=str(ROOT / "scenario" / "timeline.json"))
@@ -457,6 +484,11 @@ def main() -> int:
         render(stage, path, tl.total_duration - start_at, assets, None,
                channels=1, floor=True, click=True)
         made.append(path)
+
+    print("\nв телефон помощнику:")
+    for path in publish(made):
+        print(f"  {path.name}  {path.stat().st_size / 1e6:.2f} МБ")
+    print(f"  лежат в {CUES_DIR}")
 
     text = sheet(kept, dropped, first, args.chain, strikes)
     (out / "cue_sheet.md").write_text(text, encoding="utf-8")
