@@ -397,9 +397,16 @@ CUES_LAGS = (0, 100, 200)
 
 
 def cue_name(lag_ms: int = 0, ghost: bool = False) -> str:
-    if ghost:
-        return "lohen_cues_riser_sync"
-    return "lohen_cues_riser" + ("_lag%d" % lag_ms if lag_ms else "")
+    """Сдвиг в названии, сверочный двойник суффиксом `_sync`.
+
+    Двойник есть у КАЖДОГО сдвига, а не только у нулевого. Сдвинутый файл без
+    номера под ризами проверить нечем: в ухе одни ризы, и на слух не отличить
+    «сдвиг сел» от «пуск промазал» — обе беды звучат одинаково, ризом мимо
+    удара. Соглашение то же, что у сценических дорожек: см. src/render_cues.py.
+    """
+    return ("lohen_cues_riser"
+            + ("_lag%d" % lag_ms if lag_ms else "")
+            + ("_sync" if ghost else ""))
 
 
 def build_cues(work: Path, rows: list[dict], lag_ms: int = 0,
@@ -410,6 +417,11 @@ def build_cues(work: Path, rows: list[dict], lag_ms: int = 0,
     пускают одновременно, а задержка наушника подбирается перебором из трёх
     копий. Под нажатие помощника по якорю служат сценические дорожки
     `output/stage_cues_*`, и ризы у них те же самые — из `src/risers.py`.
+
+    Сдвиг двигает ВЕСЬ файл, номер вместе с ризами. Иначе внутри файла риз
+    кончался бы на сто-двести миллисекунд раньше удара в собственном фоне, и
+    файл врал бы про само движение. А так связь цела: риз кончается в удар,
+    как и на странице, а на месте её держит проверка соответствия двойников.
     """
     total = TOTAL
     layer = build_risers(work, shift_rows(rows, lag_ms), total)
@@ -427,9 +439,12 @@ def build_cues(work: Path, rows: list[dict], lag_ms: int = 0,
              "[1:a]volume=%.2fdB[floor]" % floor_gain]
     mix = ["[cue]", "[floor]"]
     if ghost:
-        inputs += ["-i", str(SOUNDTRACK)]
-        parts.append("[2:a]pan=mono|c0=0.5*c0+0.5*c1,volume=%.2fdB[ghost]"
-                     % CUES_GHOST_DB)
+        # `-ss` двигает номер тем же сдвигом, что и ризы, а `apad` возвращает
+        # отрезанный хвост: без него последние сто-двести миллисекунд файла
+        # остались бы без фона.
+        inputs += ["-ss", "%.4f" % (lag_ms / 1000.0), "-i", str(SOUNDTRACK)]
+        parts.append("[2:a]pan=mono|c0=0.5*c0+0.5*c1,apad,"
+                     "volume=%.2fdB[ghost]" % CUES_GHOST_DB)
         mix.append("[ghost]")
     parts.append("".join(mix) + "amix=inputs=%d:normalize=0:"
                  "dropout_transition=0,atrim=0:%.4f,asetpts=N/SR/TB[out]"
@@ -722,9 +737,10 @@ def main() -> int:
         print("  лежат в %s" % OFFLINE_DIR)
 
     if args.cues:
-        print("подсказки отдельным файлом — номера в них нет, он придёт из видео:")
-        made = [build_cues(work, rows, lag_ms=lag) for lag in CUES_LAGS]
-        made.append(build_cues(work, rows, ghost=True))
+        print("подсказки отдельным файлом, по паре на каждый сдвиг "
+              "(`_sync` — с номером тихим фоном):")
+        made = [build_cues(work, rows, lag_ms=lag, ghost=ghost)
+                for lag in CUES_LAGS for ghost in (False, True)]
         for path in publish_cues(made, keep_wav=cue_name()):
             print("  %-30s %.2f МБ  пик %.2f dBFS"
                   % (path.name, path.stat().st_size / 1e6, peak_db(path)))

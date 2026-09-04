@@ -432,10 +432,10 @@ def test_the_lag_copies_are_earlier_by_exactly_the_lag(cues, cue_rows):
     """Bluetooth задерживает звук, копии сдвинуты раньше на 100 и 200 мс.
     Сдвиг замеряется по вершинам, а не по байтам: шум внутри риза при каждой
     сборке новый, и совпадать копии не обязаны."""
-    for lag in CUES_LAGS:
+    for lag, name, _ in CUE_PAIRS:
         if not lag:
             continue
-        path = CUES_DIR / (cue_name(lag) + ".m4a")
+        path = CUES_DIR / (name + ".m4a")
         if not path.exists():
             pytest.skip("нет %s" % path.name)
         x = mono_of(path)
@@ -481,3 +481,87 @@ def test_the_cue_files_keep_headroom():
         assert peak < -1.0, "%s: %.2f dBFS" % (path.name, peak)
         assert peak > -4.0, "%s: %.2f dBFS, подсказку будет не слышно" % (
             path.name, peak)
+
+
+def ghost_shift(a, b, t0=10.0, t1=20.0, sr=48000, span=0.5, step=6):
+    """На сколько номер в `a` сдвинут против номера в `b`, в секундах.
+
+    Мерится взаимной корреляцией на участке БЕЗ ризов — до 27.9 с в файле
+    только фон, и корреляция ловит именно его, а не подсказки. Частота сбита
+    вшестеро: фонограмме хватает восьми килогерц, а корреляция считается
+    через быстрое преобразование, иначе восемь тысяч сдвигов по восемьдесят
+    тысяч отсчётов считались бы минутами.
+    """
+    x = a[int(t0 * sr):int(t1 * sr)][::step].astype(np.float64)
+    y = b[int(t0 * sr):int(t1 * sr)][::step].astype(np.float64)
+    x, y = x - x.mean(), y - y.mean()
+    n = 1 << (len(x) + len(y) - 1).bit_length()
+    c = np.fft.irfft(np.fft.rfft(x, n) * np.conj(np.fft.rfft(y, n)), n)
+    m = int(span * sr / step)
+    near = np.concatenate([c[:m + 1], c[-m:]])
+    idx = int(np.argmax(near))
+    k = idx if idx <= m else idx - (2 * m + 1)
+    return k * step / sr
+
+
+# Имена написаны буквально, а не собраны cue_name(). Тест, спрашивающий у
+# кода, как зовётся файл, не может заметить, что имя неверное: мутация,
+# схлопнувшая все три двойника в одно имя, прошла мимо именно так. А имя
+# здесь — не подробность: его набирает исполнитель на телефоне.
+CUE_PAIRS = (
+    (0, "lohen_cues_riser", "lohen_cues_riser_sync"),
+    (100, "lohen_cues_riser_lag100", "lohen_cues_riser_lag100_sync"),
+    (200, "lohen_cues_riser_lag200", "lohen_cues_riser_lag200_sync"),
+)
+
+
+def test_the_cue_files_are_named_the_way_the_phone_will_show_them():
+    """Шесть файлов, по паре на сдвиг, и имена ровно эти."""
+    assert tuple(lag for lag, _, _ in CUE_PAIRS) == tuple(CUES_LAGS)
+    for lag, plain, twin in CUE_PAIRS:
+        assert cue_name(lag) == plain
+        assert cue_name(lag, ghost=True) == twin
+    assert len({n for _, p, t in CUE_PAIRS for n in (p, t)}) == 6
+
+
+def test_every_shift_has_a_sync_twin_that_carries_the_number(cues):
+    """Сверочный двойник есть у КАЖДОГО сдвига, а не только у нулевого.
+
+    Сдвинутый файл без номера под ризами проверить нечем: в ухе одни ризы, и
+    на слух не отличить «сдвиг сел» от «пуск промазал» — обе беды звучат
+    одинаково, ризом мимо удара.
+    """
+    for _, _, name in CUE_PAIRS:
+        twin = CUES_DIR / (name + ".m4a")
+        assert twin.exists(), "нет двойника %s" % twin.name
+        x = mono_of(twin)
+        for a, b in ((2.0, 6.0), (22.0, 26.0)):
+            hi = rms_db(x[int(a * 48000):int(b * 48000)])
+            lo = rms_db(cues[int(a * 48000):int(b * 48000)])
+            assert hi - lo > 20.0, (
+                "%s: на %.0f-%.0f с номера не слышно, всего %+.1f dB над "
+                "чистым файлом" % (twin.name, a, b, hi - lo))
+            assert hi < CUES_PEAK_DB - 20.0, (
+                "%s: номер на %+.1f dB — он перекроет подсказку"
+                % (twin.name, hi))
+
+
+def test_the_shift_moves_the_number_together_with_the_risers():
+    """Сдвиг двигает ВЕСЬ файл, а не одни подсказки.
+
+    Иначе риз кончался бы на сто-двести миллисекунд раньше удара в
+    собственном фоне, и файл врал бы про само движение. Проверяется по
+    участку без ризов, то есть по одному фону.
+    """
+    base = CUES_DIR / (CUE_PAIRS[0][2] + ".m4a")
+    if not base.exists():
+        pytest.skip("нет %s" % base.name)
+    zero = mono_of(base)
+    for lag, _, name in CUE_PAIRS:
+        if not lag:
+            continue
+        path = CUES_DIR / (name + ".m4a")
+        got = ghost_shift(mono_of(path), zero)
+        assert got == pytest.approx(-lag / 1000.0, abs=0.005), (
+            "%s: номер сдвинут на %+.0f мс вместо %+d"
+            % (path.name, got * 1000, -lag))
