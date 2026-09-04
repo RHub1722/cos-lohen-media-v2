@@ -10,6 +10,7 @@
     output/stage_cues_laugh.wav     в наушник, ловить первый смех
     output/stage_cues_picture.wav   в наушник, ловить появление картинки
     output/stage_cues_titles.wav    в наушник, ловить смену титров
+    ... с --lags: _lag0/_lag100/_lag200 вместо одной, выбрать ухом
     output/stage_cues_*_sync.wav    то же плюс номер тихим фоном, под замер
     output/cue_sheet.md             печатный лист: что слышно и за сколько
 
@@ -39,7 +40,8 @@ for stream in (sys.stdout, sys.stderr):
 
 from src.cues import (ANCHORS, CHAIN, Anchor, Cue,  # noqa: E402
                       CueError, all_cues, first_cues, lengths_of,
-                      resolve_overlaps, shift, track_plan)
+                      resolve_overlaps, shift, track_plan,  # noqa: E402
+                      LAGS_MS, Track)
 from src.counting import risers  # noqa: E402
 from src.measure import peak_db  # noqa: E402
 from src.models import Timeline  # noqa: E402
@@ -321,7 +323,7 @@ def render(cues: list[Cue], out: Path, total: float, assets: Path,
 
 
 def sheet(kept: list[Cue], dropped: list[Cue], rows: list[dict],
-          plan: list[tuple[Anchor, float]], chain: float, strikes) -> str:
+          plan: list[Track], chain: float, strikes) -> str:
     """Печатный лист. Пишется здесь, а не в шаблоне: он весь из чисел.
 
     План дорожек приходит СНАРУЖИ, тот самый, по которому они собраны. Считать
@@ -358,9 +360,10 @@ def sheet(kept: list[Cue], dropped: list[Cue], rows: list[dict],
         "| файл | ловить | чем | в номере | сдвиг |",
         "|---|---|---|---|---|",
     ]
-    for anchor, start_at in plan:
-        lines.append(f"| `stage_cues_{anchor.key}.wav` | {anchor.catch} | "
-                     f"{anchor.sense} | {anchor.t:.2f} | {start_at:.2f} |")
+    for track in plan:
+        lines.append(f"| `stage_cues_{track.name}.wav` | "
+                     f"{track.anchor.catch} | {track.anchor.sense} | "
+                     f"{track.anchor.t:.2f} | {track.start_at:.2f} |")
 
     if len(plan) < len(ANCHORS):
         lines += [
@@ -370,7 +373,8 @@ def sheet(kept: list[Cue], dropped: list[Cue], rows: list[dict],
             "рядом, этот лист их НЕ описывает — пересобери всё без `--anchor`.",
         ]
 
-    ручной = any(abs(s - a.start_at(chain)) > 1e-9 for a, s in plan)
+    ручной = any(abs(t.start_at - t.anchor.start_at(chain)) > 1e-9
+                 for t in plan)
     lines += [
         "",
         "Сдвиг задан вручную через `--start-at`, из якоря с цепочкой он не"
@@ -533,6 +537,9 @@ def main() -> int:
                     help="чем ловить старт; без него собираются все три")
     ap.add_argument("--chain", type=float, default=CHAIN,
                     help="задержка цепочки: нажатие плюс радиоканал")
+    ap.add_argument("--lags", action="store_true",
+                    help="лесенка по одному якорю: три дорожки с разной "
+                         "компенсацией радиоканала, выбирается ухом")
     ap.add_argument("--start-at", type=float, default=None,
                     help="прямое переопределение суммы, в обход якоря и цепочки")
     args = ap.parse_args()
@@ -541,7 +548,8 @@ def main() -> int:
     # обнаружится через минуту сборки репетиционной дорожки, а не сразу. И
     # CueError ловится здесь: пользователю нужно сообщение, а не трассировка.
     try:
-        plan = track_plan(args.anchor, args.chain, args.start_at)
+        plan = track_plan(args.anchor, args.chain, args.start_at,
+                          LAGS_MS if args.lags else ())
     except CueError as err:
         raise SystemExit(str(err))
 
@@ -579,10 +587,11 @@ def main() -> int:
 
     rows = risers(strikes)
     made: list[Path] = []
-    for anchor, start_at in plan:
+    for track in plan:
+        anchor, start_at = track.anchor, track.start_at
         moved = shift_rows(rows, int(round(start_at * 1000.0)))
-        path = out / f"stage_cues_{anchor.key}.wav"
-        print(f"\n{anchor.key}: ловить {anchor.catch} ({anchor.sense}), "
+        path = out / f"stage_cues_{track.name}.wav"
+        print(f"\n{track.name}: ловить {anchor.catch} ({anchor.sense}), "
               f"сдвиг {start_at:.2f} с, {len(moved)} ризов")
         for row in moved:
             print(f"  файл {row['start']:6.2f} → {row['peak']:6.2f}   "
@@ -594,7 +603,7 @@ def main() -> int:
         # Сверочная копия того же самого: под словами тихо идёт номер. Играешь
         # её вместе с залом — совпало, значит цепочка замерена верно; разошлось,
         # слышно хлопком, и величина хлопка и есть поправка.
-        check = out / f"stage_cues_{anchor.key}_sync.wav"
+        check = out / f"stage_cues_{track.name}_sync.wav"
         render([], check, tl.total_duration - start_at, assets, None,
                channels=1, floor=True, click=True, riser_rows=moved,
                ghost=master, ghost_at=start_at)

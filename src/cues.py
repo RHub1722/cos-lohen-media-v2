@@ -96,7 +96,19 @@ REACTION_EYE = 0.20
 # Заглушка: нажатие около 0.05 плюс Bluetooth, который по кодеку даёт
 # 0.15-0.30 (SBC 0.15-0.25, AAC 0.15-0.20, aptX 0.08-0.15). Настоящее число
 # даёт один замер сверочной копией.
-CHAIN = 0.25
+#
+# Слагаемые названы врозь, потому что подбирают только одно. Нажатие постоянно
+# и от железа наушника не зависит; радиоканал зависит от кодека, и это он
+# гуляет в полтора раза. Лесенка перебирает ВТОРОЕ, оставляя первое на месте.
+PRESS = 0.05
+BLUETOOTH = 0.20
+CHAIN = PRESS + BLUETOOTH
+
+# Лесенка компенсаций радиоканала, в миллисекундах. Пока цепочка не замерена,
+# выбирать приходится ухом, и числа в именах файлов значат ровно это же, что
+# у дорожек тренажёра: на сколько подсказки сдвинуты РАНЬШЕ. Крайние члены не
+# случайны — 0 это «канала нет вовсе», 200 это верх диапазона SBC.
+LAGS_MS: tuple[int, ...] = (0, 100, 200)
 
 
 class CueError(Exception):
@@ -149,8 +161,25 @@ def anchor_by(key: str) -> Anchor:
     return ANCHORS[key]
 
 
+@dataclass(frozen=True)
+class Track:
+    """Одна собираемая дорожка: чем ловить старт, с какого места и как зовут.
+
+    Имя входит в политику, а не остаётся делом сборщика, и это не педантизм:
+    имя файла — единственное, чем выбирают дорожку на телефоне за кулисами в
+    темноте. Проверяется оно тестом по буквам. Однажды мутация, схлопнувшая
+    имена сверочных копий в одно, прошла мимо теста именно потому, что тест
+    спрашивал имя у самого кода.
+    """
+
+    anchor: Anchor
+    start_at: float
+    name: str
+
+
 def track_plan(key: str | None, chain: float,
-               start_at: float | None = None) -> list[tuple[Anchor, float]]:
+               start_at: float | None = None,
+               lags: Sequence[int] = ()) -> list[Track]:
     """Какие дорожки собирать и с каким сдвигом каждую.
 
     Живёт здесь, а не в main, потому что это и есть та политика, ради которой
@@ -159,16 +188,31 @@ def track_plan(key: str | None, chain: float,
 
     start_at переопределяет всю сумму — им пользуются, когда сдвиг добыт
     замером на площадке и считать его заново не из чего.
+
+    lags собирает лесенку по одному якорю: цепочка перебирается по радиоканалу
+    при неподвижном нажатии. Нужна, пока цепочка не замерена, — выбирают ухом.
     """
     if start_at is not None and key is None:
         raise CueError("start_at имеет смысл только с одним якорем: "
                        "иначе все дорожки вышли бы одинаковыми")
+    if lags and start_at is not None:
+        raise CueError("start_at и лесенка исключают друг друга: первый "
+                       "задаёт сумму целиком, вторая её и перебирает")
+    if lags and key is None:
+        raise CueError("лесенка имеет смысл только с одним якорем: на трёх "
+                       "вышло бы девять дорожек и восемнадцать файлов")
     keys = [key] if key else sorted(ANCHORS)
     out = []
     for k in keys:
         anchor = anchor_by(k)
-        out.append((anchor, start_at if start_at is not None
-                    else anchor.start_at(chain)))
+        if lags:
+            for ms in lags:
+                out.append(Track(anchor,
+                                 anchor.start_at(PRESS + ms / 1000.0),
+                                 "%s_lag%d" % (anchor.key, ms)))
+            continue
+        out.append(Track(anchor, start_at if start_at is not None
+                         else anchor.start_at(chain), anchor.key))
     return out
 
 
